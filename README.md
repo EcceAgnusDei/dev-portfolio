@@ -22,20 +22,20 @@ Ouvrir [http://localhost:3000](http://localhost:3000).
 
 ```
 src/
-  data/demos.ts          # registre des projets (Zod)
   app/
     page.tsx             # accueil
     demos/[slug]/        # page par démo
     api/ping/route.ts    # exemple API + Zod
-  features/demos/        # composants de démo
+  features/demos/        # demos.ts
+  features/pixel-ai/     # démo Pixel AI
   components/ui/         # shadcn
 ```
 
 ## Ajouter une démo
 
-1. Entrée dans `src/data/demos.ts`
-2. Composant dans `src/features/demos/`
-3. Brancher le composant dans `src/app/demos/[slug]/page.tsx` (ou routing dédié)
+1. Entrée dans `src/features/demos/demos.ts`
+2. Composant client dans `src/features/<nom-demo>/`
+3. Enregistrement dans `src/app/demos/[slug]/page.tsx` (`DEMO_VIEWS`)
 4. Route `src/app/api/...` si la clé SDK doit rester côté serveur
 
 ## Scripts

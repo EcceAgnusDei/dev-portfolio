@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardDescription,
@@ -8,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { demos } from "@/data/demos";
+import { demos } from "@/features/demos/demos";
 
 export default function Home() {
   return (
@@ -32,9 +33,12 @@ export default function Home() {
                 <CardDescription>{demo.description}</CardDescription>
               </CardHeader>
               <CardFooter className="border-t-0 bg-transparent">
-                <Button render={<Link href={`/demos/${demo.slug}`} />}>
+                <Link
+                  href={`/demos/${demo.slug}`}
+                  className={cn(buttonVariants({ variant: "link" }))}
+                >
                   Voir la démo
-                </Button>
+                </Link>
               </CardFooter>
             </Card>
           </li>
