@@ -1,0 +1,4 @@
+export const PIXEL_AI_PROMPT_MAX_LENGTH = 2_000;
+
+export const PIXEL_AI_RATE_LIMIT_MAX = 10;
+export const PIXEL_AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;

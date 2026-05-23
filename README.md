@@ -25,7 +25,7 @@ src/
   app/
     page.tsx             # accueil
     demos/[slug]/        # page par démo
-    api/ping/route.ts    # exemple API + Zod
+    api/demos/pixel-ai/grid-command/route.ts  # Gemini + rate limit IP
   features/demos/        # demos.ts
   features/pixel-ai/     # démo Pixel AI
   components/ui/         # shadcn
@@ -37,6 +37,13 @@ src/
 2. Composant client dans `src/features/<nom-demo>/`
 3. Enregistrement dans `src/app/demos/[slug]/page.tsx` (`DEMO_VIEWS`)
 4. Route `src/app/api/...` si la clé SDK doit rester côté serveur
+
+## Pixel AI
+
+- Variable `GEMINI_API_KEY` (identique à ludusVitaeNext)
+- `POST /api/demos/pixel-ai/grid-command` — corps `{ prompt, gridSize, pixels }` ; réponse `{ pixels }` (le client ajuste la taille de la grille)
+- Rate limit par IP : 30 requêtes / heure par défaut (`PIXEL_AI_RATE_LIMIT_MAX`, `PIXEL_AI_RATE_LIMIT_WINDOW_MS`)
+- Prompt max. 2 000 caractères
 
 ## Scripts
 
