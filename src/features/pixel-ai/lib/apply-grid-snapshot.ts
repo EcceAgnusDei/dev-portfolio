@@ -9,6 +9,16 @@ export type GridSnapshotTarget = {
   gridSize: GridCoord;
 };
 
+export type GridWithCellSize = GridSnapshotTarget & {
+  cellSize: string;
+};
+
+export type LoadPixelsOntoGridInput = {
+  pixels: GridCoord[];
+  gridSize?: GridCoord;
+  cellSize?: string;
+};
+
 function coordsExceedGrid(coords: GridCoord[], gridSize: GridCoord): boolean {
   for (const c of coords) {
     if (c.x < 1 || c.x > gridSize.x || c.y < 1 || c.y > gridSize.y) return true;
@@ -61,10 +71,7 @@ function expandCoordsWithGridMargin(
   return { ok: true, coords: fitted, gridSize };
 }
 
-export function applyPixelsToGrid(
-  grid: GridSnapshotTarget,
-  pixels: GridCoord[],
-): string | null {
+function applyPixels(grid: GridSnapshotTarget, pixels: GridCoord[]): string | null {
   if (pixels.length === 0) {
     grid.applyFilledCells([]);
     return null;
@@ -87,5 +94,26 @@ export function applyPixelsToGrid(
     grid.resize(expanded.gridSize);
   }
   grid.applyFilledCells(expanded.coords);
+  return null;
+}
+
+export function loadPixelsOntoGrid(
+  grid: GridWithCellSize,
+  input: LoadPixelsOntoGridInput,
+): string | null {
+  if (input.gridSize) {
+    const target = input.gridSize;
+    if (target.x !== grid.gridSize.x || target.y !== grid.gridSize.y) {
+      grid.resize(target);
+    }
+  }
+
+  const applyError = applyPixels(grid, input.pixels);
+  if (applyError) return applyError;
+
+  if (input.cellSize && input.cellSize !== grid.cellSize) {
+    grid.resize(input.cellSize);
+  }
+
   return null;
 }

@@ -1,14 +1,31 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   StaticGridCanvas,
   type StaticGridHandle,
 } from "@/features/pixel-ai/components/static-grid-canvas";
 import { PixelGridToolbar } from "@/features/pixel-ai/components/pixel-grid-toolbar";
-import { applyPixelsToGrid } from "@/features/pixel-ai/lib/apply-grid-snapshot";
+import { loadPixelsOntoGrid } from "@/features/pixel-ai/lib/apply-grid-snapshot";
 import { MAX_GRID_CELLS } from "@/features/pixel-ai/lib/grid-limits";
+import {
+  deletePixelDrawing,
+  getPixelDrawing,
+  getPixelDrawingsStoreServerSnapshot,
+  getPixelDrawingsStoreSnapshot,
+  subscribePixelDrawingsStore,
+  loadPixelDrawingOntoGrid,
+  resetGridToNewDrawing,
+  savePixelDrawing,
+  snapshotGridAsPixelDrawing,
+} from "@/features/pixel-ai/lib/pixel-drawing-storage";
 import { postPixelAiCommand } from "@/features/pixel-ai/lib/post-pixel-ai-command";
 
 export function PixelAiDemoClient() {
@@ -18,6 +35,13 @@ export function PixelAiDemoClient() {
   const [cellSizeInput, setCellSizeInput] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPending, setAiPending] = useState(false);
+  const savedDrawings = useSyncExternalStore(
+    subscribePixelDrawingsStore,
+    getPixelDrawingsStoreSnapshot,
+    getPixelDrawingsStoreServerSnapshot,
+  );
+  const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
+  const [drawingName, setDrawingName] = useState("");
 
   const syncInputsFromGrid = useCallback(() => {
     const grid = gridRef.current;
@@ -110,18 +134,102 @@ export function PixelAiDemoClient() {
       return;
     }
 
-    const applyError = applyPixelsToGrid(grid, result.pixels);
+    const loadError = loadPixelsOntoGrid(grid, { pixels: result.pixels });
 
-    if (applyError) {
-      setNoticeMessage(applyError);
+    if (loadError) {
+      setNoticeMessage(loadError);
       return;
     }
 
     syncInputsFromGrid();
   };
 
+  const handleActiveDrawingChange = (id: string | null) => {
+    if (id === null) {
+      setActiveDrawingId(null);
+      setDrawingName("");
+      setNoticeMessage(null);
+      return;
+    }
+
+    const drawing = getPixelDrawing(id);
+    if (!drawing) {
+      setNoticeMessage("Ce dessin n’existe plus.");
+      setActiveDrawingId(null);
+      setDrawingName("");
+      return;
+    }
+
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const loadError = loadPixelDrawingOntoGrid(grid, drawing);
+    if (loadError) {
+      setNoticeMessage(loadError);
+      return;
+    }
+
+    setActiveDrawingId(id);
+    setDrawingName(drawing.name);
+    syncInputsFromGrid();
+    setNoticeMessage(null);
+  };
+
+  const handleSaveDrawing = () => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    if (!drawingName.trim()) {
+      setNoticeMessage("Le nom du dessin est requis.");
+      return;
+    }
+
+    const id = activeDrawingId ?? crypto.randomUUID();
+    const drawing = snapshotGridAsPixelDrawing(grid, id, drawingName);
+    const saveError = savePixelDrawing(drawing);
+    if (saveError) {
+      setNoticeMessage(saveError);
+      return;
+    }
+
+    setActiveDrawingId(id);
+    setDrawingName(drawing.name);
+    setNoticeMessage("Dessin enregistré.");
+  };
+
+  const handleNewDrawing = () => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    resetGridToNewDrawing(grid);
+    setActiveDrawingId(null);
+    setDrawingName("");
+    syncInputsFromGrid();
+    setNoticeMessage(null);
+  };
+
+  const handleDeleteDrawing = () => {
+    if (activeDrawingId === null) return;
+
+    const deleteError = deletePixelDrawing(activeDrawingId);
+    if (deleteError) {
+      setNoticeMessage(deleteError);
+      return;
+    }
+
+    const grid = gridRef.current;
+    if (grid) {
+      resetGridToNewDrawing(grid);
+      syncInputsFromGrid();
+    }
+
+    setActiveDrawingId(null);
+    setDrawingName("");
+    setNoticeMessage("Dessin supprimé.");
+  };
+
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 [&_input]:h-8 [&_input]:rounded-md [&_input]:border [&_input]:border-border [&_input]:bg-background [&_input]:px-2 [&_input]:py-1 [&_input]:text-sm">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 [&_input]:h-8 [&_input]:rounded-md [&_input]:border [&_input]:border-border [&_input]:bg-background [&_input]:px-2 [&_input]:py-1 [&_input]:text-sm [&_select]:h-8 [&_select]:rounded-md [&_select]:border [&_select]:border-border [&_select]:bg-background [&_select]:px-2 [&_select]:text-sm">
       <section
         id="pixel-ai-grid"
         className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 bg-muted/20"
@@ -143,10 +251,18 @@ export function PixelAiDemoClient() {
         onAiPromptChange={setAiPrompt}
         onSubmitAi={() => void handleSubmitAi()}
         aiPending={aiPending}
+        savedDrawings={savedDrawings}
+        activeDrawingId={activeDrawingId}
+        onActiveDrawingChange={handleActiveDrawingChange}
+        drawingName={drawingName}
+        onDrawingNameChange={setDrawingName}
+        onSaveDrawing={handleSaveDrawing}
+        onNewDrawing={handleNewDrawing}
+        onDeleteDrawing={handleDeleteDrawing}
       />
       {noticeMessage ? (
         <p
-          className="text-center text-sm text-destructive"
+          className="text-center text-sm text-muted-foreground"
           role="status"
           aria-live="polite"
         >
