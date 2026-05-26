@@ -9,6 +9,16 @@ import {
 } from "react";
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   StaticGridCanvas,
   type StaticGridHandle,
 } from "@/features/pixel-ai/components/static-grid-canvas";
@@ -49,6 +59,7 @@ export function PixelAiDemoClient() {
   );
   const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
   const [drawingName, setDrawingName] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const syncInputsFromGrid = useCallback(() => {
     const grid = gridRef.current;
@@ -244,7 +255,7 @@ export function PixelAiDemoClient() {
     clearNotice();
   };
 
-  const handleDeleteDrawing = () => {
+  const handleConfirmDeleteDrawing = () => {
     if (activeDrawingId === null) return;
 
     const deleteError = deletePixelDrawing(activeDrawingId);
@@ -262,6 +273,7 @@ export function PixelAiDemoClient() {
     setActiveDrawingId(null);
     setDrawingName("");
     clearHistory();
+    setDeleteConfirmOpen(false);
     showInfo("Dessin supprimé.");
   };
 
@@ -313,8 +325,31 @@ export function PixelAiDemoClient() {
         onDrawingNameChange={setDrawingName}
         onSaveDrawing={handleSaveDrawing}
         onNewDrawing={handleNewDrawing}
-        onDeleteDrawing={handleDeleteDrawing}
+        onDeleteDrawing={() => setDeleteConfirmOpen(true)}
       />
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le dessin ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {drawingName.trim().length > 0
+                ? `« ${drawingName.trim()} »`
+                : "Ce dessin"}{" "}
+              sera supprimé définitivement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={aiPending}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={aiPending}
+              onClick={handleConfirmDeleteDrawing}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
