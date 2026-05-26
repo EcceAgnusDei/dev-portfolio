@@ -28,10 +28,16 @@ import {
 } from "@/features/pixel-ai/lib/pixel-drawing-storage";
 import { postPixelAiCommand } from "@/features/pixel-ai/lib/post-pixel-ai-command";
 import { usePixelAiHistory } from "@/features/pixel-ai/use-pixel-ai-history";
+import { cn } from "@/lib/utils";
+
+type Notice = {
+  text: string;
+  variant: "alert" | "info";
+};
 
 export function PixelAiDemoClient() {
   const gridRef = useRef<StaticGridHandle | null>(null);
-  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [gridSizeInputs, setGridSizeInputs] = useState({ x: "", y: "" });
   const [cellSizeInput, setCellSizeInput] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
@@ -55,6 +61,18 @@ export function PixelAiDemoClient() {
     setCellSizeInput(raw);
   }, []);
 
+  const showAlert = useCallback((text: string) => {
+    setNotice({ text, variant: "alert" });
+  }, []);
+
+  const showInfo = useCallback((text: string) => {
+    setNotice({ text, variant: "info" });
+  }, []);
+
+  const clearNotice = useCallback(() => {
+    setNotice(null);
+  }, []);
+
   const {
     canUndo,
     canRedo,
@@ -66,7 +84,7 @@ export function PixelAiDemoClient() {
   } = usePixelAiHistory({
     getGrid: () => gridRef.current,
     syncInputsFromGrid,
-    onApplyError: setNoticeMessage,
+    onApplyError: showAlert,
   });
 
   useLayoutEffect(() => {
@@ -91,9 +109,9 @@ export function PixelAiDemoClient() {
       grid.resize({ x, y });
       grid.applyFilledCells(filledBefore);
       syncInputsFromGrid();
-      setNoticeMessage(null);
+      clearNotice();
     } else {
-      setNoticeMessage(
+      showAlert(
         `Largeur et hauteur entières ≥ 1, avec au plus ${MAX_GRID_CELLS.toLocaleString("fr-FR")} cellules au total (largeur × hauteur).`,
       );
     }
@@ -107,33 +125,31 @@ export function PixelAiDemoClient() {
     const n = Number(trimmed);
 
     if (!Number.isFinite(n)) {
-      setNoticeMessage("Entrez une valeur entière supérieure à 0.");
+      showAlert("Entrez une valeur entière supérieure à 0.");
       syncInputsFromGrid();
       return;
     }
     if (!Number.isInteger(n)) {
-      setNoticeMessage(
-        "La taille d'une cellule doit être un entier (en pixels).",
-      );
+      showAlert("La taille d'une cellule doit être un entier (en pixels).");
       syncInputsFromGrid();
       return;
     }
     if (n < 1) {
-      setNoticeMessage("Entrez une valeur entière supérieure à 0.");
+      showAlert("Entrez une valeur entière supérieure à 0.");
       syncInputsFromGrid();
       return;
     }
 
     grid.resize(`${n}px`);
     syncInputsFromGrid();
-    setNoticeMessage(null);
+    clearNotice();
   };
 
   const handleSubmitAi = async () => {
     const grid = gridRef.current;
     if (!grid || aiPending) return;
 
-    setNoticeMessage(null);
+    clearNotice();
     setAiPending(true);
 
     const result = await postPixelAiCommand({
@@ -145,7 +161,7 @@ export function PixelAiDemoClient() {
     setAiPending(false);
 
     if (!result.ok) {
-      setNoticeMessage(result.error);
+      showAlert(result.error);
       return;
     }
 
@@ -154,7 +170,7 @@ export function PixelAiDemoClient() {
 
     if (loadError) {
       discardLastUndoRecord();
-      setNoticeMessage(loadError);
+      showAlert(loadError);
       return;
     }
 
@@ -166,13 +182,13 @@ export function PixelAiDemoClient() {
       setActiveDrawingId(null);
       setDrawingName("");
       clearHistory();
-      setNoticeMessage(null);
+      clearNotice();
       return;
     }
 
     const drawing = getPixelDrawing(id);
     if (!drawing) {
-      setNoticeMessage("Ce dessin n’existe plus.");
+      showAlert("Ce dessin n’existe plus.");
       setActiveDrawingId(null);
       setDrawingName("");
       return;
@@ -183,7 +199,7 @@ export function PixelAiDemoClient() {
 
     const loadError = loadPixelDrawingOntoGrid(grid, drawing);
     if (loadError) {
-      setNoticeMessage(loadError);
+      showAlert(loadError);
       return;
     }
 
@@ -191,7 +207,7 @@ export function PixelAiDemoClient() {
     setDrawingName(drawing.name);
     syncInputsFromGrid();
     clearHistory();
-    setNoticeMessage(null);
+    clearNotice();
   };
 
   const handleSaveDrawing = () => {
@@ -199,7 +215,7 @@ export function PixelAiDemoClient() {
     if (!grid) return;
 
     if (!drawingName.trim()) {
-      setNoticeMessage("Le nom du dessin est requis.");
+      showAlert("Le nom du dessin est requis.");
       return;
     }
 
@@ -207,13 +223,13 @@ export function PixelAiDemoClient() {
     const drawing = snapshotGridAsPixelDrawing(grid, id, drawingName);
     const saveError = savePixelDrawing(drawing);
     if (saveError) {
-      setNoticeMessage(saveError);
+      showAlert(saveError);
       return;
     }
 
     setActiveDrawingId(id);
     setDrawingName(drawing.name);
-    setNoticeMessage("Dessin enregistré.");
+    showInfo("Dessin enregistré.");
   };
 
   const handleNewDrawing = () => {
@@ -225,7 +241,7 @@ export function PixelAiDemoClient() {
     setDrawingName("");
     syncInputsFromGrid();
     clearHistory();
-    setNoticeMessage(null);
+    clearNotice();
   };
 
   const handleDeleteDrawing = () => {
@@ -233,7 +249,7 @@ export function PixelAiDemoClient() {
 
     const deleteError = deletePixelDrawing(activeDrawingId);
     if (deleteError) {
-      setNoticeMessage(deleteError);
+      showAlert(deleteError);
       return;
     }
 
@@ -246,7 +262,7 @@ export function PixelAiDemoClient() {
     setActiveDrawingId(null);
     setDrawingName("");
     clearHistory();
-    setNoticeMessage("Dessin supprimé.");
+    showInfo("Dessin supprimé.");
   };
 
   return (
@@ -259,6 +275,20 @@ export function PixelAiDemoClient() {
           <StaticGridCanvas ref={gridRef} />
         </div>
       </section>
+      {notice ? (
+        <p
+          className={cn(
+            "px-2 text-center text-sm",
+            notice.variant === "alert"
+              ? "text-destructive"
+              : "text-muted-foreground",
+          )}
+          role={notice.variant === "alert" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {notice.text}
+        </p>
+      ) : null}
       <PixelGridToolbar
         gridSizeInputs={gridSizeInputs}
         onGridSizeInputChange={(field, value) =>
@@ -285,15 +315,6 @@ export function PixelAiDemoClient() {
         onNewDrawing={handleNewDrawing}
         onDeleteDrawing={handleDeleteDrawing}
       />
-      {noticeMessage ? (
-        <p
-          className="text-center text-sm text-muted-foreground"
-          role="status"
-          aria-live="polite"
-        >
-          {noticeMessage}
-        </p>
-      ) : null}
     </div>
   );
 }
