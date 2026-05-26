@@ -19,6 +19,24 @@ export type LoadPixelsOntoGridInput = {
   cellSize?: string;
 };
 
+export type GridStateSnapshot = {
+  gridSize: GridCoord;
+  cellSize: string;
+  pixels: GridCoord[];
+};
+
+export type GridStateSource = GridWithCellSize & {
+  getFilledCellsCoords: () => GridCoord[];
+};
+
+export function snapshotGridState(grid: GridStateSource): GridStateSnapshot {
+  return {
+    gridSize: { ...grid.gridSize },
+    cellSize: grid.cellSize,
+    pixels: grid.getFilledCellsCoords(),
+  };
+}
+
 function coordsExceedGrid(coords: GridCoord[], gridSize: GridCoord): boolean {
   for (const c of coords) {
     if (c.x < 1 || c.x > gridSize.x || c.y < 1 || c.y > gridSize.y) return true;

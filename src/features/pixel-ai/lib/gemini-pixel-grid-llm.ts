@@ -19,7 +19,7 @@ Règles strictes :
 - Ne renvoie aucun autre champ que "pixels".
 - Essaie de dessiner dans les limites de la grille (gridSize) si possible, si ce n'est pas possible, tu peux envoyer des coordonnées en dehors des limites de la grille.
 - Dessine centrée dans la grille, en t'appuyant sur gridSize.
-- Si l'utilisateur demande de dessiner quelque chose qui n'a aucun rapport avec le dessin actuel décrit dans "pixels", efface le dessin actuel et remplace par le nouveau dessin.
+- Ne conserve le dessin envoyé par l'utilisateur que si sa demande le suggère.
 
 Si tu ne comprends pas la demande (trop vague, hors sujet, incohérente, impossible à interpréter comme une modification de dessin) :
 - Ne devine pas un autre dessin.

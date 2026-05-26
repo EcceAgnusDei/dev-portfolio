@@ -2,9 +2,10 @@ import { z } from "zod";
 
 import {
   loadPixelsOntoGrid,
+  snapshotGridState,
+  type GridStateSource,
   type GridWithCellSize,
 } from "@/features/pixel-ai/lib/apply-grid-snapshot";
-import type { GridCoord } from "@/features/pixel-ai/lib/grid-coords";
 
 const LOCAL_STORAGE_KEY = "dev-portfolio:pixel-ai-drawings";
 const DRAWINGS_STORE_EVENT = "dev-portfolio:pixel-ai-drawings-store-change";
@@ -36,10 +37,6 @@ export type PixelDrawingListItem = Pick<
   PixelDrawing,
   "id" | "name" | "updatedAt"
 >;
-
-type GridSnapshotSource = GridWithCellSize & {
-  getFilledCellsCoords: () => GridCoord[];
-};
 
 function readStore(): Record<string, PixelDrawing> {
   if (typeof window === "undefined") return {};
@@ -138,29 +135,30 @@ export function loadPixelDrawingOntoGrid(
   return loadPixelsOntoGrid(grid, {
     gridSize: drawing.gridSize,
     pixels: drawing.pixels,
-    cellSize: drawing.cellSize,
+    cellSize: drawing.cellSize ?? grid.cellSize,
   });
 }
 
 export function snapshotGridAsPixelDrawing(
-  grid: GridSnapshotSource,
+  grid: GridStateSource,
   id: string,
   name: string,
 ): PixelDrawing {
+  const state = snapshotGridState(grid);
   return {
     id,
     name: name.trim(),
     updatedAt: Date.now(),
-    gridSize: { ...grid.gridSize },
-    cellSize: grid.cellSize,
-    pixels: grid.getFilledCellsCoords(),
+    gridSize: state.gridSize,
+    cellSize: state.cellSize,
+    pixels: state.pixels,
   };
 }
 
 export const DEFAULT_NEW_DRAWING_GRID_SIZE = { x: 50, y: 30 };
 export const DEFAULT_NEW_DRAWING_CELL_SIZE = "20px";
 
-export function resetGridToNewDrawing(grid: GridSnapshotSource): void {
+export function resetGridToNewDrawing(grid: GridStateSource): void {
   grid.resize(DEFAULT_NEW_DRAWING_GRID_SIZE);
   grid.applyFilledCells([]);
   grid.resize(DEFAULT_NEW_DRAWING_CELL_SIZE);

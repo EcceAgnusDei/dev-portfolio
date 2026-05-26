@@ -27,6 +27,7 @@ import {
   snapshotGridAsPixelDrawing,
 } from "@/features/pixel-ai/lib/pixel-drawing-storage";
 import { postPixelAiCommand } from "@/features/pixel-ai/lib/post-pixel-ai-command";
+import { usePixelAiHistory } from "@/features/pixel-ai/use-pixel-ai-history";
 
 export function PixelAiDemoClient() {
   const gridRef = useRef<StaticGridHandle | null>(null);
@@ -53,6 +54,20 @@ export function PixelAiDemoClient() {
     const raw = String(grid.cellSize).replace(/px$/i, "").trim();
     setCellSizeInput(raw);
   }, []);
+
+  const {
+    canUndo,
+    canRedo,
+    clearHistory,
+    recordBeforeAiModification,
+    discardLastUndoRecord,
+    undo,
+    redo,
+  } = usePixelAiHistory({
+    getGrid: () => gridRef.current,
+    syncInputsFromGrid,
+    onApplyError: setNoticeMessage,
+  });
 
   useLayoutEffect(() => {
     syncInputsFromGrid();
@@ -134,9 +149,11 @@ export function PixelAiDemoClient() {
       return;
     }
 
+    recordBeforeAiModification();
     const loadError = loadPixelsOntoGrid(grid, { pixels: result.pixels });
 
     if (loadError) {
+      discardLastUndoRecord();
       setNoticeMessage(loadError);
       return;
     }
@@ -148,6 +165,7 @@ export function PixelAiDemoClient() {
     if (id === null) {
       setActiveDrawingId(null);
       setDrawingName("");
+      clearHistory();
       setNoticeMessage(null);
       return;
     }
@@ -172,6 +190,7 @@ export function PixelAiDemoClient() {
     setActiveDrawingId(id);
     setDrawingName(drawing.name);
     syncInputsFromGrid();
+    clearHistory();
     setNoticeMessage(null);
   };
 
@@ -205,6 +224,7 @@ export function PixelAiDemoClient() {
     setActiveDrawingId(null);
     setDrawingName("");
     syncInputsFromGrid();
+    clearHistory();
     setNoticeMessage(null);
   };
 
@@ -225,6 +245,7 @@ export function PixelAiDemoClient() {
 
     setActiveDrawingId(null);
     setDrawingName("");
+    clearHistory();
     setNoticeMessage("Dessin supprimé.");
   };
 
@@ -251,6 +272,10 @@ export function PixelAiDemoClient() {
         onAiPromptChange={setAiPrompt}
         onSubmitAi={() => void handleSubmitAi()}
         aiPending={aiPending}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
         savedDrawings={savedDrawings}
         activeDrawingId={activeDrawingId}
         onActiveDrawingChange={handleActiveDrawingChange}

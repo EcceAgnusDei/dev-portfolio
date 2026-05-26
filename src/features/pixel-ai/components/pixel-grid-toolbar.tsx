@@ -16,6 +16,10 @@ type PixelGridToolbarProps = {
   onAiPromptChange: (value: string) => void;
   onSubmitAi: () => void;
   aiPending: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   savedDrawings: PixelDrawingListItem[];
   activeDrawingId: string | null;
   onActiveDrawingChange: (id: string | null) => void;
@@ -37,6 +41,10 @@ export function PixelGridToolbar({
   onAiPromptChange,
   onSubmitAi,
   aiPending,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   savedDrawings,
   activeDrawingId,
   onActiveDrawingChange,
@@ -188,14 +196,35 @@ export function PixelGridToolbar({
               disabled={aiPending}
               className="min-h-16 w-full min-w-0 flex-1 resize-y rounded-md border border-border bg-background px-2 py-1.5 text-sm"
             />
-            <Button
-              type="button"
-              onClick={onSubmitAi}
-              disabled={aiPending || !aiPrompt.trim()}
-              className="shrink-0 sm:self-end"
-            >
-              {aiPending ? "Envoi…" : "Envoyer"}
-            </Button>
+            <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 sm:flex-col sm:items-stretch sm:self-end">
+              <Button
+                type="button"
+                onClick={onSubmitAi}
+                disabled={aiPending || !aiPrompt.trim()}
+              >
+                {aiPending ? "Envoi…" : "Envoyer"}
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onUndo}
+                  disabled={aiPending || !canUndo}
+                  aria-label="Annuler la dernière modification IA"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onRedo}
+                  disabled={aiPending || !canRedo}
+                  aria-label="Rétablir la modification IA annulée"
+                >
+                  Refaire
+                </Button>
+              </div>
+            </div>
           </div>
         </fieldset>
       </div>
