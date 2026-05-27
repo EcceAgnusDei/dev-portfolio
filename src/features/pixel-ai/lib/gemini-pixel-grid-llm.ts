@@ -72,6 +72,28 @@ function geminiErrorStatus(err: unknown): number | undefined {
   return undefined;
 }
 
+function parseRetryDelaySeconds(err: unknown): number | undefined {
+  if (!err || typeof err !== "object") return undefined;
+  const o = err as Record<string, unknown>;
+  const details = o.errorDetails;
+  if (!Array.isArray(details)) return undefined;
+
+  for (const item of details) {
+    if (!item || typeof item !== "object") continue;
+    const d = item as Record<string, unknown>;
+    const t = d["@type"];
+    if (typeof t !== "string" || !t.includes("RetryInfo")) continue;
+    const raw = d.retryDelay;
+    if (typeof raw !== "string") continue;
+    const m = raw.trim().match(/^(\d+(?:\.\d+)?)s$/i);
+    if (!m) continue;
+    const n = Number.parseFloat(m[1]!);
+    if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+
+  return undefined;
+}
+
 function userFacingGeminiError(err: unknown): string {
   const raw = geminiErrorMessage(err).toLowerCase();
   const status = geminiErrorStatus(err);
@@ -109,6 +131,10 @@ function userFacingGeminiError(err: unknown): string {
     raw.includes("rate limit") ||
     raw.includes("resource exhausted")
   ) {
+    const retrySec = parseRetryDelaySeconds(err);
+    if (retrySec) {
+      return `Limite d'utilisation IA atteinte. Réessayez dans ${retrySec} s.`;
+    }
     return "Limite d'utilisation IA atteinte. Réessayez plus tard.";
   }
 
