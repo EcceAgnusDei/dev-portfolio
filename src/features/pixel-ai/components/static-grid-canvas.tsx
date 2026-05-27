@@ -156,151 +156,152 @@ function drawCanvas(opts: {
 
 export const StaticGridCanvas = forwardRef<StaticGridHandle>(
   function StaticGridCanvas(_, ref) {
-  const [gridSize, setGridSize] = useState<GridCoord>(DEFAULT_GRID);
-  const [cellSize, setCellSize] = useState<string>(DEFAULT_CELL_SIZE);
-  const [filled, setFilled] = useState<Set<number>>(() => new Set());
+    const [gridSize, setGridSize] = useState<GridCoord>(DEFAULT_GRID);
+    const [cellSize, setCellSize] = useState<string>(DEFAULT_CELL_SIZE);
+    const [filled, setFilled] = useState<Set<number>>(() => new Set());
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const filledRef = useRef(filled);
-  const gridSizeRef = useRef(gridSize);
-  const cellSizeRef = useRef(cellSize);
+    const filledRef = useRef(filled);
+    const gridSizeRef = useRef(gridSize);
+    const cellSizeRef = useRef(cellSize);
 
-  filledRef.current = filled;
-  gridSizeRef.current = gridSize;
-  cellSizeRef.current = cellSize;
+    filledRef.current = filled;
+    gridSizeRef.current = gridSize;
+    cellSizeRef.current = cellSize;
 
-  const cellPx = useMemo(() => parseCellPx(cellSize), [cellSize]);
-  const cssCanvasSize = useMemo(() => {
-    const wPx = gridSize.x * cellPx;
-    const hPx = gridSize.y * cellPx;
-    return { wPx, hPx };
-  }, [gridSize.x, gridSize.y, cellPx]);
+    const cellPx = useMemo(() => parseCellPx(cellSize), [cellSize]);
+    const cssCanvasSize = useMemo(() => {
+      const wPx = gridSize.x * cellPx;
+      const hPx = gridSize.y * cellPx;
+      return { wPx, hPx };
+    }, [gridSize.x, gridSize.y, cellPx]);
 
-  const repaintAll = useCallback(
-    (filledSet: Set<number>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const repaintAll = useCallback(
+      (filledSet: Set<number>) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-      drawCanvas({
-        canvas,
-        gridSize,
-        cellPx,
-        colors: readThemeColors(),
-        filled: filledSet,
-      });
-    },
-    [gridSize, cellPx],
-  );
-
-  const toggleCell = useCallback(
-    (x: number, y: number) => {
-      const idx = toCellIndex(x, y, gridSizeRef.current.x);
-      setFilled((prev) => {
-        const next = new Set(prev);
-        if (next.has(idx)) {
-          next.delete(idx);
-        } else {
-          next.add(idx);
-        }
-        filledRef.current = next;
-        repaintAll(next);
-        return next;
-      });
-    },
-    [repaintAll],
-  );
-
-  const handleCanvasClick = useCallback(
-    (event: MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const localX = event.clientX - rect.left;
-      const localY = event.clientY - rect.top;
-      const x = Math.floor(localX / cellPx) + 1;
-      const y = Math.floor(localY / cellPx) + 1;
-
-      if (
-        x < 1 ||
-        x > gridSizeRef.current.x ||
-        y < 1 ||
-        y > gridSizeRef.current.y
-      ) {
-        return;
-      }
-      toggleCell(x, y);
-    },
-    [cellPx, toggleCell],
-  );
-
-  useLayoutEffect(() => {
-    repaintAll(filledRef.current);
-  }, [repaintAll]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      get gridSize() {
-        return { ...gridSizeRef.current };
+        drawCanvas({
+          canvas,
+          gridSize,
+          cellPx,
+          colors: readThemeColors(),
+          filled: filledSet,
+        });
       },
-      get cellSize() {
-        return cellSizeRef.current;
+      [gridSize, cellPx],
+    );
+
+    const toggleCell = useCallback(
+      (x: number, y: number) => {
+        const idx = toCellIndex(x, y, gridSizeRef.current.x);
+        setFilled((prev) => {
+          const next = new Set(prev);
+          if (next.has(idx)) {
+            next.delete(idx);
+          } else {
+            next.add(idx);
+          }
+          filledRef.current = next;
+          repaintAll(next);
+          return next;
+        });
       },
-      getFilledCellsCoords: () => {
-        const out: GridCoord[] = [];
-        const width = gridSizeRef.current.x;
-        for (const idx of filledRef.current) {
-          const { x, y } = cellIndexToCoord(idx, width);
-          out.push({ x, y });
-        }
-        return out;
-      },
-      applyFilledCells: (coords: GridCoord[]) => {
-        const next = normalizeFilledToIndexSet(coords, gridSizeRef.current);
-        filledRef.current = next;
-        setFilled(next);
-        repaintAll(next);
-      },
-      resize: (value) => {
-        if (typeof value === "string") {
-          cellSizeRef.current = value;
-          setCellSize(value);
+      [repaintAll],
+    );
+
+    const handleCanvasClick = useCallback(
+      (event: MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        const x = Math.floor(localX / cellPx) + 1;
+        const y = Math.floor(localY / cellPx) + 1;
+
+        if (
+          x < 1 ||
+          x > gridSizeRef.current.x ||
+          y < 1 ||
+          y > gridSizeRef.current.y
+        ) {
           return;
         }
-
-        const nextSize = { x: value.x, y: value.y };
-        const migrated = reindexFilledForResize(
-          filledRef.current,
-          gridSizeRef.current,
-          nextSize,
-        );
-        filledRef.current = migrated;
-        setFilled(migrated);
-        setGridSize(nextSize);
-        gridSizeRef.current = nextSize;
+        toggleCell(x, y);
       },
-    }),
-    [repaintAll],
-  );
+      [cellPx, toggleCell],
+    );
 
-  return (
-    <div
-      className="relative block"
-      style={{
-        width: `${cssCanvasSize.wPx}px`,
-        height: `${cssCanvasSize.hPx}px`,
-      }}
-    >
-      <canvas
-        ref={canvasRef}
-        onClick={handleCanvasClick}
-        className="block cursor-crosshair"
-        aria-label="Grille de dessin. Cliquez pour colorier une cellule."
-      />
-    </div>
-  );
-});
+    useLayoutEffect(() => {
+      repaintAll(filledRef.current);
+    }, [repaintAll]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        get gridSize() {
+          return { ...gridSizeRef.current };
+        },
+        get cellSize() {
+          return cellSizeRef.current;
+        },
+        getFilledCellsCoords: () => {
+          const out: GridCoord[] = [];
+          const width = gridSizeRef.current.x;
+          for (const idx of filledRef.current) {
+            const { x, y } = cellIndexToCoord(idx, width);
+            out.push({ x, y });
+          }
+          return out;
+        },
+        applyFilledCells: (coords: GridCoord[]) => {
+          const next = normalizeFilledToIndexSet(coords, gridSizeRef.current);
+          filledRef.current = next;
+          setFilled(next);
+          repaintAll(next);
+        },
+        resize: (value) => {
+          if (typeof value === "string") {
+            cellSizeRef.current = value;
+            setCellSize(value);
+            return;
+          }
+
+          const nextSize = { x: value.x, y: value.y };
+          const migrated = reindexFilledForResize(
+            filledRef.current,
+            gridSizeRef.current,
+            nextSize,
+          );
+          filledRef.current = migrated;
+          setFilled(migrated);
+          setGridSize(nextSize);
+          gridSizeRef.current = nextSize;
+        },
+      }),
+      [repaintAll],
+    );
+
+    return (
+      <div
+        className="relative block"
+        style={{
+          width: `${cssCanvasSize.wPx}px`,
+          height: `${cssCanvasSize.hPx}px`,
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          onClick={handleCanvasClick}
+          className="block cursor-crosshair"
+          aria-label="Grille de dessin. Cliquez pour colorier une cellule."
+        />
+      </div>
+    );
+  },
+);
 
 StaticGridCanvas.displayName = "StaticGridCanvas";

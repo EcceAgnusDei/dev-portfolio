@@ -1,58 +1,40 @@
 import { z } from "zod";
 
-import type { GridCoord } from "@/features/pixel-ai/lib/grid-coords";
-
-const gridCoordSchema = z.object({
-  x: z.number().int().min(1),
-  y: z.number().int().min(1),
+const gridAiAsciiSchema = z.object({
+  rows: z.array(z.string()),
 });
 
-const gridAiPixelsSchema = z.object({
-  pixels: z.array(gridCoordSchema),
-});
-
-type ParseGridAiPixelsResult =
-  | { ok: true; pixels: GridCoord[] }
+type ParseGridAiAsciiRowsResult =
+  | { ok: true; rows: string[] }
   | { ok: false; error: string };
 
-function dedupeCoords(cells: GridCoord[]): GridCoord[] {
-  const seen = new Set<string>();
-  const out: GridCoord[] = [];
-  for (const c of cells) {
-    const k = `${c.x},${c.y}`;
-    if (!seen.has(k)) {
-      seen.add(k);
-      out.push(c);
-    }
-  }
-  return out;
-}
-
-function validateGridAiPixels(data: unknown): ParseGridAiPixelsResult {
-  const result = gridAiPixelsSchema.safeParse(data);
-  if (!result.success) {
-    const first = result.error.issues[0];
-    const msg =
-      first && typeof first.message === "string"
-        ? first.message
-        : "Réponse IA invalide.";
-    return { ok: false, error: msg };
-  }
-
-  return {
-    ok: true,
-    pixels: dedupeCoords(result.data.pixels),
-  };
-}
-
-export function parseAndValidateGridAiPixelsJson(
+export function parseAndValidateGridAiAsciiRowsJson(
   raw: string,
-): ParseGridAiPixelsResult {
+): ParseGridAiAsciiRowsResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw) as unknown;
   } catch {
     return { ok: false, error: "JSON invalide." };
   }
-  return validateGridAiPixels(parsed);
+
+  const result = gridAiAsciiSchema.safeParse(parsed);
+  if (!result.success) {
+    return { ok: false, error: "Réponse IA invalide." };
+  }
+
+  const rows = result.data.rows;
+  if (rows.length === 0) return { ok: true, rows: [] };
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (typeof row !== "string" || row.length === 0) {
+      return {
+        ok: false,
+        error: "Réponse IA invalide.",
+      };
+    }
+  }
+
+  return { ok: true, rows };
 }

@@ -177,7 +177,10 @@ export function PixelAiDemoClient() {
     }
 
     recordBeforeAiModification();
-    const loadError = loadPixelsOntoGrid(grid, { pixels: result.pixels });
+    const loadError = loadPixelsOntoGrid(grid, {
+      gridSize: result.gridSize,
+      pixels: result.pixels,
+    });
 
     if (loadError) {
       discardLastUndoRecord();

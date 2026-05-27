@@ -8,7 +8,7 @@ export type PostPixelAiCommandBody = {
 };
 
 export type PostPixelAiCommandResult =
-  | { ok: true; pixels: GridCoord[] }
+  | { ok: true; pixels: GridCoord[]; gridSize?: GridCoord }
   | { ok: false; error: string };
 
 export async function postPixelAiCommand(
@@ -51,6 +51,7 @@ export async function postPixelAiCommand(
   const obj = data as {
     error?: unknown;
     pixels?: GridCoord[];
+    gridSize?: GridCoord;
   };
 
   if (!res.ok) {
@@ -65,8 +66,18 @@ export async function postPixelAiCommand(
     return { ok: false, error: "Réponse serveur invalide." };
   }
 
+  const gs = obj.gridSize;
+  const gridSize =
+    gs &&
+    typeof gs === "object" &&
+    typeof (gs as { x?: unknown }).x === "number" &&
+    typeof (gs as { y?: unknown }).y === "number"
+      ? { x: gs.x, y: gs.y }
+      : undefined;
+
   return {
     ok: true,
     pixels: obj.pixels,
+    ...(gridSize ? { gridSize } : {}),
   };
 }

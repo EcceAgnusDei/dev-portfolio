@@ -1,33 +1,32 @@
 import { FinishReason, GoogleGenerativeAI } from "@google/generative-ai";
 
-import type { GridCoord } from "@/features/pixel-ai/lib/grid-coords";
-
 const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+//const DEFAULT_MODEL = "gemini-2.5-pro";
 
 const SYSTEM_INSTRUCTION = `Tu es un éditeur de dessin sur grille de pixels (style pixel art).
 
 Contexte :
-- Une grille de cellules ; chaque cellule peut être vide ou remplie en noir.
-- "gridSize" (fourni en entrée) donne les dimensions actuelles de la grille: largeur × hauteur (colonnes × lignes).
-- "pixels" liste les cellules noires actuelles, coordonnées 1-based (x ≥ 1, y ≥ 1).
-- Tu modifies le dessin selon la demande. Tu ne choisis pas la taille de la grille : le client l'ajustera si tes coordonnées le nécessitent.
+- Une grille de cellules ; chaque cellule est vide (.) ou remplie (#).
+- "rows" est le dessin actuel : un tableau de chaînes, une par ligne.
+- Dans "rows", l'index 0 est la ligne du haut, le dernier index est la ligne du bas.
+- Chaque chaîne doit avoir la même longueur : '.' = vide, '#' = pixel noir.
+- Tu modifies le dessin selon userRequest.
 
 Règles strictes :
 - Tu réponds par UN SEUL objet JSON, sans markdown, sans texte avant ou après.
-- Format obligatoire : { "pixels": [ { "x", "y" }, ... ] }
-- "pixels" est la liste complète et définitive des pixels noirs (elle remplace entièrement le dessin précédent).
-- Ne renvoie aucun autre champ que "pixels".
-- Essaie de dessiner dans les limites de la grille (gridSize) si possible, si ce n'est pas possible, tu peux envoyer des coordonnées en dehors des limites de la grille.
-- Dessine centrée dans la grille, en t'appuyant sur gridSize.
-- Ne conserve le dessin envoyé par l'utilisateur que si sa demande le suggère.
+- Format obligatoire : { "rows": [ ".....", ".....", ... ] }
+- "rows" est le dessin complet et définitif (il remplace entièrement le dessin précédent).
+- Ne renvoie aucun autre champ que "rows".
+- Tu peux renvoyer une grille plus grande que ce que tu reçois, mais seulement si c'est utile.
+- Utilise uniquement '.' et '#' dans les chaînes.
+- Si tu as le choix, dessine de manière centrée dans la grille.
 
-Si tu ne comprends pas la demande (trop vague, hors sujet, incohérente, impossible à interpréter comme une modification de dessin) :
-- Ne devine pas un autre dessin.
-- Dessine un point d'interrogation "?" lisible.
+Si tu ne comprends pas la demande (trop vague, hors sujet, incohérente) :
+- Renvoie le même dessin que dans rows (entrée), sans modification.
 
-Pour « effacer » ou « vider » : "pixels": [].
+Pour « effacer » ou « vider » : toutes les lignes ne contiennent que des '.'.
 
-Interprète la demande (souvent en français) à partir du contexte (gridSize, pixels, userRequest).`;
+Interprète la demande (souvent en français) à partir du contexte (rows, userRequest).`;
 
 function resolveModelName(): string {
   const fromEnv = process.env.GEMINI_MODEL?.trim();
@@ -178,8 +177,7 @@ function userFacingResponseTextError(
 export async function geminiPixelGridStateJson(
   apiKey: string,
   userPrompt: string,
-  gridSize: GridCoord,
-  pixels: GridCoord[],
+  rows: string[],
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
@@ -194,8 +192,7 @@ export async function geminiPixelGridStateJson(
 
   const context = JSON.stringify(
     {
-      gridSize,
-      pixels,
+      rows,
       userRequest: userPrompt,
     },
     null,
@@ -205,7 +202,7 @@ export async function geminiPixelGridStateJson(
   let result;
   try {
     result = await model.generateContent(
-      `Produis uniquement l'objet JSON { "pixels": [ { "x", "y" }, ... ] } pour ce contexte :\n${context}`,
+      `Produis uniquement l'objet JSON { "rows": [ ".....", ... ] } pour ce contexte :\n${context}`,
     );
   } catch (err) {
     devLog("[gemini-pixel-grid] generateContent error:", err);

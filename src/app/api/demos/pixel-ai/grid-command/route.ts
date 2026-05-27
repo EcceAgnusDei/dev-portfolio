@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { geminiPixelGridStateJson } from "@/features/pixel-ai/lib/gemini-pixel-grid-llm";
-import { parseAndValidateGridAiPixelsJson } from "@/features/pixel-ai/lib/grid-state-schema";
+import {
+  asciiRowsToPixels,
+  pixelsToAsciiRows,
+} from "@/features/pixel-ai/lib/grid-ascii";
+import { parseAndValidateGridAiAsciiRowsJson } from "@/features/pixel-ai/lib/grid-state-schema";
 import {
   PIXEL_AI_PROMPT_MAX_LENGTH,
   PIXEL_AI_RATE_LIMIT_MAX,
@@ -108,12 +112,8 @@ export async function POST(request: Request) {
 
   let stateJson: string;
   try {
-    stateJson = await geminiPixelGridStateJson(
-      geminiKey,
-      prompt,
-      gridSize,
-      pixels,
-    );
+    const rows = pixelsToAsciiRows(gridSize, pixels);
+    stateJson = await geminiPixelGridStateJson(geminiKey, prompt, rows);
   } catch (err) {
     const message =
       err instanceof Error && err.message.trim()
@@ -121,14 +121,17 @@ export async function POST(request: Request) {
         : "Le service IA a échoué. Réessayez plus tard.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
-
-  const state = parseAndValidateGridAiPixelsJson(stateJson);
-  if (!state.ok) {
+  const parsedAi = parseAndValidateGridAiAsciiRowsJson(stateJson);
+  if (!parsedAi.ok) {
     return NextResponse.json(
       { error: "L'IA a répondu de manière inattendue." }, // Réponse IA non conforme.
       { status: 500 },
     );
   }
 
-  return NextResponse.json({ pixels: state.pixels });
+  const converted = asciiRowsToPixels(parsedAi.rows);
+  return NextResponse.json({
+    pixels: converted.pixels,
+    gridSize: converted.gridSize, //nécessaire pour spacialiser le dessin dans la grille.
+  });
 }

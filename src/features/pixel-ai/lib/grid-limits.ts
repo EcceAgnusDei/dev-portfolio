@@ -1,1 +1,1 @@
-export const MAX_GRID_CELLS = 20_000;
+export const MAX_GRID_CELLS = 5_000;
