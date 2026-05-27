@@ -12,8 +12,6 @@ import {
 } from "react";
 
 import {
-  cellIndexToCoord,
-  toCellIndex,
   type GridCoord,
 } from "@/features/pixel-ai/lib/grid-coords";
 
@@ -48,33 +46,31 @@ function readThemeColors(): ThemeColors {
   };
 }
 
-function normalizeFilledToIndexSet(
-  coords: GridCoord[] | null,
-  gridSize: GridCoord,
-): Set<number> {
-  if (!coords?.length) return new Set<number>();
-  const out = new Set<number>();
+function coordKey(x: number, y: number): string {
+  return `${x},${y}`;
+}
+
+function keyToCoord(key: unknown): GridCoord | null {
+  if (typeof key !== "string") return null;
+  const parts = key.split(",");
+  if (parts.length !== 2) return null;
+  const x = Number.parseInt(parts[0] ?? "", 10);
+  const y = Number.parseInt(parts[1] ?? "", 10);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  return { x, y };
+}
+
+function normalizeFilledToCoordSet(coords: GridCoord[] | null): Set<string> {
+  if (!coords?.length) return new Set<string>();
+  const out = new Set<string>();
   for (const c of coords) {
     const x = Math.trunc(c.x);
     const y = Math.trunc(c.y);
-    if (x < 1 || x > gridSize.x || y < 1 || y > gridSize.y) continue;
-    out.add(toCellIndex(x, y, gridSize.x));
+    if (x < 1 || y < 1) continue;
+    out.add(coordKey(x, y));
   }
   return out;
-}
-
-function reindexFilledForResize(
-  prevFilled: Set<number>,
-  prevSize: GridCoord,
-  nextSize: GridCoord,
-): Set<number> {
-  const nextFilled = new Set<number>();
-  for (const idx of prevFilled) {
-    const { x, y } = cellIndexToCoord(idx, prevSize.x);
-    if (x < 1 || x > nextSize.x || y < 1 || y > nextSize.y) continue;
-    nextFilled.add(toCellIndex(x, y, nextSize.x));
-  }
-  return nextFilled;
 }
 
 function setupCanvas(
@@ -96,14 +92,14 @@ function setupCanvas(
 
 function paintCell(
   ctx: CanvasRenderingContext2D,
-  idx: number,
-  width: number,
+  coord: GridCoord,
+  height: number,
   cellPx: number,
   color: string,
 ) {
-  const { x, y } = cellIndexToCoord(idx, width);
+  const { x, y } = coord;
   const px = (x - 1) * cellPx;
-  const py = (y - 1) * cellPx;
+  const py = (height - y) * cellPx;
   const inset = cellPx >= 3 ? 1 : 0;
   const side = Math.max(1, cellPx - inset * 2);
   ctx.fillStyle = color;
@@ -115,7 +111,7 @@ function drawCanvas(opts: {
   gridSize: GridCoord;
   cellPx: number;
   colors: ThemeColors;
-  filled: Set<number>;
+  filled: Set<string>;
 }) {
   const { canvas, gridSize, cellPx, colors, filled } = opts;
   const { x: w, y: h } = gridSize;
@@ -149,8 +145,11 @@ function drawCanvas(opts: {
   ctx.lineTo(wPx, hPx - 0.5);
   ctx.stroke();
 
-  for (const idx of filled) {
-    paintCell(ctx, idx, w, cellPx, colors.fg);
+  for (const key of filled) {
+    const coord = keyToCoord(key);
+    if (!coord) continue;
+    if (coord.x < 1 || coord.x > w || coord.y < 1 || coord.y > h) continue;
+    paintCell(ctx, coord, h, cellPx, colors.fg);
   }
 }
 
@@ -158,7 +157,7 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
   function StaticGridCanvas(_, ref) {
     const [gridSize, setGridSize] = useState<GridCoord>(DEFAULT_GRID);
     const [cellSize, setCellSize] = useState<string>(DEFAULT_CELL_SIZE);
-    const [filled, setFilled] = useState<Set<number>>(() => new Set());
+    const [filled, setFilled] = useState<Set<string>>(() => new Set());
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -178,7 +177,7 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
     }, [gridSize.x, gridSize.y, cellPx]);
 
     const repaintAll = useCallback(
-      (filledSet: Set<number>) => {
+      (filledSet: Set<string>) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -195,13 +194,13 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
 
     const toggleCell = useCallback(
       (x: number, y: number) => {
-        const idx = toCellIndex(x, y, gridSizeRef.current.x);
+        const key = coordKey(x, y);
         setFilled((prev) => {
           const next = new Set(prev);
-          if (next.has(idx)) {
-            next.delete(idx);
+          if (next.has(key)) {
+            next.delete(key);
           } else {
-            next.add(idx);
+            next.add(key);
           }
           filledRef.current = next;
           repaintAll(next);
@@ -220,7 +219,9 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
         const localX = event.clientX - rect.left;
         const localY = event.clientY - rect.top;
         const x = Math.floor(localX / cellPx) + 1;
-        const y = Math.floor(localY / cellPx) + 1;
+        const yTopIndex = Math.floor(localY / cellPx) + 1;
+        const yMax = gridSizeRef.current.y;
+        const y = yMax - (yTopIndex - 1);
 
         if (
           x < 1 ||
@@ -250,15 +251,15 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
         },
         getFilledCellsCoords: () => {
           const out: GridCoord[] = [];
-          const width = gridSizeRef.current.x;
-          for (const idx of filledRef.current) {
-            const { x, y } = cellIndexToCoord(idx, width);
-            out.push({ x, y });
+          for (const key of filledRef.current) {
+            const coord = keyToCoord(key);
+            if (!coord) continue;
+            out.push(coord);
           }
           return out;
         },
         applyFilledCells: (coords: GridCoord[]) => {
-          const next = normalizeFilledToIndexSet(coords, gridSizeRef.current);
+          const next = normalizeFilledToCoordSet(coords);
           filledRef.current = next;
           setFilled(next);
           repaintAll(next);
@@ -271,15 +272,9 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
           }
 
           const nextSize = { x: value.x, y: value.y };
-          const migrated = reindexFilledForResize(
-            filledRef.current,
-            gridSizeRef.current,
-            nextSize,
-          );
-          filledRef.current = migrated;
-          setFilled(migrated);
           setGridSize(nextSize);
           gridSizeRef.current = nextSize;
+          repaintAll(filledRef.current);
         },
       }),
       [repaintAll],
