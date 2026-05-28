@@ -1,7 +1,11 @@
 import { FinishReason, GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  MAX_GRID_CELLS,
+  PIXEL_AI_MAX_OUTPUT_TOKENS,
+} from "@/features/pixel-ai/lib/pixel-ai-config";
 
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
-//const DEFAULT_MODEL = "gemini-2.5-pro";
+//const DEFAULT_MODEL = "gemini-3.1-flash-lite";
+const DEFAULT_MODEL = "gemini-3.5-flash";
 
 const SYSTEM_INSTRUCTION = `Tu es un éditeur de dessin sur grille de pixels (style pixel art).
 
@@ -17,9 +21,11 @@ Règles strictes :
 - Format obligatoire : { "rows": [ ".....", ".....", ... ] }
 - "rows" est le dessin complet et définitif (il remplace entièrement le dessin précédent).
 - Ne renvoie aucun autre champ que "rows".
-- Tu peux renvoyer une grille plus grande que ce que tu reçois, mais seulement si c'est utile.
+- Renvoie une grille de la même taille que celle que tu reçois, sauf si tu as besoin d'agrandir pour bien répondre à la requête.
 - Utilise uniquement '.' et '#' dans les chaînes.
 - Si tu as le choix, dessine de manière centrée dans la grille.
+- Ne dépasse pas la limite de pixels : ${MAX_GRID_CELLS}, à moins qu'on ne te le demande explicitement.
+- Si tu vois que la réponse va dépasser pas la limite de tokens ${PIXEL_AI_MAX_OUTPUT_TOKENS / 2 /* on s'accorde une marge de sécurité */}, envoie une réponse plus petite que ce que l'utilisateur attend. 
 
 Si tu ne comprends pas la demande (trop vague, hors sujet, incohérente) :
 - Renvoie le même dessin que dans rows (entrée), sans modification.
@@ -211,7 +217,7 @@ export async function geminiPixelGridStateJson(
     systemInstruction: SYSTEM_INSTRUCTION,
     generationConfig: {
       temperature: 0.25,
-      maxOutputTokens: 8192,
+      maxOutputTokens: PIXEL_AI_MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
     },
   });
@@ -265,6 +271,6 @@ export async function geminiPixelGridStateJson(
       "L'IA n'a renvoyé aucun dessin. Reformulez votre demande et réessayez.",
     );
   }
-
+  devLog("[gemini-pixel-grid] response:", text);
   return text;
 }

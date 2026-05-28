@@ -12,8 +12,10 @@ import {
 } from "react";
 
 import {
-  type GridCoord,
-} from "@/features/pixel-ai/lib/grid-coords";
+  PIXEL_AI_DEFAULT_CELL_SIZE,
+  PIXEL_AI_DEFAULT_GRID_SIZE,
+} from "@/features/pixel-ai/lib/pixel-ai-config";
+import { type GridCoord } from "@/features/pixel-ai/lib/grid-coords";
 
 export type StaticGridHandle = {
   getFilledCellsCoords: () => GridCoord[];
@@ -29,12 +31,10 @@ type ThemeColors = {
   border: string;
 };
 
-const DEFAULT_GRID = { x: 50, y: 30 };
-const DEFAULT_CELL_SIZE = "20px";
-
 function parseCellPx(cellSize: string): number {
   const n = Number.parseInt(cellSize, 10);
-  return Number.isFinite(n) && n > 0 ? n : 20;
+  const fallback = Number.parseInt(PIXEL_AI_DEFAULT_CELL_SIZE, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 function readThemeColors(): ThemeColors {
@@ -93,13 +93,12 @@ function setupCanvas(
 function paintCell(
   ctx: CanvasRenderingContext2D,
   coord: GridCoord,
-  height: number,
   cellPx: number,
   color: string,
 ) {
   const { x, y } = coord;
   const px = (x - 1) * cellPx;
-  const py = (height - y) * cellPx;
+  const py = (y - 1) * cellPx;
   const inset = cellPx >= 3 ? 1 : 0;
   const side = Math.max(1, cellPx - inset * 2);
   ctx.fillStyle = color;
@@ -149,14 +148,14 @@ function drawCanvas(opts: {
     const coord = keyToCoord(key);
     if (!coord) continue;
     if (coord.x < 1 || coord.x > w || coord.y < 1 || coord.y > h) continue;
-    paintCell(ctx, coord, h, cellPx, colors.fg);
+    paintCell(ctx, coord, cellPx, colors.fg);
   }
 }
 
 export const StaticGridCanvas = forwardRef<StaticGridHandle>(
   function StaticGridCanvas(_, ref) {
-    const [gridSize, setGridSize] = useState<GridCoord>(DEFAULT_GRID);
-    const [cellSize, setCellSize] = useState<string>(DEFAULT_CELL_SIZE);
+    const [gridSize, setGridSize] = useState<GridCoord>(PIXEL_AI_DEFAULT_GRID_SIZE);
+    const [cellSize, setCellSize] = useState<string>(PIXEL_AI_DEFAULT_CELL_SIZE);
     const [filled, setFilled] = useState<Set<string>>(() => new Set());
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -219,9 +218,7 @@ export const StaticGridCanvas = forwardRef<StaticGridHandle>(
         const localX = event.clientX - rect.left;
         const localY = event.clientY - rect.top;
         const x = Math.floor(localX / cellPx) + 1;
-        const yTopIndex = Math.floor(localY / cellPx) + 1;
-        const yMax = gridSizeRef.current.y;
-        const y = yMax - (yTopIndex - 1);
+        const y = Math.floor(localY / cellPx) + 1;
 
         if (
           x < 1 ||

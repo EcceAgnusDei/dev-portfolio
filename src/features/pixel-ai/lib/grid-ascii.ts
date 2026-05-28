@@ -37,7 +37,8 @@ export function pixelsToAsciiRows(
 ): string[] {
   const filled = new Set(pixels.map(coordKey));
   const rows: string[] = [];
-  for (let y = 1; y <= gridSize.y; y++) {
+  for (let rowIndex = 0; rowIndex < gridSize.y; rowIndex++) {
+    const y = rowIndex + 1;
     let row = "";
     for (let x = 1; x <= gridSize.x; x++) {
       row += filled.has(`${x},${y}`) ? ASCII_FILLED : ASCII_EMPTY;

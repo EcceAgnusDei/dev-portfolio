@@ -1,5 +1,5 @@
 import type { GridCoord } from "@/features/pixel-ai/lib/grid-coords";
-import { MAX_GRID_CELLS } from "@/features/pixel-ai/lib/grid-limits";
+import { MAX_GRID_CELLS } from "@/features/pixel-ai/lib/pixel-ai-config";
 
 export const GRID_PATTERN_MARGIN = 10;
 

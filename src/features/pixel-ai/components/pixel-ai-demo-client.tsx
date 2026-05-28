@@ -24,7 +24,7 @@ import {
 } from "@/features/pixel-ai/components/static-grid-canvas";
 import { PixelGridToolbar } from "@/features/pixel-ai/components/pixel-grid-toolbar";
 import { loadPixelsOntoGrid } from "@/features/pixel-ai/lib/apply-grid-snapshot";
-import { MAX_GRID_CELLS } from "@/features/pixel-ai/lib/grid-limits";
+import { MAX_GRID_CELLS } from "@/features/pixel-ai/lib/pixel-ai-config";
 import {
   deletePixelDrawing,
   getPixelDrawing,

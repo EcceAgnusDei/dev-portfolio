@@ -155,11 +155,6 @@ export function snapshotGridAsPixelDrawing(
   };
 }
 
-export const DEFAULT_NEW_DRAWING_GRID_SIZE = { x: 50, y: 30 };
-export const DEFAULT_NEW_DRAWING_CELL_SIZE = "20px";
-
 export function resetGridToNewDrawing(grid: GridStateSource): void {
-  grid.resize(DEFAULT_NEW_DRAWING_GRID_SIZE);
   grid.applyFilledCells([]);
-  grid.resize(DEFAULT_NEW_DRAWING_CELL_SIZE);
 }
