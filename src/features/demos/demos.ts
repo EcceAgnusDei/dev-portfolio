@@ -15,6 +15,11 @@ export const demos = demoSchema.array().parse([
     description: "Faites du dessin pixel par pixel en colaborant avec l'IA.",
   },
   {
+    slug: "vector-ai",
+    title: "Vector AI",
+    description: "Dessiner en vecteur avec l’IA.",
+  },
+  {
     slug: "example-sdk",
     title: "Exemple SDK",
     description:
