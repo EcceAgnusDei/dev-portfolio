@@ -1,5 +1,6 @@
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
-import { ShapeView } from "@/features/vector-ai/lib/render/shape-view";
+import { viewBoxToAttr } from "@/features/vector-ai/lib/view/shape-presentation";
+import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 import { cn } from "@/lib/utils";
 
 export type VectorCanvasProps = {
@@ -8,10 +9,6 @@ export type VectorCanvasProps = {
   className?: string;
   "aria-label"?: string;
 };
-
-function viewBoxAttr(viewBox: VectorDoc["viewBox"]): string {
-  return `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`;
-}
 
 export function VectorCanvas({
   doc,
@@ -24,7 +21,7 @@ export function VectorCanvas({
 
   return (
     <svg
-      viewBox={viewBoxAttr(viewBox)}
+      viewBox={viewBoxToAttr(viewBox)}
       width="100%"
       height="100%"
       xmlns="http://www.w3.org/2000/svg"

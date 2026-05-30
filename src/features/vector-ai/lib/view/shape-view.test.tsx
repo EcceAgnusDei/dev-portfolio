@@ -6,7 +6,7 @@ import {
   makeLineShape,
   makeRectShape,
 } from "@/features/vector-ai/lib/editor/test-fixtures";
-import { ShapeView } from "@/features/vector-ai/lib/render/shape-view";
+import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 
 describe("ShapeView", () => {
   it("rend un rect aux coords transform sans groupe", () => {

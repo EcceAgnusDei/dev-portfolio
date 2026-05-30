@@ -8,7 +8,7 @@ import {
   makeRectShape,
   makeSampleDoc,
 } from "@/features/vector-ai/lib/editor/test-fixtures";
-import { VectorCanvas } from "@/features/vector-ai/lib/render/vector-canvas";
+import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
 
 describe("VectorCanvas", () => {
   it("rend le viewBox et les calques", () => {

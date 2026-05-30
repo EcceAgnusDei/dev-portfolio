@@ -10,7 +10,7 @@ import {
   makeEditorWithSampleDoc,
   makeRectShape,
 } from "@/features/vector-ai/lib/editor/test-fixtures";
-import { VectorCanvas } from "@/features/vector-ai/lib/render/vector-canvas";
+import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
 
 export function VectorAiDemoClient() {
   const [state, dispatch] = useReducer(editorReducer, null, makeEditorWithSampleDoc);
