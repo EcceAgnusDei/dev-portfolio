@@ -19,3 +19,6 @@ export { presentationToXml } from "@/features/vector-ai/lib/view/presentation-to
 export { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 export { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 export { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
+export { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
+export { screenToWorld } from "@/features/vector-ai/lib/editor/pointer/screen-to-world";
+export { useVectorPointer } from "@/features/vector-ai/lib/editor/pointer/use-vector-pointer";

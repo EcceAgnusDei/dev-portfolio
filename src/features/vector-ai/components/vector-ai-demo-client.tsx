@@ -3,14 +3,17 @@
 import { useReducer } from "react";
 
 import { Button } from "@/components/ui/button";
-import { createShapeId } from "@/features/vector-ai/lib/document/schema";
+import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { editorReducer } from "@/features/vector-ai/lib/editor/reducer";
 import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/selectors";
-import {
-  makeEditorWithSampleDoc,
-  makeRectShape,
-} from "@/features/vector-ai/lib/editor/test-fixtures";
-import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
+import type { EditorTool } from "@/features/vector-ai/lib/editor/state";
+import { makeEditorWithSampleDoc } from "@/features/vector-ai/lib/editor/test-fixtures";
+import { cn } from "@/lib/utils";
+
+const TOOLS: { id: EditorTool; label: string }[] = [
+  { id: "select", label: "Sélection" },
+  { id: "rect", label: "Rectangle" },
+];
 
 export function VectorAiDemoClient() {
   const [state, dispatch] = useReducer(editorReducer, null, makeEditorWithSampleDoc);
@@ -18,6 +21,17 @@ export function VectorAiDemoClient() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
+        {TOOLS.map((tool) => (
+          <Button
+            key={tool.id}
+            type="button"
+            variant={state.tool === tool.id ? "default" : "outline"}
+            size="sm"
+            onClick={() => dispatch({ type: "TOOL_SET", tool: tool.id })}
+          >
+            {tool.label}
+          </Button>
+        ))}
         <Button
           type="button"
           variant="outline"
@@ -36,45 +50,20 @@ export function VectorAiDemoClient() {
         >
           Rétablir
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            dispatch({
-              type: "SHAPE_ADD",
-              shape: makeRectShape({
-                id: createShapeId(),
-                transform: {
-                  x: 100 + Math.random() * 200,
-                  y: 100 + Math.random() * 150,
-                },
-              }),
-            })
-          }
-        >
-          Ajouter un rectangle
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => dispatch({ type: "SELECTION_SET", ids: ["rect-1"] })}
-        >
-          Sélectionner rect-1
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => dispatch({ type: "SELECTION_SET", ids: [] })}
-        >
-          Désélectionner
-        </Button>
       </div>
       <div className="aspect-[4/3] w-full max-w-3xl">
-        <VectorCanvas doc={state.doc} selectedIds={state.selection.ids} />
+        <VectorCanvasInteractive state={state} dispatch={dispatch} />
       </div>
+      <p
+        className={cn(
+          "text-muted-foreground text-sm",
+          state.selection.ids.length === 0 && "opacity-80",
+        )}
+      >
+        {state.selection.ids.length > 0
+          ? `Sélection : ${state.selection.ids.join(", ")}`
+          : "Aucune sélection"}
+      </p>
     </div>
   );
 }

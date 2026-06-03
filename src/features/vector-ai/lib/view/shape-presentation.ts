@@ -7,9 +7,12 @@ import {
 
 export type SvgPrimitiveTag = "rect" | "circle" | "line";
 
-export type ShapePresentation = {
+export type ShapeLayer = {
   tag: SvgPrimitiveTag;
   attrs: Record<string, string | number>;
+};
+
+export type ShapePresentation = ShapeLayer & {
   groupTransform?: string;
 };
 

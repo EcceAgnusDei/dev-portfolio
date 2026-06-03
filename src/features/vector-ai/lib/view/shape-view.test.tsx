@@ -37,23 +37,27 @@ describe("ShapeView", () => {
 
   it("rend un circle centré sur transform.x/y", () => {
     const markup = renderToStaticMarkup(
-      <ShapeView shape={makeCircleShape()} />,
+      <ShapeView shape={makeCircleShape()} onPointerDown={() => {}} />,
     );
 
-    expect(markup).toMatch(/^<circle\b/);
+    expect(markup).toMatch(/^<g\b/);
     expect(markup).toContain('cx="200"');
     expect(markup).toContain('cy="120"');
+    expect(markup).toContain('r="50"'); //cercle de hit invisible
     expect(markup).toContain('r="40"');
   });
 
   it("rend une line avec points absolus", () => {
-    const markup = renderToStaticMarkup(<ShapeView shape={makeLineShape()} />);
+    const markup = renderToStaticMarkup(
+      <ShapeView shape={makeLineShape()} onPointerDown={() => {}} />,
+    );
 
-    expect(markup).toMatch(/^<line\b/);
+    expect(markup).toMatch(/^<g\b/);
     expect(markup).toContain('x1="80"');
     expect(markup).toContain('y1="280"');
     expect(markup).toContain('x2="320"');
     expect(markup).toContain('y2="320"');
+    expect(markup.match(/<line\b/g)?.length).toBe(2); //2 lignes: la visible et la ligne de hit
   });
 
   it("convertit une line en coords locales dans un groupe transformé", () => {
@@ -62,12 +66,13 @@ describe("ShapeView", () => {
         shape={makeLineShape({
           transform: { x: 80, y: 280, r: 15 },
         })}
+        onPointerDown={() => {}}
       />,
     );
 
     expect(markup).toMatch(/^<g\b/);
     expect(markup).toContain('transform="translate(80 280) rotate(15)"');
-    expect(markup).toContain("<line");
+    expect(markup.match(/<line\b/g)?.length).toBe(2);
     expect(markup).toContain('x1="0"');
     expect(markup).toContain('y1="0"');
     expect(markup).toContain('x2="240"');
