@@ -5,8 +5,8 @@ import { useRef } from "react";
 import type {
   EditorAction,
   EditorState,
-} from "@/features/vector-ai/lib/editor/state";
-import { useVectorPointer } from "@/features/vector-ai/lib/editor/pointer/use-vector-pointer";
+} from "@/features/vector-ai/lib/editor/core/state";
+import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ export function VectorCanvasInteractive({
   className,
 }: VectorCanvasInteractiveProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const pointer = useVectorPointer({ state, dispatch, svgRef });
+  const pointer = useVectorInteraction({ state, dispatch, svgRef });
 
   return (
     <VectorCanvas
@@ -32,6 +32,8 @@ export function VectorCanvasInteractive({
       className={cn(className)}
       shapePointerEvents={pointer.shapePointerEvents}
       rectPreview={pointer.rectPreview}
+      circlePreview={pointer.circlePreview}
+      linePreview={pointer.linePreview}
       onPointerDown={pointer.onSvgPointerDown}
       onPointerMove={pointer.onSvgPointerMove}
       onPointerUp={pointer.onSvgPointerUp}

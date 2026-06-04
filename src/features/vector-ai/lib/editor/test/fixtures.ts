@@ -5,7 +5,7 @@ import type {
   RectShape,
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
-import { createInitialEditorState } from "@/features/vector-ai/lib/editor/state";
+import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 
 export function makeRectShape(overrides?: Partial<RectShape>): RectShape {
   const base: RectShape = {

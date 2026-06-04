@@ -5,7 +5,10 @@ import type {
   Shape,
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
-import type { RectPreview } from "@/features/vector-ai/lib/editor/pointer/pointer-session";
+import { circlePreviewFromAnchorAndPoint } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
+import type { LinePreview } from "@/features/vector-ai/lib/editor/geometry/line-preview";
+import type { RectPreview } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
 
 type Point = { x: number; y: number };
 
@@ -29,6 +32,82 @@ export function clampPointToViewBox(point: Point, viewBox: ViewBox): Point {
     x: clampInRange(point.x, minX, maxX),
     y: clampInRange(point.y, minY, maxY),
   };
+}
+
+function circleFitsViewBox(
+  cx: number,
+  cy: number,
+  r: number,
+  viewBox: ViewBox,
+): boolean {
+  if (r <= 0) return true;
+  const { minX, minY, maxX, maxY } = viewBoxEdges(viewBox);
+  return cx - r >= minX && cx + r <= maxX && cy - r >= minY && cy + r <= maxY;
+}
+
+export function clampCirclePreviewFromAnchor(
+  anchor: Point,
+  current: Point,
+  viewBox: ViewBox,
+): CirclePreview {
+  const target = clampPointToViewBox(current, viewBox);
+  const dx = target.x - anchor.x;
+  const dy = target.y - anchor.y;
+
+  if (dx === 0 && dy === 0) {
+    return {
+      cx: anchor.x,
+      cy: anchor.y,
+      r: 0,
+      anchorX: anchor.x,
+      anchorY: anchor.y,
+    };
+  }
+
+  const full = circlePreviewFromAnchorAndPoint(anchor, target);
+  if (circleFitsViewBox(full.cx, full.cy, full.r, viewBox)) {
+    return full;
+  }
+
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 32; i++) {
+    const mid = (lo + hi) / 2;
+    const point = { x: anchor.x + mid * dx, y: anchor.y + mid * dy };
+    const { cx, cy, r } = circlePreviewFromAnchorAndPoint(anchor, point);
+    if (circleFitsViewBox(cx, cy, r, viewBox)) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  const point = { x: anchor.x + lo * dx, y: anchor.y + lo * dy };
+  return circlePreviewFromAnchorAndPoint(anchor, point);
+}
+
+export function clampCirclePreviewToViewBox(
+  preview: CirclePreview,
+  viewBox: ViewBox,
+): CirclePreview {
+  const opposite = {
+    x: 2 * preview.cx - preview.anchorX,
+    y: 2 * preview.cy - preview.anchorY,
+  };
+  return clampCirclePreviewFromAnchor(
+    { x: preview.anchorX, y: preview.anchorY },
+    opposite,
+    viewBox,
+  );
+}
+
+export function clampLinePreviewToViewBox(
+  preview: LinePreview,
+  viewBox: ViewBox,
+): LinePreview {
+  const a = clampPointToViewBox({ x: preview.x1, y: preview.y1 }, viewBox);
+  const b = clampPointToViewBox({ x: preview.x2, y: preview.y2 }, viewBox);
+  return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
 }
 
 export function clampRectPreviewToViewBox(

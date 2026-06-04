@@ -1,4 +1,4 @@
-import type { WorldPoint } from "@/features/vector-ai/lib/editor/pointer/pointer-session";
+import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 
 export function screenToWorld(
   svg: SVGSVGElement,

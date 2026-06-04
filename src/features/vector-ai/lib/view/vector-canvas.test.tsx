@@ -7,7 +7,7 @@ import {
   makeLineShape,
   makeRectShape,
   makeSampleDoc,
-} from "@/features/vector-ai/lib/editor/test-fixtures";
+} from "@/features/vector-ai/lib/editor/test/fixtures";
 import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
 
 describe("VectorCanvas", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { applyShapePatch } from "@/features/vector-ai/lib/editor/shape-patch";
-import { makeRectShape } from "@/features/vector-ai/lib/editor/test-fixtures";
+import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
+import { makeRectShape } from "@/features/vector-ai/lib/editor/test/fixtures";
 
 describe("applyShapePatch", () => {
   it("fusionne transform partiellement", () => {

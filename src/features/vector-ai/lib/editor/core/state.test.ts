@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { createEmptyDoc } from "@/features/vector-ai/lib/document/schema";
-import { createInitialEditorState } from "@/features/vector-ai/lib/editor/state";
-import { makeDocWithRect } from "@/features/vector-ai/lib/editor/test-fixtures";
+import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
+import { makeDocWithRect } from "@/features/vector-ai/lib/editor/test/fixtures";
 
 describe("createInitialEditorState", () => {
   it("initialise un document vide par défaut", () => {

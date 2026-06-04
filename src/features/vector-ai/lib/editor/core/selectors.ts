@@ -1,5 +1,5 @@
 import type { Shape, VectorDoc } from "@/features/vector-ai/lib/document/types";
-import type { EditorState } from "@/features/vector-ai/lib/editor/state";
+import type { EditorState } from "@/features/vector-ai/lib/editor/core/state";
 
 export function getShapeById(doc: VectorDoc, id: string): Shape | undefined {
   return doc.shapes.find((s) => s.id === id);

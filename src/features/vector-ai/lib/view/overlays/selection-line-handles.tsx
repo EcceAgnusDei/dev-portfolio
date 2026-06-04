@@ -4,7 +4,7 @@ import type { LineShape, VectorDoc } from "@/features/vector-ai/lib/document/typ
 import {
   lineEndWorldPoint,
   type LineEnd,
-} from "@/features/vector-ai/lib/editor/pointer/pointer-session";
+} from "@/features/vector-ai/lib/editor/session/types";
 import { VECTOR_AI_LINE_HANDLE_RADIUS } from "@/features/vector-ai/lib/vector-ai-config";
 
 export type SelectionLineHandlesProps = {

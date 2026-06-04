@@ -1,9 +1,7 @@
 import type { LineShape, Transform } from "@/features/vector-ai/lib/document/types";
+import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 
-export type WorldPoint = {
-  x: number;
-  y: number;
-};
+export type { WorldPoint };
 
 export type LineEnd = "start" | "end";
 
@@ -42,25 +40,23 @@ export type PointerSession =
       pointerId: number;
       startWorld: WorldPoint;
       currentWorld: WorldPoint;
+    }
+  | {
+      kind: "create-circle";
+      pointerId: number;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
+    }
+  | {
+      kind: "create-line";
+      pointerId: number;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
     };
 
 export const IDLE_POINTER_SESSION: PointerSession = { kind: "idle" };
 
-export type RectPreview = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-};
-
-export function rectPreviewFromSession(
-  session: Extract<PointerSession, { kind: "create-rect" }>,
-): RectPreview {
-  const { startWorld, currentWorld } = session;
-  return {
-    x: Math.min(startWorld.x, currentWorld.x),
-    y: Math.min(startWorld.y, currentWorld.y),
-    w: Math.abs(currentWorld.x - startWorld.x),
-    h: Math.abs(currentWorld.y - startWorld.y),
-  };
-}
+export type CreateDragSession = Extract<
+  PointerSession,
+  { kind: "create-rect" | "create-circle" | "create-line" }
+>;

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { docWithPointerPreview } from "@/features/vector-ai/lib/editor/pointer/doc-with-pointer-preview";
+import { docWithPointerPreview } from "@/features/vector-ai/lib/editor/preview/doc";
 import {
   makeCircleShape,
   makeDocWithRect,
   makeLineShape,
   makeRectShape,
-} from "@/features/vector-ai/lib/editor/test-fixtures";
+} from "@/features/vector-ai/lib/editor/test/fixtures";
 
 describe("docWithPointerPreview", () => {
   it("ne modifie pas le doc en idle ou create-rect", () => {

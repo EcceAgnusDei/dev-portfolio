@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { createInitialEditorState } from "@/features/vector-ai/lib/editor/state";
+import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import {
   canRedo,
   canUndo,
   getSelectedShapes,
   getShapeById,
   isShapeSelected,
-} from "@/features/vector-ai/lib/editor/selectors";
-import { makeEditorWithRect } from "@/features/vector-ai/lib/editor/test-fixtures";
+} from "@/features/vector-ai/lib/editor/core/selectors";
+import { makeEditorWithRect } from "@/features/vector-ai/lib/editor/test/fixtures";
 
 describe("selectors", () => {
   it("getShapeById trouve une forme", () => {

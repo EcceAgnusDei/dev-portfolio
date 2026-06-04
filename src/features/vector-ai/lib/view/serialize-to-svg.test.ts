@@ -6,7 +6,7 @@ import {
   makeLineShape,
   makeRectShape,
   makeSampleDoc,
-} from "@/features/vector-ai/lib/editor/test-fixtures";
+} from "@/features/vector-ai/lib/editor/test/fixtures";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 
 describe("serializeToSvg", () => {

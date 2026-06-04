@@ -1,5 +1,5 @@
 import type { Shape } from "@/features/vector-ai/lib/document/types";
-import type { ShapePatch } from "@/features/vector-ai/lib/editor/state";
+import type { ShapePatch } from "@/features/vector-ai/lib/editor/core/state";
 
 export function applyShapePatch(shape: Shape, patch: ShapePatch): Shape {
   const next = {

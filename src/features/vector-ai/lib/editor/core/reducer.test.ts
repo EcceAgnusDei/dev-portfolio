@@ -2,27 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { createEmptyDoc } from "@/features/vector-ai/lib/document/schema";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
-import { editorReducer } from "@/features/vector-ai/lib/editor/reducer";
-import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/selectors";
-import { createInitialEditorState } from "@/features/vector-ai/lib/editor/state";
+import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
+import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import {
   makeDocWithRect,
   makeEditorWithRect,
   makeRectShape,
-} from "@/features/vector-ai/lib/editor/test-fixtures";
+} from "@/features/vector-ai/lib/editor/test/fixtures";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";
 
 describe("editorReducer", () => {
-  it("SHAPE_ADD ajoute une forme et enregistre l'historique", () => {
-    const state = createInitialEditorState();
-    const shape = makeRectShape({ id: "new" });
-    const next = editorReducer(state, { type: "SHAPE_ADD", shape });
-    expect(next.doc.shapes).toHaveLength(1);
-    expect(next.doc.shapes[0]?.id).toBe("new");
-    expect(next.history.past).toHaveLength(1);
-    expect(next.history.future).toHaveLength(0);
-  });
-
   it("SHAPE_ADD ignore un id déjà présent", () => {
     const state = makeEditorWithRect("dup");
     const next = editorReducer(state, {
@@ -41,17 +30,6 @@ describe("editorReducer", () => {
     });
     expect(next.doc.shapes).toHaveLength(1);
     expect(next.history.past).toHaveLength(0);
-  });
-
-  it("SHAPE_UPDATE déplace une forme", () => {
-    const state = makeEditorWithRect("r");
-    const next = editorReducer(state, {
-      type: "SHAPE_UPDATE",
-      id: "r",
-      patch: { transform: { x: 500 } },
-    });
-    expect(next.doc.shapes[0]?.transform.x).toBe(500);
-    expect(next.history.past).toHaveLength(1);
   });
 
   it("SHAPE_UPDATE ignore une forme verrouillée", () => {
@@ -95,13 +73,6 @@ describe("editorReducer", () => {
     expect(next.history.past).toHaveLength(0);
   });
 
-  it("TOOL_SET change l'outil sans historique", () => {
-    const state = createInitialEditorState();
-    const next = editorReducer(state, { type: "TOOL_SET", tool: "rect" });
-    expect(next.tool).toBe("rect");
-    expect(next.history).toEqual(state.history);
-  });
-
   it("VIEWBOX_SET met à jour le viewBox", () => {
     const state = createInitialEditorState();
     const viewBox = { x: 1, y: 2, w: 400, h: 300 };
@@ -126,38 +97,6 @@ describe("editorReducer", () => {
     } as unknown as VectorDoc;
     const next = editorReducer(state, { type: "DOC_SET", doc: invalidDoc });
     expect(next).toBe(state);
-  });
-
-  it("UNDO puis REDO restaurent le document", () => {
-    let state = makeEditorWithRect("r");
-    state = editorReducer(state, {
-      type: "SHAPE_UPDATE",
-      id: "r",
-      patch: { transform: { x: 999 } },
-    });
-    expect(state.doc.shapes[0]?.transform.x).toBe(999);
-
-    const undone = editorReducer(state, { type: "UNDO" });
-    expect(undone.doc.shapes[0]?.transform.x).toBe(10);
-    expect(canUndo(undone)).toBe(false);
-    expect(canRedo(undone)).toBe(true);
-
-    const redone = editorReducer(undone, { type: "REDO" });
-    expect(redone.doc.shapes[0]?.transform.x).toBe(999);
-    expect(canRedo(redone)).toBe(false);
-  });
-
-  it("UNDO filtre la sélection vers des ids encore présents", () => {
-    let state = {
-      ...makeEditorWithRect("only"),
-      selection: { ids: ["only"] },
-    };
-    state = editorReducer(state, {
-      type: "SHAPE_ADD",
-      shape: makeRectShape({ id: "second", transform: { x: 0, y: 0 } }),
-    });
-    state = editorReducer(state, { type: "UNDO" });
-    expect(state.selection.ids).toEqual(["only"]);
   });
 
   it("refuse SHAPE_ADD au-delà de VECTOR_AI_MAX_SHAPES", () => {

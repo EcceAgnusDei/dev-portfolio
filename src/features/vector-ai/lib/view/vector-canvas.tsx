@@ -1,11 +1,13 @@
 import { forwardRef, type PointerEvent } from "react";
 
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
-import type { RectPreview } from "@/features/vector-ai/lib/editor/pointer/pointer-session";
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
+import type { LinePreview } from "@/features/vector-ai/lib/editor/geometry/line-preview";
+import type { RectPreview } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
+import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
+import { SelectionLineHandles } from "@/features/vector-ai/lib/view/overlays/selection-line-handles";
 import { viewBoxToAttr } from "@/features/vector-ai/lib/view/shape-presentation";
-import { SelectionLineHandles } from "@/features/vector-ai/lib/editor/pointer/selection-line-handles";
 import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
-import type { LineEnd } from "@/features/vector-ai/lib/editor/pointer/pointer-session";
 import { cn } from "@/lib/utils";
 
 export type VectorCanvasProps = {
@@ -25,6 +27,8 @@ export type VectorCanvasProps = {
   onPointerUp?: (event: PointerEvent<SVGSVGElement>) => void;
   onPointerCancel?: (event: PointerEvent<SVGSVGElement>) => void;
   rectPreview?: RectPreview | null;
+  circlePreview?: CirclePreview | null;
+  linePreview?: LinePreview | null;
 };
 
 export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
@@ -42,6 +46,8 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       onPointerUp,
       onPointerCancel,
       rectPreview,
+      circlePreview,
+      linePreview,
     },
     ref,
   ) {
@@ -98,6 +104,41 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
                 y={rectPreview.y}
                 width={rectPreview.w}
                 height={rectPreview.h}
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+                strokeDasharray="4 2"
+              />
+            ) : null}
+            {circlePreview && circlePreview.r > 0 ? (
+              <>
+                <circle
+                  cx={circlePreview.cx}
+                  cy={circlePreview.cy}
+                  r={circlePreview.r}
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  strokeDasharray="4 2"
+                />
+                <circle
+                  cx={circlePreview.anchorX}
+                  cy={circlePreview.anchorY}
+                  r={3}
+                  fill="var(--primary)"
+                  stroke="none"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </>
+            ) : null}
+            {linePreview ? (
+              <line
+                x1={linePreview.x1}
+                y1={linePreview.y1}
+                x2={linePreview.x2}
+                y2={linePreview.y2}
                 fill="none"
                 stroke="var(--primary)"
                 strokeWidth={1}

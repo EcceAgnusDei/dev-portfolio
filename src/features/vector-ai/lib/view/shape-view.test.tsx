@@ -5,7 +5,7 @@ import {
   makeCircleShape,
   makeLineShape,
   makeRectShape,
-} from "@/features/vector-ai/lib/editor/test-fixtures";
+} from "@/features/vector-ai/lib/editor/test/fixtures";
 import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 
 describe("ShapeView", () => {

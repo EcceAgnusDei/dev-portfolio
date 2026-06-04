@@ -4,19 +4,25 @@ import { useReducer } from "react";
 
 import { Button } from "@/components/ui/button";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
-import { editorReducer } from "@/features/vector-ai/lib/editor/reducer";
-import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/selectors";
-import type { EditorTool } from "@/features/vector-ai/lib/editor/state";
-import { makeEditorWithSampleDoc } from "@/features/vector-ai/lib/editor/test-fixtures";
+import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
+import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/core/selectors";
+import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
+import { makeEditorWithSampleDoc } from "@/features/vector-ai/lib/editor/test/fixtures";
 import { cn } from "@/lib/utils";
 
 const TOOLS: { id: EditorTool; label: string }[] = [
   { id: "select", label: "Sélection" },
   { id: "rect", label: "Rectangle" },
+  { id: "circle", label: "Cercle" },
+  { id: "line", label: "Ligne" },
 ];
 
 export function VectorAiDemoClient() {
-  const [state, dispatch] = useReducer(editorReducer, null, makeEditorWithSampleDoc);
+  const [state, dispatch] = useReducer(
+    editorReducer,
+    null,
+    makeEditorWithSampleDoc,
+  );
 
   return (
     <div className="flex flex-col gap-4">

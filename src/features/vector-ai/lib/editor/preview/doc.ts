@@ -4,9 +4,12 @@ import type {
   VectorDoc,
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
-import { clampPointToViewBox, clampShapeToViewBox } from "@/features/vector-ai/lib/editor/clamp-to-viewbox";
-import { applyShapePatch } from "@/features/vector-ai/lib/editor/shape-patch";
-import type { PointerSession } from "@/features/vector-ai/lib/editor/pointer/pointer-session";
+import {
+  clampPointToViewBox,
+  clampShapeToViewBox,
+} from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
+import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
+import type { PointerSession } from "@/features/vector-ai/lib/editor/session/types";
 
 function applyMovePreview(
   shape: Shape,
@@ -82,7 +85,14 @@ export function docWithPointerPreview(
   doc: VectorDoc,
   session: PointerSession,
 ): VectorDoc {
-  if (session.kind === "idle" || session.kind === "create-rect") return doc;
+  if (
+    session.kind === "idle" ||
+    session.kind === "create-rect" ||
+    session.kind === "create-circle" ||
+    session.kind === "create-line"
+  ) {
+    return doc;
+  }
 
   return {
     ...doc,
