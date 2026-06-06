@@ -1,12 +1,5 @@
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
-
-export type CirclePreview = {
-  cx: number;
-  cy: number;
-  r: number;
-  anchorX: number;
-  anchorY: number;
-};
 
 export function circlePreviewFromAnchorAndPoint(
   anchor: WorldPoint,

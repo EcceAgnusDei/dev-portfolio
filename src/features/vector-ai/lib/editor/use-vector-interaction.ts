@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -13,12 +14,14 @@ import {
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
-import type { CirclePreview } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
-import type { LinePreview } from "@/features/vector-ai/lib/editor/geometry/line-preview";
-import type { RectPreview } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
+import type { CubicPathPreview } from "@/features/vector-ai/lib/editor/preview/cubic";
+import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
+import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 import type {
   EditorAction,
   EditorState,
+  EditorTool,
 } from "@/features/vector-ai/lib/editor/core/state";
 import { isCanvasBackgroundTarget } from "@/features/vector-ai/lib/editor/pointer/canvas-target";
 import {
@@ -31,16 +34,21 @@ import {
   getDisplayDoc,
   getPreviews,
   handleBackgroundPointerDown,
+  handleCubicHandlePointerDown,
   handleLineEndPointerDown,
   handleShapePointerDown,
   shapePointerEventsForTool,
+  shouldCapturePointerForSession,
+  shouldCommitSessionOnPointerUp,
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
+import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
 import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
 import {
   IDLE_POINTER_SESSION,
   type PointerSession,
 } from "@/features/vector-ai/lib/editor/session/types";
+import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
 
 function worldFromEvent(
   svg: SVGSVGElement | null,
@@ -59,9 +67,11 @@ export type UseVectorInteractionParams = {
 export type UseVectorInteractionResult = {
   displayDoc: VectorDoc;
   session: PointerSession;
+  setTool: (tool: EditorTool) => void;
   rectPreview: RectPreview | null;
   circlePreview: CirclePreview | null;
   linePreview: LinePreview | null;
+  cubicPreview: CubicPathPreview | null;
   shapePointerEvents: "auto" | "none";
   onSvgPointerDown: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerMove: (event: ReactPointerEvent<SVGSVGElement>) => void;
@@ -71,6 +81,11 @@ export type UseVectorInteractionResult = {
   onLineEndPointerDown: (
     shapeId: string,
     end: LineEnd,
+    event: ReactPointerEvent,
+  ) => void;
+  onCubicHandlePointerDown: (
+    shapeId: string,
+    handle: CubicHandle,
     event: ReactPointerEvent,
   ) => void;
 };
@@ -91,6 +106,15 @@ export function useVectorInteraction({
     [state],
   );
 
+  const setTool = useCallback(
+    (tool: EditorTool) => {
+      if (tool === state.tool) return;
+      setSession((prev) => cancelCubicSessionForToolChange(prev, tool));
+      dispatch({ type: "TOOL_SET", tool });
+    },
+    [dispatch, state.tool],
+  );
+
   const dispatchActions = useCallback(
     (actions: EditorAction[]) => {
       for (const action of actions) {
@@ -104,6 +128,7 @@ export function useVectorInteraction({
     (event: ReactPointerEvent) => {
       const current = sessionRef.current;
       if (current.kind === "idle") return;
+      if (!shouldCommitSessionOnPointerUp(current)) return;
       if (current.pointerId !== event.pointerId) return;
 
       releaseSvgPointer(svgRef.current, event.pointerId);
@@ -156,6 +181,28 @@ export function useVectorInteraction({
     [interactionState, dispatchActions, svgRef],
   );
 
+  const onCubicHandlePointerDown = useCallback(
+    (shapeId: string, handle: CubicHandle, event: ReactPointerEvent) => {
+      const world = worldFromEvent(svgRef.current, event);
+      if (!world) return;
+
+      const result = handleCubicHandlePointerDown(
+        interactionState,
+        shapeId,
+        handle,
+        world,
+        event.pointerId,
+      );
+      if (!result) return;
+
+      event.stopPropagation();
+      captureSvgPointer(svgRef.current, event.pointerId);
+      dispatchActions(result.actions);
+      setSession(result.session);
+    },
+    [interactionState, dispatchActions, svgRef],
+  );
+
   const onSvgPointerDown = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
       if (!isCanvasBackgroundTarget(event.target, svgRef.current)) return;
@@ -167,9 +214,10 @@ export function useVectorInteraction({
         interactionState,
         world,
         event.pointerId,
+        sessionRef.current,
       );
 
-      if (result.session.kind !== "idle") {
+      if (shouldCapturePointerForSession(result.session)) {
         captureSvgPointer(svgRef.current, event.pointerId);
       }
 
@@ -210,6 +258,17 @@ export function useVectorInteraction({
     [svgRef],
   );
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (sessionRef.current.kind !== "create-cubic") return;
+      setSession(IDLE_POINTER_SESSION);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const displayDoc = useMemo(
     () => getDisplayDoc(interactionState, session),
     [interactionState, session],
@@ -223,9 +282,11 @@ export function useVectorInteraction({
   return {
     displayDoc,
     session,
+    setTool,
     rectPreview: previews.rect,
     circlePreview: previews.circle,
     linePreview: previews.line,
+    cubicPreview: previews.cubic,
     shapePointerEvents: shapePointerEventsForTool(state.tool),
     onSvgPointerDown,
     onSvgPointerMove,
@@ -233,5 +294,6 @@ export function useVectorInteraction({
     onSvgPointerCancel,
     onShapePointerDown,
     onLineEndPointerDown,
+    onCubicHandlePointerDown,
   };
 }

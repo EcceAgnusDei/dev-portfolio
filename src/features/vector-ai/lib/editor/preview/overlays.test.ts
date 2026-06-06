@@ -10,6 +10,7 @@ describe("getSessionPreviews", () => {
       rect: null,
       circle: null,
       line: null,
+      cubic: null,
     });
     expect(
       getSessionPreviews(
@@ -27,6 +28,7 @@ describe("getSessionPreviews", () => {
       rect: null,
       circle: null,
       line: null,
+      cubic: null,
     });
   });
 });

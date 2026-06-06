@@ -1,9 +1,13 @@
 import type { ViewBox } from "@/features/vector-ai/lib/document/types";
-import type { CirclePreview } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
-import type { LinePreview } from "@/features/vector-ai/lib/editor/geometry/line-preview";
-import type { RectPreview } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
-import { rectPreviewFromDrag } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
-import { linePreviewFromDrag } from "@/features/vector-ai/lib/editor/geometry/line-preview";
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
+import {
+  cubicPathPreviewFromPlacement,
+  type CubicPathPreview,
+} from "@/features/vector-ai/lib/editor/preview/cubic";
+import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
+import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
+import { linePreviewFromDrag } from "@/features/vector-ai/lib/editor/preview/line";
+import { rectPreviewFromDrag } from "@/features/vector-ai/lib/editor/preview/rect";
 import {
   clampCirclePreviewFromAnchor,
   clampLinePreviewToViewBox,
@@ -15,15 +19,21 @@ export type ToolPreviews = {
   rect: RectPreview | null;
   circle: CirclePreview | null;
   line: LinePreview | null;
+  cubic: CubicPathPreview | null;
 };
 
-export type { CirclePreview, LinePreview, RectPreview };
+export type { CirclePreview, CubicPathPreview, LinePreview, RectPreview };
 
 export function getSessionPreviews(
   session: PointerSession,
   viewBox: ViewBox,
 ): ToolPreviews {
-  const empty: ToolPreviews = { rect: null, circle: null, line: null };
+  const empty: ToolPreviews = {
+    rect: null,
+    circle: null,
+    line: null,
+    cubic: null,
+  };
 
   if (session.kind === "create-rect") {
     return {
@@ -51,6 +61,18 @@ export function getSessionPreviews(
       ...empty,
       line: clampLinePreviewToViewBox(
         linePreviewFromDrag(session.startWorld, session.currentWorld),
+        viewBox,
+      ),
+    };
+  }
+
+  if (session.kind === "create-cubic") {
+    return {
+      ...empty,
+      cubic: cubicPathPreviewFromPlacement(
+        session.placed,
+        session.hover,
+        session.step,
         viewBox,
       ),
     };

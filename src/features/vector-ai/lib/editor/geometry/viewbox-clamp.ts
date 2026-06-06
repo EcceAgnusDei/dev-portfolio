@@ -1,14 +1,22 @@
 import type {
   CircleShape,
+  CubicWorldPoints,
   LineShape,
+  PathShape,
   RectShape,
   Shape,
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
-import { circlePreviewFromAnchorAndPoint } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
-import type { CirclePreview } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
-import type { LinePreview } from "@/features/vector-ai/lib/editor/geometry/line-preview";
-import type { RectPreview } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
+import {
+  cubicWorldBounds,
+  cubicWorldPointsFromPathShape,
+  cubicWorldToLocalSegments,
+} from "@/features/vector-ai/lib/editor/geometry/path-segments";
+import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
+import { circlePreviewFromAnchorAndPoint } from "@/features/vector-ai/lib/editor/geometry/circle-from-anchor";
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
+import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
+import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 
 type Point = { x: number; y: number };
 
@@ -101,6 +109,38 @@ export function clampCirclePreviewToViewBox(
   );
 }
 
+export function clampPartialCubicWorld(
+  placed: Partial<CubicWorldPoints>,
+  viewBox: ViewBox,
+): Partial<CubicWorldPoints> {
+  return {
+    ...(placed.p0 != null
+      ? { p0: clampPointToViewBox(placed.p0, viewBox) }
+      : {}),
+    ...(placed.c1 != null
+      ? { c1: clampPointToViewBox(placed.c1, viewBox) }
+      : {}),
+    ...(placed.c2 != null
+      ? { c2: clampPointToViewBox(placed.c2, viewBox) }
+      : {}),
+    ...(placed.p3 != null
+      ? { p3: clampPointToViewBox(placed.p3, viewBox) }
+      : {}),
+  };
+}
+
+export function clampCubicWorldPoints(
+  points: CubicWorldPoints,
+  viewBox: ViewBox,
+): CubicWorldPoints {
+  return {
+    p0: clampPointToViewBox(points.p0, viewBox),
+    c1: clampPointToViewBox(points.c1, viewBox),
+    c2: clampPointToViewBox(points.c2, viewBox),
+    p3: clampPointToViewBox(points.p3, viewBox),
+  };
+}
+
 export function clampLinePreviewToViewBox(
   preview: LinePreview,
   viewBox: ViewBox,
@@ -151,6 +191,57 @@ function clampCircleShape(shape: CircleShape, viewBox: ViewBox): CircleShape {
   };
 }
 
+function translateCubicWorldPoints(
+  points: CubicWorldPoints,
+  dx: number,
+  dy: number,
+): CubicWorldPoints {
+  const shift = (point: WorldPoint): WorldPoint => ({
+    x: point.x + dx,
+    y: point.y + dy,
+  });
+  return {
+    p0: shift(points.p0),
+    c1: shift(points.c1),
+    c2: shift(points.c2),
+    p3: shift(points.p3),
+  };
+}
+
+function clampPathShape(shape: PathShape, viewBox: ViewBox): PathShape {
+  const world = cubicWorldPointsFromPathShape(shape);
+  if (!world) return shape;
+
+  const { minX, minY, maxX, maxY } = viewBoxEdges(viewBox);
+  const bounds = cubicWorldBounds(world);
+
+  let dx = 0;
+  let dy = 0;
+
+  if (bounds.maxX - bounds.minX > maxX - minX) {
+    dx = minX - bounds.minX;
+  } else if (bounds.minX < minX) {
+    dx = minX - bounds.minX;
+  } else if (bounds.maxX > maxX) {
+    dx = maxX - bounds.maxX;
+  }
+
+  if (bounds.maxY - bounds.minY > maxY - minY) {
+    dy = minY - bounds.minY;
+  } else if (bounds.minY < minY) {
+    dy = minY - bounds.minY;
+  } else if (bounds.maxY > maxY) {
+    dy = maxY - bounds.maxY;
+  }
+
+  const shifted = translateCubicWorldPoints(world, dx, dy);
+  return {
+    ...shape,
+    transform: { ...shape.transform, x: shifted.p0.x, y: shifted.p0.y },
+    segments: cubicWorldToLocalSegments(shifted),
+  };
+}
+
 function clampLineShape(shape: LineShape, viewBox: ViewBox): LineShape {
   const { minX, minY, maxX, maxY } = viewBoxEdges(viewBox);
   const lineMinX = Math.min(shape.transform.x, shape.x2);
@@ -192,5 +283,6 @@ function clampLineShape(shape: LineShape, viewBox: ViewBox): LineShape {
 export function clampShapeToViewBox(shape: Shape, viewBox: ViewBox): Shape {
   if (shape.type === "rect") return clampRectShape(shape, viewBox);
   if (shape.type === "circle") return clampCircleShape(shape, viewBox);
+  if (shape.type === "path") return clampPathShape(shape, viewBox);
   return clampLineShape(shape, viewBox);
 }

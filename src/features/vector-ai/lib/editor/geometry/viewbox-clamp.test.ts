@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { circlePreviewFromAnchorAndPoint } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
+import { circlePreviewFromAnchorAndPoint } from "@/features/vector-ai/lib/editor/geometry/circle-from-anchor";
 import {
   clampCirclePreviewFromAnchor,
   clampCirclePreviewToViewBox,

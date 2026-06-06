@@ -11,7 +11,7 @@ export function commitPointerSession(
   session: PointerSession,
   doc: VectorDoc,
 ): EditorAction[] {
-  if (session.kind === "move" || session.kind === "move-line-end") {
+  if (session.kind === "move" || session.kind === "move-line-end" || session.kind === "move-cubic-handle") {
     return commitSelectMove(
       session,
       getShapeById(doc, session.shapeId),

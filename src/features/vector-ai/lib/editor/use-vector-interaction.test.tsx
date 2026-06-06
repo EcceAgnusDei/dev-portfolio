@@ -1,10 +1,7 @@
 ﻿/**
  * @vitest-environment jsdom
  */
-import {
-  act,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { act, type PointerEvent as ReactPointerEvent } from "react";
 import {
   afterEach,
   beforeAll,
@@ -67,12 +64,18 @@ describe("useVectorInteraction (smoke React)", () => {
     });
     act(() => {
       interaction.onSvgPointerMove(
-        makePointerEvent({ clientX: 15, clientY: 25 }) as ReactPointerEvent<SVGSVGElement>,
+        makePointerEvent({
+          clientX: 15,
+          clientY: 25,
+        }) as ReactPointerEvent<SVGSVGElement>,
       );
     });
     act(() => {
       interaction.onSvgPointerUp(
-        makePointerEvent({ clientX: 15, clientY: 25 }) as ReactPointerEvent<SVGSVGElement>,
+        makePointerEvent({
+          clientX: 15,
+          clientY: 25,
+        }) as ReactPointerEvent<SVGSVGElement>,
       );
     });
 
@@ -87,7 +90,10 @@ describe("useVectorInteraction (smoke React)", () => {
 
   it("capture le pointeur SVG au début d'un drag", () => {
     const state = makeEditorWithRect("rect-1");
-    const { interaction, svgRef, unmount } = renderInteractionHook(state, dispatch);
+    const { interaction, svgRef, unmount } = renderInteractionHook(
+      state,
+      dispatch,
+    );
 
     act(() => {
       interaction.onShapePointerDown(
@@ -112,7 +118,10 @@ describe("useVectorInteraction (smoke React)", () => {
     });
     act(() => {
       interaction.onSvgPointerCancel(
-        makePointerEvent({ clientX: 10, clientY: 20 }) as ReactPointerEvent<SVGSVGElement>,
+        makePointerEvent({
+          clientX: 10,
+          clientY: 20,
+        }) as ReactPointerEvent<SVGSVGElement>,
       );
     });
 
@@ -159,12 +168,18 @@ describe("useVectorInteraction (smoke React)", () => {
     });
     act(() => {
       interaction.onSvgPointerMove(
-        makePointerEvent({ clientX: 50, clientY: 60 }) as ReactPointerEvent<SVGSVGElement>,
+        makePointerEvent({
+          clientX: 50,
+          clientY: 60,
+        }) as ReactPointerEvent<SVGSVGElement>,
       );
     });
     act(() => {
       interaction.onSvgPointerUp(
-        makePointerEvent({ clientX: 50, clientY: 60 }) as ReactPointerEvent<SVGSVGElement>,
+        makePointerEvent({
+          clientX: 50,
+          clientY: 60,
+        }) as ReactPointerEvent<SVGSVGElement>,
       );
     });
 

@@ -1,5 +1,6 @@
 import type {
   LineShape,
+  PathShape,
   Shape,
   VectorDoc,
   ViewBox,
@@ -8,6 +9,10 @@ import {
   clampPointToViewBox,
   clampShapeToViewBox,
 } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
+import {
+  cubicWorldPointsWithHandleAt,
+  pathShapeFromCubicWorldPoints,
+} from "@/features/vector-ai/lib/editor/geometry/path-segments";
 import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
 import type { PointerSession } from "@/features/vector-ai/lib/editor/session/types";
 
@@ -48,6 +53,21 @@ function applyMovePreview(
   );
 }
 
+function applyCubicHandlePreview(
+  shape: PathShape,
+  session: Extract<PointerSession, { kind: "move-cubic-handle" }>,
+  viewBox: ViewBox,
+): PathShape {
+  const point = clampPointToViewBox(session.currentWorld, viewBox);
+  const world = cubicWorldPointsWithHandleAt(
+    session.startPoints,
+    session.handle,
+    point,
+  );
+  const next = pathShapeFromCubicWorldPoints(shape, world);
+  return clampShapeToViewBox(next, viewBox) as PathShape;
+}
+
 function applyLineEndPreview(
   shape: LineShape,
   session: Extract<PointerSession, { kind: "move-line-end" }>,
@@ -69,11 +89,18 @@ function applyLineEndPreview(
 
 export function shapeAfterPointerSession(
   shape: Shape,
-  session: Extract<PointerSession, { kind: "move" | "move-line-end" }>,
+  session: Extract<
+    PointerSession,
+    { kind: "move" | "move-line-end" | "move-cubic-handle" }
+  >,
   viewBox: ViewBox,
 ): Shape {
   if (session.kind === "move") {
     return applyMovePreview(shape, session, viewBox);
+  }
+  if (session.kind === "move-cubic-handle") {
+    if (shape.type !== "path") return shape;
+    return applyCubicHandlePreview(shape, session, viewBox);
   }
   if (shape.type === "line") {
     return applyLineEndPreview(shape, session, viewBox);
@@ -89,7 +116,8 @@ export function docWithPointerPreview(
     session.kind === "idle" ||
     session.kind === "create-rect" ||
     session.kind === "create-circle" ||
-    session.kind === "create-line"
+    session.kind === "create-line" ||
+    session.kind === "create-cubic"
   ) {
     return doc;
   }
@@ -99,7 +127,7 @@ export function docWithPointerPreview(
     shapes: doc.shapes.map((shape) => {
       if (shape.id !== session.shapeId || shape.locked) return shape;
 
-      if (session.kind === "move" || session.kind === "move-line-end") {
+      if (session.kind === "move" || session.kind === "move-line-end" || session.kind === "move-cubic-handle") {
         return shapeAfterPointerSession(shape, session, doc.viewBox);
       }
 

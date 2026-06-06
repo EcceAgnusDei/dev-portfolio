@@ -1,10 +1,13 @@
 import { forwardRef, type PointerEvent } from "react";
 
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
-import type { CirclePreview } from "@/features/vector-ai/lib/editor/geometry/circle-preview";
-import type { LinePreview } from "@/features/vector-ai/lib/editor/geometry/line-preview";
-import type { RectPreview } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
+import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
+import type { CubicPathPreview } from "@/features/vector-ai/lib/editor/preview/cubic";
+import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
+import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
+import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
+import { SelectionCubicHandles } from "@/features/vector-ai/lib/view/overlays/selection-cubic-handles";
 import { SelectionLineHandles } from "@/features/vector-ai/lib/view/overlays/selection-line-handles";
 import { viewBoxToAttr } from "@/features/vector-ai/lib/view/shape-presentation";
 import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
@@ -22,6 +25,11 @@ export type VectorCanvasProps = {
     end: LineEnd,
     event: PointerEvent,
   ) => void;
+  onCubicHandlePointerDown?: (
+    shapeId: string,
+    handle: CubicHandle,
+    event: PointerEvent,
+  ) => void;
   onPointerDown?: (event: PointerEvent<SVGSVGElement>) => void;
   onPointerMove?: (event: PointerEvent<SVGSVGElement>) => void;
   onPointerUp?: (event: PointerEvent<SVGSVGElement>) => void;
@@ -29,6 +37,7 @@ export type VectorCanvasProps = {
   rectPreview?: RectPreview | null;
   circlePreview?: CirclePreview | null;
   linePreview?: LinePreview | null;
+  cubicPreview?: CubicPathPreview | null;
 };
 
 export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
@@ -41,6 +50,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       shapePointerEvents = "auto",
       onShapePointerDown,
       onLineEndPointerDown,
+      onCubicHandlePointerDown,
       onPointerDown,
       onPointerMove,
       onPointerUp,
@@ -48,6 +58,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       rectPreview,
       circlePreview,
       linePreview,
+      cubicPreview,
     },
     ref,
   ) {
@@ -146,12 +157,35 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
                 strokeDasharray="4 2"
               />
             ) : null}
+            {cubicPreview ? (
+              <g
+                transform={`translate(${cubicPreview.transform.x} ${cubicPreview.transform.y})`}
+              >
+                <path
+                  d={cubicPreview.d}
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  strokeDasharray="4 2"
+                />
+              </g>
+            ) : null}
           </g>
-          <g pointerEvents={onLineEndPointerDown ? "auto" : "none"}>
+          <g
+            pointerEvents={
+              onLineEndPointerDown || onCubicHandlePointerDown ? "auto" : "none"
+            }
+          >
             <SelectionLineHandles
               doc={doc}
               selectedIds={selectedIds}
               onLineEndPointerDown={onLineEndPointerDown}
+            />
+            <SelectionCubicHandles
+              doc={doc}
+              selectedIds={selectedIds}
+              onCubicHandlePointerDown={onCubicHandlePointerDown}
             />
           </g>
         </g>

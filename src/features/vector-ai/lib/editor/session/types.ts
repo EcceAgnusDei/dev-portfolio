@@ -1,7 +1,15 @@
-import type { LineShape, Transform } from "@/features/vector-ai/lib/document/types";
+import type {
+  CubicCreateStep,
+  CubicHandle,
+  CubicWorldPoints,
+  LineShape,
+  Transform,
+} from "@/features/vector-ai/lib/document/types";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 
 export type { WorldPoint };
+
+export type { CubicHandle };
 
 export type LineEnd = "start" | "end";
 
@@ -36,6 +44,15 @@ export type PointerSession =
       startY2: number;
     }
   | {
+      kind: "move-cubic-handle";
+      pointerId: number;
+      shapeId: string;
+      handle: CubicHandle;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
+      startPoints: CubicWorldPoints;
+    }
+  | {
       kind: "create-rect";
       pointerId: number;
       startWorld: WorldPoint;
@@ -52,6 +69,13 @@ export type PointerSession =
       pointerId: number;
       startWorld: WorldPoint;
       currentWorld: WorldPoint;
+    }
+  | {
+      kind: "create-cubic";
+      step: CubicCreateStep;
+      placed: Partial<CubicWorldPoints>;
+      hover: WorldPoint | null;
+      pointerId: number;
     };
 
 export const IDLE_POINTER_SESSION: PointerSession = { kind: "idle" };

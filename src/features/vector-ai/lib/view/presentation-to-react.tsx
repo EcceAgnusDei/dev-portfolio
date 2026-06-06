@@ -83,6 +83,22 @@ function hitLayerFromPresentation(
         },
       };
     }
+    case "path": {
+      const strokeWidth = Number(presentation.attrs.strokeWidth ?? 2);
+      const hitStroke = Math.max(
+        VECTOR_AI_HIT_LINE_STROKE_WIDTH,
+        strokeWidth + 8,
+      );
+      return {
+        tag: "path",
+        attrs: {
+          ...visible.attrs,
+          stroke: "transparent",
+          fill: "none",
+          strokeWidth: hitStroke,
+        },
+      };
+    }
     default:
       return null;
   }
@@ -115,7 +131,8 @@ export function presentationToReact(
   }
 
   const hitNode = layerToReact(hit, {
-    pointerEvents: hit.tag === "line" ? "stroke" : undefined,
+    pointerEvents:
+      hit.tag === "line" || hit.tag === "path" ? "stroke" : undefined,
     ...pointerTargetProps(onPointerDown),
   });
 

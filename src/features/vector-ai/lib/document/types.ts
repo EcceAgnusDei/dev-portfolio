@@ -1,3 +1,5 @@
+import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
+
 export type VectorDocVersion = 1;
 
 export type ViewBox = {
@@ -22,7 +24,7 @@ export type ShapeStyle = {
   opacity?: number;
 };
 
-export type ShapeType = "rect" | "circle" | "line";
+export type ShapeType = "rect" | "circle" | "line" | "path";
 
 export type ShapeBase = {
   id: string;
@@ -51,10 +53,48 @@ export type LineShape = ShapeBase & {
   y2: number;
 };
 
-export type Shape = RectShape | CircleShape | LineShape;
+export type PathShape = ShapeBase & {
+  type: "path";
+  segments: PathSegmentLocal[];
+};
+
+export type Shape = RectShape | CircleShape | LineShape | PathShape;
 
 export type VectorDoc = {
   version: VectorDocVersion;
   viewBox: ViewBox;
   shapes: Shape[];
 };
+
+export type CubicCreateStep = 1 | 2 | 3 | 4;
+
+export const CUBIC_CREATE_STEPS = [1, 2, 3, 4] as const satisfies readonly CubicCreateStep[];
+
+export type CubicHandle = "p0" | "c1" | "c2" | "p3";
+
+export type CubicWorldPoints = {
+  p0: WorldPoint;
+  c1: WorldPoint;
+  c2: WorldPoint;
+  p3: WorldPoint;
+};
+
+export type MoveSegmentLocal = {
+  t: "M";
+  x: number;
+  y: number;
+};
+
+export type CubicSegmentLocal = {
+  t: "C";
+  x: number;
+  y: number;
+  c1x: number;
+  c1y: number;
+  c2x: number;
+  c2y: number;
+};
+
+export type PathSegmentLocal = MoveSegmentLocal | CubicSegmentLocal;
+
+export type CubicMvpPathSegments = [MoveSegmentLocal, CubicSegmentLocal];

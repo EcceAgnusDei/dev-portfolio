@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import type {
   CircleShape,
+  CubicMvpPathSegments,
+  CubicSegmentLocal,
   LineShape,
+  MoveSegmentLocal,
+  PathShape,
   RectShape,
   Shape,
   ShapeStyle,
@@ -88,11 +92,49 @@ const lineShapeSchema = shapeBaseSchema.extend({
   y2: z.number().finite(),
 }) satisfies z.ZodType<LineShape>;
 
+const pathCoordSchema = z.number().finite();
+
+const moveSegmentSchema = z.object({
+  t: z.literal("M"),
+  x: pathCoordSchema,
+  y: pathCoordSchema,
+}) satisfies z.ZodType<MoveSegmentLocal>;
+
+const cubicSegmentSchema = z.object({
+  t: z.literal("C"),
+  x: pathCoordSchema,
+  y: pathCoordSchema,
+  c1x: pathCoordSchema,
+  c1y: pathCoordSchema,
+  c2x: pathCoordSchema,
+  c2y: pathCoordSchema,
+}) satisfies z.ZodType<CubicSegmentLocal>;
+
+const cubicMvpSegmentsSchema = z
+  .tuple([moveSegmentSchema, cubicSegmentSchema])
+  .refine(
+    ([move]) => move.x === 0 && move.y === 0,
+    "Le segment M d'une courbe cubique MVP doit être à l'origine locale (0, 0).",
+  ) satisfies z.ZodType<CubicMvpPathSegments>;
+
+const pathShapeSchema = shapeBaseSchema.extend({
+  type: z.literal("path"),
+  segments: cubicMvpSegmentsSchema,
+}) satisfies z.ZodType<PathShape>;
+
 export const shapeSchema = z.discriminatedUnion("type", [
   rectShapeSchema,
   circleShapeSchema,
   lineShapeSchema,
+  pathShapeSchema,
 ]) satisfies z.ZodType<Shape>;
+
+export {
+  cubicMvpSegmentsSchema,
+  cubicSegmentSchema,
+  moveSegmentSchema,
+  pathShapeSchema,
+};
 
 export const vectorDocSchema = z.object({
   version: z.literal(VECTOR_AI_DOC_VERSION),

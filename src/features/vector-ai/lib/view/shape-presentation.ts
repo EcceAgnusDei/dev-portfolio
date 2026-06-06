@@ -1,11 +1,12 @@
 import type { Shape, ViewBox } from "@/features/vector-ai/lib/document/types";
+import { segmentsToPathD } from "@/features/vector-ai/lib/view/segments-to-path-d";
 import { styleToSvgProps } from "@/features/vector-ai/lib/view/style-to-svg-props";
 import {
   buildSvgTransform,
   hasTransformExtras,
 } from "@/features/vector-ai/lib/view/transform-to-svg";
 
-export type SvgPrimitiveTag = "rect" | "circle" | "line";
+export type SvgPrimitiveTag = "rect" | "circle" | "line" | "path";
 
 export type ShapeLayer = {
   tag: SvgPrimitiveTag;
@@ -66,6 +67,15 @@ export function presentationFromShape(shape: Shape): ShapePresentation {
         groupTransform,
       };
     }
+    case "path":
+      return {
+        tag: "path",
+        attrs: {
+          d: segmentsToPathD(shape.segments),
+          ...style,
+        },
+        groupTransform: buildSvgTransform(shape.transform),
+      };
     default: {
       const _exhaustive: never = shape;
       return _exhaustive;

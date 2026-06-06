@@ -21,6 +21,7 @@ export {
   viewBoxToAttr,
   type ShapePresentation,
 } from "@/features/vector-ai/lib/view/shape-presentation";
+export { segmentsToPathD } from "@/features/vector-ai/lib/view/segments-to-path-d";
 export { presentationToXml } from "@/features/vector-ai/lib/view/presentation-to-xml";
 export { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 export { ShapeView } from "@/features/vector-ai/lib/view/shape-view";

@@ -45,13 +45,7 @@ describe("pointer handlers", () => {
     const interaction = interactionState(editor);
 
     expect(
-      handleLineEndPointerDown(
-        interaction,
-        "rect-1",
-        "end",
-        { x: 0, y: 0 },
-        1,
-      ),
+      handleLineEndPointerDown(interaction, "rect-1", "end", { x: 0, y: 0 }, 1),
     ).toBeNull();
   });
 

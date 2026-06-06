@@ -61,7 +61,7 @@ export function setupSvgRef(): RefObject<SVGSVGElement | null> {
 }
 
 export function renderInteractionHook(
-  state: EditorState,
+  initialState: EditorState,
   dispatch: (action: EditorAction) => void,
 ): RenderedInteractionHook {
   const svgRef = setupSvgRef();
@@ -69,9 +69,24 @@ export function renderInteractionHook(
   document.body.appendChild(container);
   const root = createRoot(container);
   let interaction: UseVectorInteractionResult | null = null;
+  let currentState = initialState;
+
+  const wrappedDispatch = (action: EditorAction) => {
+    if (action.type === "TOOL_SET") {
+      currentState = { ...currentState, tool: action.tool };
+    }
+    dispatch(action);
+    act(() => {
+      root.render(<HookHost />);
+    });
+  };
 
   function HookHost() {
-    interaction = useVectorInteraction({ state, dispatch, svgRef });
+    interaction = useVectorInteraction({
+      state: currentState,
+      dispatch: wrappedDispatch,
+      svgRef,
+    });
     return null;
   }
 
@@ -84,7 +99,12 @@ export function renderInteractionHook(
   }
 
   return {
-    interaction,
+    get interaction(): UseVectorInteractionResult {
+      if (interaction === null) {
+        throw new Error("Hook non initialisé.");
+      }
+      return interaction;
+    },
     svgRef,
     unmount() {
       act(() => {

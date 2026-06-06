@@ -1,8 +1,10 @@
+import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import type {
   EditorAction,
   EditorState,
+  EditorTool,
 } from "@/features/vector-ai/lib/editor/core/state";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
@@ -11,13 +13,16 @@ import {
   getDisplayDoc,
   getPreviews,
   handleBackgroundPointerDown,
+  handleCubicHandlePointerDown,
   handleLineEndPointerDown,
   handleShapePointerDown,
+  shouldCommitSessionOnPointerUp,
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import type { ToolPreviews } from "@/features/vector-ai/lib/editor/preview/overlays";
 import type { LineEnd, PointerSession } from "@/features/vector-ai/lib/editor/session/types";
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
+import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
 
 export type GestureStep =
   | { type: "background-down"; world: WorldPoint; pointerId?: number }
@@ -29,8 +34,18 @@ export type GestureStep =
       world: WorldPoint;
       pointerId?: number;
     }
+  | {
+      type: "cubic-handle-down";
+      shapeId: string;
+      handle: CubicHandle;
+      world: WorldPoint;
+      pointerId?: number;
+    }
   | { type: "move"; world: WorldPoint; pointerId?: number }
   | { type: "up"; pointerId?: number }
+  | { type: "tool-set"; tool: EditorTool }
+  | { type: "cancel-session" }
+  | { type: "pointer-cancel"; pointerId?: number }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -58,7 +73,12 @@ function applyActions(
 const DEFAULT_POINTER_ID = 1;
 
 function pointerIdFromStep(step: GestureStep): number {
-  if (step.type === "undo" || step.type === "redo") {
+  if (
+    step.type === "undo" ||
+    step.type === "redo" ||
+    step.type === "tool-set" ||
+    step.type === "cancel-session"
+  ) {
     return DEFAULT_POINTER_ID;
   }
   return step.pointerId ?? DEFAULT_POINTER_ID;
@@ -84,6 +104,7 @@ export function runGesture(
           interaction,
           step.world,
           pointerId,
+          session,
         );
         session = result.session;
         stepActions = result.actions;
@@ -116,12 +137,40 @@ export function runGesture(
         }
         break;
       }
+      case "cubic-handle-down": {
+        const result = handleCubicHandlePointerDown(
+          interaction,
+          step.shapeId,
+          step.handle,
+          step.world,
+          pointerId,
+        );
+        if (result) {
+          session = result.session;
+          stepActions = result.actions;
+        }
+        break;
+      }
       case "move":
         session = updateSessionPointerWorld(session, pointerId, step.world);
         break;
       case "up":
-        stepActions = commitSession(interaction, session);
+        if (shouldCommitSessionOnPointerUp(session)) {
+          stepActions = commitSession(interaction, session);
+          session = IDLE_POINTER_SESSION;
+        }
+        break;
+      case "tool-set":
+        session = cancelCubicSessionForToolChange(session, step.tool);
+        stepActions = [{ type: "TOOL_SET", tool: step.tool }];
+        break;
+      case "cancel-session":
         session = IDLE_POINTER_SESSION;
+        break;
+      case "pointer-cancel":
+        if (session.kind !== "idle" && session.pointerId === pointerId) {
+          session = IDLE_POINTER_SESSION;
+        }
         break;
       case "undo":
         stepActions = [{ type: "UNDO" }];

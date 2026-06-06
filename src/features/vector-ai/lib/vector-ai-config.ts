@@ -1,3 +1,5 @@
+import type { ShapeStyle } from "@/features/vector-ai/lib/document/types";
+
 export const VECTOR_AI_DOC_VERSION = 1 as const;
 
 export const VECTOR_AI_DEFAULT_VIEWBOX = {
@@ -17,3 +19,34 @@ export const VECTOR_AI_MAX_SHAPE_ID_LENGTH = 64;
 export const VECTOR_AI_HIT_LINE_STROKE_WIDTH = 16;
 export const VECTOR_AI_HIT_CIRCLE_PADDING = 10;
 export const VECTOR_AI_LINE_HANDLE_RADIUS = 10;
+
+export const VECTOR_AI_MIN_RECT_SIZE = 2;
+export const VECTOR_AI_MIN_CIRCLE_RADIUS = 1;
+export const VECTOR_AI_MIN_LINE_LENGTH = 2;
+
+export const VECTOR_AI_DEFAULT_RECT_STYLE: ShapeStyle = {
+  fill: "#000000",
+  stroke: "none",
+};
+
+export const VECTOR_AI_DEFAULT_CIRCLE_STYLE: ShapeStyle = {
+  fill: "none",
+  stroke: "#000000",
+  strokeWidth: 2,
+};
+
+export const VECTOR_AI_DEFAULT_LINE_STYLE: ShapeStyle = {
+  fill: "none",
+  stroke: "#000000",
+  strokeWidth: 2,
+};
+
+export const VECTOR_AI_MIN_CUBIC_POINT_DISTANCE = 2;
+export const VECTOR_AI_CUBIC_PATH_SEGMENT_COUNT_MVP = 2;
+export const VECTOR_AI_MAX_PATH_SEGMENTS = 32;
+
+export const VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE: ShapeStyle = {
+  fill: "none",
+  stroke: "#000000",
+  strokeWidth: 2,
+};

@@ -1,16 +1,51 @@
-import type { Shape } from "@/features/vector-ai/lib/document/types";
+import type { Shape, ShapeBase } from "@/features/vector-ai/lib/document/types";
 import type { ShapePatch } from "@/features/vector-ai/lib/editor/core/state";
 
-export function applyShapePatch(shape: Shape, patch: ShapePatch): Shape {
-  const next = {
+function patchShapeBase(shape: ShapeBase, patch: ShapePatch): ShapeBase {
+  return {
     ...shape,
-    ...patch,
     transform: patch.transform
       ? { ...shape.transform, ...patch.transform }
       : shape.transform,
     style: patch.style ? { ...shape.style, ...patch.style } : shape.style,
+    ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
   };
-  return next as Shape;
+}
+
+export function applyShapePatch(shape: Shape, patch: ShapePatch): Shape {
+  if (shape.type === "rect") {
+    return {
+      ...patchShapeBase(shape, patch),
+      type: "rect",
+      w: patch.w ?? shape.w,
+      h: patch.h ?? shape.h,
+      ...(patch.rx !== undefined ? { rx: patch.rx } : shape.rx !== undefined ? { rx: shape.rx } : {}),
+    };
+  }
+
+  if (shape.type === "circle") {
+    return {
+      ...patchShapeBase(shape, patch),
+      type: "circle",
+      r: patch.r ?? shape.r,
+    };
+  }
+
+  if (shape.type === "line") {
+    return {
+      ...patchShapeBase(shape, patch),
+      type: "line",
+      x2: patch.x2 ?? shape.x2,
+      y2: patch.y2 ?? shape.y2,
+    };
+  }
+
+  return {
+    ...patchShapeBase(shape, patch),
+    type: "path",
+    segments: patch.segments ?? shape.segments,
+  };
 }
 
 export function shapePatchFromMove(before: Shape, after: Shape): ShapePatch {
@@ -28,9 +63,27 @@ export function shapePatchFromMove(before: Shape, after: Shape): ShapePatch {
     if (before.y2 !== after.y2) patch.y2 = after.y2;
   }
 
+  if (before.type === "path" && after.type === "path") {
+    if (JSON.stringify(before.segments) !== JSON.stringify(after.segments)) {
+      patch.segments = after.segments;
+    }
+  }
+
   return patch;
 }
 
 export function hasShapePatch(patch: ShapePatch): boolean {
-  return patch.transform != null || patch.x2 != null || patch.y2 != null;
+  return (
+    patch.transform != null ||
+    patch.style != null ||
+    patch.locked != null ||
+    patch.name != null ||
+    patch.w != null ||
+    patch.h != null ||
+    patch.rx != null ||
+    patch.r != null ||
+    patch.x2 != null ||
+    patch.y2 != null ||
+    patch.segments != null
+  );
 }

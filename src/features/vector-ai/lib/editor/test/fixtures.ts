@@ -1,11 +1,34 @@
 import { createEmptyDoc } from "@/features/vector-ai/lib/document/schema";
 import type {
   CircleShape,
+  CubicMvpPathSegments,
+  CubicWorldPoints,
   LineShape,
+  PathShape,
   RectShape,
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
+import { cubicWorldToLocalSegments } from "@/features/vector-ai/lib/editor/geometry/path-segments";
+import { segmentsToPathD } from "@/features/vector-ai/lib/view/segments-to-path-d";
+import { VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE } from "@/features/vector-ai/lib/vector-ai-config";
+
+export const CUBIC_REFERENCE_WORLD: CubicWorldPoints = {
+  p0: { x: 10, y: 20 },
+  c1: { x: 30, y: 10 },
+  c2: { x: 50, y: 40 },
+  p3: { x: 70, y: 20 },
+};
+
+export const CUBIC_REFERENCE_TRANSFORM = {
+  x: CUBIC_REFERENCE_WORLD.p0.x,
+  y: CUBIC_REFERENCE_WORLD.p0.y,
+};
+
+export const CUBIC_REFERENCE_SEGMENTS: CubicMvpPathSegments =
+  cubicWorldToLocalSegments(CUBIC_REFERENCE_WORLD);
+
+export const CUBIC_REFERENCE_PATH_D = segmentsToPathD(CUBIC_REFERENCE_SEGMENTS);
 
 export function makeRectShape(overrides?: Partial<RectShape>): RectShape {
   const base: RectShape = {
@@ -84,6 +107,26 @@ export function makeLineShape(overrides?: Partial<LineShape>): LineShape {
   };
 }
 
+export function makeCubicPathShape(
+  overrides?: Partial<PathShape>,
+): PathShape {
+  const base: PathShape = {
+    id: "path-1",
+    type: "path",
+    transform: { ...CUBIC_REFERENCE_TRANSFORM },
+    segments: [...CUBIC_REFERENCE_SEGMENTS],
+    style: { ...VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE },
+  };
+  if (!overrides) return base;
+  return {
+    ...base,
+    ...overrides,
+    transform: { ...base.transform, ...overrides.transform },
+    style: { ...base.style, ...overrides.style },
+    segments: overrides.segments ?? base.segments,
+  };
+}
+
 export function makeSampleDoc(): VectorDoc {
   return {
     ...createEmptyDoc(),
@@ -97,6 +140,7 @@ export function makeSampleDoc(): VectorDoc {
       }),
       makeCircleShape({ id: "circle-1" }),
       makeLineShape({ id: "line-1" }),
+      makeCubicPathShape({ id: "path-1" }),
     ],
   };
 }

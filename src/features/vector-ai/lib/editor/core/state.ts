@@ -1,7 +1,14 @@
 import { createEmptyDoc } from "@/features/vector-ai/lib/document/schema";
-import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
-
-export type EditorTool = "select" | "rect" | "circle" | "line";
+import type {
+  PathSegmentLocal,
+  VectorDoc,
+} from "@/features/vector-ai/lib/document/types";
+export type EditorTool =
+  | "select"
+  | "rect"
+  | "circle"
+  | "line"
+  | "cubic";
 
 export type EditorHistory = {
   past: VectorDoc[];
@@ -26,6 +33,7 @@ export type ShapePatch = {
   r?: number;
   x2?: number;
   y2?: number;
+  segments?: PathSegmentLocal[];
 };
 
 export type EditorAction =

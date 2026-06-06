@@ -1,16 +1,12 @@
 import { createShapeId } from "@/features/vector-ai/lib/document/schema";
-import type { RectShape } from "@/features/vector-ai/lib/document/types";
-import { rectPreviewFromDrag } from "@/features/vector-ai/lib/editor/geometry/rect-preview";
+import { rectPreviewFromDrag } from "@/features/vector-ai/lib/editor/preview/rect";
 import { clampRectPreviewToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 import type { CreateDragSession } from "@/features/vector-ai/lib/editor/session/types";
-
-const MIN_RECT_SIZE = 2;
-
-const DEFAULT_NEW_RECT_STYLE: RectShape["style"] = {
-  fill: "#000000",
-  stroke: "none",
-};
+import {
+  VECTOR_AI_DEFAULT_RECT_STYLE,
+  VECTOR_AI_MIN_RECT_SIZE,
+} from "@/features/vector-ai/lib/vector-ai-config";
 
 export function commitCreateRect(
   session: Extract<CreateDragSession, { kind: "create-rect" }>,
@@ -20,7 +16,9 @@ export function commitCreateRect(
     rectPreviewFromDrag(session.startWorld, session.currentWorld),
     viewBox,
   );
-  if (preview.w < MIN_RECT_SIZE || preview.h < MIN_RECT_SIZE) return [];
+  if (preview.w < VECTOR_AI_MIN_RECT_SIZE || preview.h < VECTOR_AI_MIN_RECT_SIZE) {
+    return [];
+  }
 
   const id = createShapeId();
   return [
@@ -32,7 +30,7 @@ export function commitCreateRect(
         transform: { x: preview.x, y: preview.y },
         w: preview.w,
         h: preview.h,
-        style: DEFAULT_NEW_RECT_STYLE,
+        style: VECTOR_AI_DEFAULT_RECT_STYLE,
       },
     },
     { type: "SELECTION_SET", ids: [id] },
