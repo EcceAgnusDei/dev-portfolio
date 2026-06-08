@@ -85,7 +85,7 @@ export function VectorAiDemoClient() {
         <VectorCanvasInteractive
           svgRef={svgRef}
           interaction={interaction}
-          selectedIds={state.selection.ids}
+          selectedId={state.selection.ids[0] ?? null}
         />
       </div>
       <p

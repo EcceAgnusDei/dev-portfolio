@@ -13,14 +13,21 @@ import {
   getDisplayDoc,
   getPreviews,
   handleBackgroundPointerDown,
+  handleCircleHandlePointerDown,
   handleCubicHandlePointerDown,
   handleLineEndPointerDown,
+  handleRectHandlePointerDown,
   handleShapePointerDown,
   shouldCommitSessionOnPointerUp,
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import type { ToolPreviews } from "@/features/vector-ai/lib/editor/preview/overlays";
-import type { LineEnd, PointerSession } from "@/features/vector-ai/lib/editor/session/types";
+import type {
+  CircleResizeHandle,
+  LineEnd,
+  PointerSession,
+  RectResizeHandle,
+} from "@/features/vector-ai/lib/editor/session/types";
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
 
@@ -38,6 +45,20 @@ export type GestureStep =
       type: "cubic-handle-down";
       shapeId: string;
       handle: CubicHandle;
+      world: WorldPoint;
+      pointerId?: number;
+    }
+  | {
+      type: "rect-handle-down";
+      shapeId: string;
+      handle: RectResizeHandle;
+      world: WorldPoint;
+      pointerId?: number;
+    }
+  | {
+      type: "circle-handle-down";
+      shapeId: string;
+      handle: CircleResizeHandle;
       world: WorldPoint;
       pointerId?: number;
     }
@@ -139,6 +160,34 @@ export function runGesture(
       }
       case "cubic-handle-down": {
         const result = handleCubicHandlePointerDown(
+          interaction,
+          step.shapeId,
+          step.handle,
+          step.world,
+          pointerId,
+        );
+        if (result) {
+          session = result.session;
+          stepActions = result.actions;
+        }
+        break;
+      }
+      case "rect-handle-down": {
+        const result = handleRectHandlePointerDown(
+          interaction,
+          step.shapeId,
+          step.handle,
+          step.world,
+          pointerId,
+        );
+        if (result) {
+          session = result.session;
+          stepActions = result.actions;
+        }
+        break;
+      }
+      case "circle-handle-down": {
+        const result = handleCircleHandlePointerDown(
           interaction,
           step.shapeId,
           step.handle,

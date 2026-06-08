@@ -15,14 +15,18 @@ import { advanceCreateCubicSession } from "@/features/vector-ai/lib/editor/sessi
 import { beginCreateSession } from "@/features/vector-ai/lib/editor/session/begin-create";
 import { beginCreateCubicSession } from "@/features/vector-ai/lib/editor/session/begin-create-cubic";
 import {
+  beginCircleResizeSession,
   beginCubicHandleMoveSession,
   beginLineEndMoveSession,
   beginMoveSession,
-} from "@/features/vector-ai/lib/editor/session/begin-select";
+  beginRectResizeSession,
+} from "@/features/vector-ai/lib/editor/session/begin-mutate";
 import type {
+  CircleResizeHandle,
   CubicHandle,
   LineEnd,
   PointerSession,
+  RectResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import {
   IDLE_POINTER_SESSION,
@@ -45,7 +49,9 @@ export function shouldCapturePointerForSession(session: PointerSession): boolean
     session.kind === "create-line" ||
     session.kind === "move" ||
     session.kind === "move-line-end" ||
-    session.kind === "move-cubic-handle"
+    session.kind === "move-cubic-handle" ||
+    session.kind === "resize-rect" ||
+    session.kind === "resize-circle"
   );
 }
 
@@ -171,6 +177,42 @@ export function handleCubicHandlePointerDown(
 
   return {
     session,
+    actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
+  };
+}
+
+export function handleRectHandlePointerDown(
+  state: EditorInteractionState,
+  shapeId: string,
+  handle: RectResizeHandle,
+  world: WorldPoint,
+  pointerId: number,
+): { session: PointerSession; actions: EditorAction[] } | null {
+  if (state.tool !== "select") return null;
+
+  const shape = getShapeById(state.doc, shapeId);
+  if (!shape || shape.locked || shape.type !== "rect") return null;
+
+  return {
+    session: beginRectResizeSession(shape, handle, world, pointerId),
+    actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
+  };
+}
+
+export function handleCircleHandlePointerDown(
+  state: EditorInteractionState,
+  shapeId: string,
+  handle: CircleResizeHandle,
+  world: WorldPoint,
+  pointerId: number,
+): { session: PointerSession; actions: EditorAction[] } | null {
+  if (state.tool !== "select") return null;
+
+  const shape = getShapeById(state.doc, shapeId);
+  if (!shape || shape.locked || shape.type !== "circle") return null;
+
+  return {
+    session: beginCircleResizeSession(shape, handle, world, pointerId),
     actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
   };
 }

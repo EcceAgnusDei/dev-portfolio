@@ -13,6 +13,18 @@ export type { CubicHandle };
 
 export type LineEnd = "start" | "end";
 
+export type RectResizeHandle =
+  | "nw"
+  | "n"
+  | "ne"
+  | "e"
+  | "se"
+  | "s"
+  | "sw"
+  | "w";
+
+export type CircleResizeHandle = "n" | "e" | "s" | "w";
+
 export function lineEndWorldPoint(shape: LineShape, end: LineEnd): WorldPoint {
   if (end === "start") {
     return { x: shape.transform.x, y: shape.transform.y };
@@ -51,6 +63,25 @@ export type PointerSession =
       startWorld: WorldPoint;
       currentWorld: WorldPoint;
       startPoints: CubicWorldPoints;
+    }
+  | {
+      kind: "resize-rect";
+      pointerId: number;
+      shapeId: string;
+      handle: RectResizeHandle;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
+      startBounds: { x: number; y: number; w: number; h: number };
+    }
+  | {
+      kind: "resize-circle";
+      pointerId: number;
+      shapeId: string;
+      handle: CircleResizeHandle;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
+      startCenter: WorldPoint;
+      startR: number;
     }
   | {
       kind: "create-rect";

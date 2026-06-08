@@ -94,7 +94,7 @@ describe("VectorCanvas", () => {
 
   it("marque la forme sélectionnée", () => {
     const markup = renderToStaticMarkup(
-      <VectorCanvas doc={makeSampleDoc()} selectedIds={["rect-1"]} />,
+      <VectorCanvas doc={makeSampleDoc()} selectedId="rect-1" />,
     );
 
     expect(markup).toContain('fill="#111111"');

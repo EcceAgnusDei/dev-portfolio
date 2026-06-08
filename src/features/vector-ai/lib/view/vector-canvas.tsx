@@ -7,15 +7,21 @@ import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
 import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
+import { SelectionCircleHandles } from "@/features/vector-ai/lib/view/overlays/selection-circle-handles";
 import { SelectionCubicHandles } from "@/features/vector-ai/lib/view/overlays/selection-cubic-handles";
 import { SelectionLineHandles } from "@/features/vector-ai/lib/view/overlays/selection-line-handles";
+import { SelectionRectHandles } from "@/features/vector-ai/lib/view/overlays/selection-rect-handles";
+import type {
+  CircleResizeHandle,
+  RectResizeHandle,
+} from "@/features/vector-ai/lib/editor/session/types";
 import { viewBoxToAttr } from "@/features/vector-ai/lib/view/shape-presentation";
 import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 import { cn } from "@/lib/utils";
 
 export type VectorCanvasProps = {
   doc: VectorDoc;
-  selectedIds?: string[];
+  selectedId?: string | null;
   className?: string;
   "aria-label"?: string;
   shapePointerEvents?: "auto" | "none";
@@ -28,6 +34,16 @@ export type VectorCanvasProps = {
   onCubicHandlePointerDown?: (
     shapeId: string,
     handle: CubicHandle,
+    event: PointerEvent,
+  ) => void;
+  onRectHandlePointerDown?: (
+    shapeId: string,
+    handle: RectResizeHandle,
+    event: PointerEvent,
+  ) => void;
+  onCircleHandlePointerDown?: (
+    shapeId: string,
+    handle: CircleResizeHandle,
     event: PointerEvent,
   ) => void;
   onPointerDown?: (event: PointerEvent<SVGSVGElement>) => void;
@@ -44,13 +60,15 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
   function VectorCanvas(
     {
       doc,
-      selectedIds = [],
+      selectedId = null,
       className,
       "aria-label": ariaLabel = "Zone de dessin vectoriel",
       shapePointerEvents = "auto",
       onShapePointerDown,
       onLineEndPointerDown,
       onCubicHandlePointerDown,
+      onRectHandlePointerDown,
+      onCircleHandlePointerDown,
       onPointerDown,
       onPointerMove,
       onPointerUp,
@@ -62,7 +80,6 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
     },
     ref,
   ) {
-    const selected = new Set(selectedIds);
     const { viewBox } = doc;
     const interactive = Boolean(onPointerDown);
 
@@ -98,9 +115,9 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
             <ShapeView
               key={shape.id}
               shape={shape}
-              selected={selected.has(shape.id)}
+              selected={shape.id === selectedId}
               onPointerDown={
-                onShapePointerDown
+                shapePointerEvents === "auto" && onShapePointerDown
                   ? (event) => onShapePointerDown(shape.id, event)
                   : undefined
               }
@@ -174,18 +191,33 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
           </g>
           <g
             pointerEvents={
-              onLineEndPointerDown || onCubicHandlePointerDown ? "auto" : "none"
+              onLineEndPointerDown ||
+              onCubicHandlePointerDown ||
+              onRectHandlePointerDown ||
+              onCircleHandlePointerDown
+                ? "auto"
+                : "none"
             }
           >
             <SelectionLineHandles
               doc={doc}
-              selectedIds={selectedIds}
+              selectedId={selectedId}
               onLineEndPointerDown={onLineEndPointerDown}
             />
             <SelectionCubicHandles
               doc={doc}
-              selectedIds={selectedIds}
+              selectedId={selectedId}
               onCubicHandlePointerDown={onCubicHandlePointerDown}
+            />
+            <SelectionRectHandles
+              doc={doc}
+              selectedId={selectedId}
+              onRectHandlePointerDown={onRectHandlePointerDown}
+            />
+            <SelectionCircleHandles
+              doc={doc}
+              selectedId={selectedId}
+              onCircleHandlePointerDown={onCircleHandlePointerDown}
             />
           </g>
         </g>

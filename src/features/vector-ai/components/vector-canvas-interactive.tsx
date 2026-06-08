@@ -9,21 +9,21 @@ import { cn } from "@/lib/utils";
 export type VectorCanvasInteractiveProps = {
   svgRef: RefObject<SVGSVGElement | null>;
   interaction: UseVectorInteractionResult;
-  selectedIds: string[];
+  selectedId: string | null;
   className?: string;
 };
 
 export function VectorCanvasInteractive({
   svgRef,
   interaction,
-  selectedIds,
+  selectedId,
   className,
 }: VectorCanvasInteractiveProps) {
   return (
     <VectorCanvas
       ref={svgRef}
       doc={interaction.displayDoc}
-      selectedIds={selectedIds}
+      selectedId={selectedId}
       className={cn(className)}
       shapePointerEvents={interaction.shapePointerEvents}
       rectPreview={interaction.rectPreview}
@@ -37,6 +37,8 @@ export function VectorCanvasInteractive({
       onShapePointerDown={interaction.onShapePointerDown}
       onLineEndPointerDown={interaction.onLineEndPointerDown}
       onCubicHandlePointerDown={interaction.onCubicHandlePointerDown}
+      onRectHandlePointerDown={interaction.onRectHandlePointerDown}
+      onCircleHandlePointerDown={interaction.onCircleHandlePointerDown}
     />
   );
 }

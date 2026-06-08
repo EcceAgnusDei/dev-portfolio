@@ -58,6 +58,15 @@ export function shapePatchFromMove(before: Shape, after: Shape): ShapePatch {
     patch.transform = { x: after.transform.x, y: after.transform.y };
   }
 
+  if (before.type === "rect" && after.type === "rect") {
+    if (before.w !== after.w) patch.w = after.w;
+    if (before.h !== after.h) patch.h = after.h;
+  }
+
+  if (before.type === "circle" && after.type === "circle") {
+    if (before.r !== after.r) patch.r = after.r;
+  }
+
   if (before.type === "line" && after.type === "line") {
     if (before.x2 !== after.x2) patch.x2 = after.x2;
     if (before.y2 !== after.y2) patch.y2 = after.y2;

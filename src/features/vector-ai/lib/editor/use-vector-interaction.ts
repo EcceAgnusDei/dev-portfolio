@@ -34,8 +34,10 @@ import {
   getDisplayDoc,
   getPreviews,
   handleBackgroundPointerDown,
+  handleCircleHandlePointerDown,
   handleCubicHandlePointerDown,
   handleLineEndPointerDown,
+  handleRectHandlePointerDown,
   handleShapePointerDown,
   shapePointerEventsForTool,
   shouldCapturePointerForSession,
@@ -43,7 +45,11 @@ import {
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
-import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
+import type {
+  CircleResizeHandle,
+  LineEnd,
+  RectResizeHandle,
+} from "@/features/vector-ai/lib/editor/session/types";
 import {
   IDLE_POINTER_SESSION,
   type PointerSession,
@@ -86,6 +92,16 @@ export type UseVectorInteractionResult = {
   onCubicHandlePointerDown: (
     shapeId: string,
     handle: CubicHandle,
+    event: ReactPointerEvent,
+  ) => void;
+  onRectHandlePointerDown: (
+    shapeId: string,
+    handle: RectResizeHandle,
+    event: ReactPointerEvent,
+  ) => void;
+  onCircleHandlePointerDown: (
+    shapeId: string,
+    handle: CircleResizeHandle,
     event: ReactPointerEvent,
   ) => void;
 };
@@ -203,9 +219,61 @@ export function useVectorInteraction({
     [interactionState, dispatchActions, svgRef],
   );
 
+  const onRectHandlePointerDown = useCallback(
+    (shapeId: string, handle: RectResizeHandle, event: ReactPointerEvent) => {
+      const world = worldFromEvent(svgRef.current, event);
+      if (!world) return;
+
+      const result = handleRectHandlePointerDown(
+        interactionState,
+        shapeId,
+        handle,
+        world,
+        event.pointerId,
+      );
+      if (!result) return;
+
+      event.stopPropagation();
+      captureSvgPointer(svgRef.current, event.pointerId);
+      dispatchActions(result.actions);
+      setSession(result.session);
+    },
+    [interactionState, dispatchActions, svgRef],
+  );
+
+  const onCircleHandlePointerDown = useCallback(
+    (shapeId: string, handle: CircleResizeHandle, event: ReactPointerEvent) => {
+      const world = worldFromEvent(svgRef.current, event);
+      if (!world) return;
+
+      const result = handleCircleHandlePointerDown(
+        interactionState,
+        shapeId,
+        handle,
+        world,
+        event.pointerId,
+      );
+      if (!result) return;
+
+      event.stopPropagation();
+      captureSvgPointer(svgRef.current, event.pointerId);
+      dispatchActions(result.actions);
+      setSession(result.session);
+    },
+    [interactionState, dispatchActions, svgRef],
+  );
+
   const onSvgPointerDown = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
-      if (!isCanvasBackgroundTarget(event.target, svgRef.current)) return;
+      const ignoreShapeHits =
+        shapePointerEventsForTool(interactionState.tool) === "none";
+      if (
+        !isCanvasBackgroundTarget(event.target, svgRef.current, {
+          ignoreShapeHits,
+        })
+      ) {
+        return;
+      }
 
       const world = worldFromEvent(svgRef.current, event);
       if (!world) return;
@@ -295,5 +363,7 @@ export function useVectorInteraction({
     onShapePointerDown,
     onLineEndPointerDown,
     onCubicHandlePointerDown,
+    onRectHandlePointerDown,
+    onCircleHandlePointerDown,
   };
 }
