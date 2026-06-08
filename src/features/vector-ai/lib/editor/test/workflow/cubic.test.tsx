@@ -1,11 +1,20 @@
+/**
+ * @vitest-environment jsdom
+ */
 import "@/features/vector-ai/lib/editor/test/mock-create-shape-id";
 
+import { act, type PointerEvent as ReactPointerEvent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { CubicHandle, CubicWorldPoints } from "@/features/vector-ai/lib/document/types";
+import { createEmptyDoc } from "@/features/vector-ai/lib/document/schema";
+import type {
+  CubicHandle,
+  CubicWorldPoints,
+} from "@/features/vector-ai/lib/document/types";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import { cubicWorldPointsFromPathShape } from "@/features/vector-ai/lib/editor/geometry/path-segments";
+import { shapePointerEventsForTool } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import {
   expectAfterCreate,
   expectAfterMove,
@@ -20,7 +29,12 @@ import {
   CUBIC_REFERENCE_WORLD,
   makeCubicPathShape,
   makeEditorWithRect,
+  makeLineShape,
 } from "@/features/vector-ai/lib/editor/test/fixtures";
+import {
+  makePointerEvent,
+  renderInteractionHook,
+} from "@/features/vector-ai/lib/editor/test/pointer-harness";
 import {
   actionsOfType,
   lastSnapshot,
@@ -30,12 +44,46 @@ import {
 import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import { segmentsToPathD } from "@/features/vector-ai/lib/view/segments-to-path-d";
+import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
 import { VECTOR_AI_MIN_CUBIC_POINT_DISTANCE } from "@/features/vector-ai/lib/vector-ai-config";
+
+const LINE_REFERENCE_MIDPOINT = { x: 200, y: 300 };
+
+const NEW_CUBIC_WORLD: CubicWorldPoints = {
+  p0: LINE_REFERENCE_MIDPOINT,
+  c1: { x: 220, y: 280 },
+  c2: { x: 260, y: 320 },
+  p3: CUBIC_REFERENCE_WORLD.p3,
+};
+
+function svgLineHitTarget(): SVGLineElement {
+  return document.createElementNS("http://www.w3.org/2000/svg", "line");
+}
+
+function svgPathHitTarget(): SVGPathElement {
+  return document.createElementNS("http://www.w3.org/2000/svg", "path");
+}
 
 function makeEditorWithCubicTool() {
   const state = makeEditorWithRect();
   state.tool = "cubic";
   return state;
+}
+
+function clickSvgAt(
+  interaction: ReturnType<typeof renderInteractionHook>["interaction"],
+  point: { x: number; y: number },
+  target: Element,
+) {
+  act(() => {
+    interaction.onSvgPointerDown(
+      makePointerEvent({
+        clientX: point.x,
+        clientY: point.y,
+        target,
+      }) as ReactPointerEvent<SVGSVGElement>,
+    );
+  });
 }
 
 function makeEditorWithCubicPath(id = "path-1") {
@@ -67,11 +115,22 @@ function cubicHandleDrag(
 }
 
 describe("courbe cubique", () => {
+  beforeAll(() => {
+    (
+      globalThis as typeof globalThis & {
+        IS_REACT_ACT_ENVIRONMENT?: boolean;
+      }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+
   describe("création", () => {
     it("crée un path cubique en 4 clics", () => {
       const initial = makeEditorWithCubicTool();
 
-      const result = runGesture(initial, cubicCreateSteps(CUBIC_REFERENCE_WORLD));
+      const result = runGesture(
+        initial,
+        cubicCreateSteps(CUBIC_REFERENCE_WORLD),
+      );
 
       expectAfterCreate(result, "new-shape-id", {
         type: "path",
@@ -114,8 +173,12 @@ describe("courbe cubique", () => {
       expect(result.snapshots[1].previews.cubic?.transform).toEqual(
         CUBIC_REFERENCE_TRANSFORM,
       );
-      expect(result.snapshots[3].previews.cubic?.kind).toBe("segment-p0-c1-hover");
-      expect(result.snapshots[5].previews.cubic?.kind).toBe("curve-p0-c1-c2-hover");
+      expect(result.snapshots[3].previews.cubic?.kind).toBe(
+        "segment-p0-c1-hover",
+      );
+      expect(result.snapshots[5].previews.cubic?.kind).toBe(
+        "curve-p0-c1-c2-hover",
+      );
     });
 
     it("garde P0 fixe pendant la création", () => {
@@ -282,12 +345,113 @@ describe("courbe cubique", () => {
     });
   });
 
+  describe("création sur formes existantes", () => {
+    it("crée une courbe en cliquant sur des hit areas de ligne et de courbe existantes", () => {
+      const state = makeEditorWithCubicTool();
+      state.doc.shapes = [
+        makeLineShape({ id: "line-1" }),
+        makeCubicPathShape({ id: "existing-path" }),
+      ];
+      const dispatch = vi.fn();
+      const { interaction, unmount } = renderInteractionHook(state, dispatch);
+
+      clickSvgAt(interaction, NEW_CUBIC_WORLD.p0, svgLineHitTarget());
+      clickSvgAt(interaction, NEW_CUBIC_WORLD.c1, svgPathHitTarget());
+      clickSvgAt(interaction, NEW_CUBIC_WORLD.c2, svgLineHitTarget());
+      clickSvgAt(interaction, NEW_CUBIC_WORLD.p3, svgPathHitTarget());
+
+      expect(interaction.session).toEqual({ kind: "idle" });
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "SHAPE_ADD",
+          shape: expect.objectContaining({
+            id: "new-shape-id",
+            type: "path",
+            transform: { x: NEW_CUBIC_WORLD.p0.x, y: NEW_CUBIC_WORLD.p0.y },
+          }),
+        }),
+      );
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "SELECTION_SET",
+        ids: ["new-shape-id"],
+      });
+      expect(dispatch).toHaveBeenCalledWith({ type: "TOOL_SET", tool: "select" });
+      unmount();
+    });
+  });
+
+  describe("curseur au-dessus de formes existantes", () => {
+    it("désactive les pointer events forme en mode cubic", () => {
+      expect(shapePointerEventsForTool("cubic")).toBe("none");
+    });
+
+    it("n'affiche pas cursor move sur une ligne en mode dessin", () => {
+      const doc = {
+        ...createEmptyDoc(),
+        shapes: [makeLineShape({ id: "line-1" })],
+      };
+
+      const markup = renderToStaticMarkup(
+        <VectorCanvas
+          doc={doc}
+          shapePointerEvents="none"
+          onShapePointerDown={() => {}}
+          onPointerDown={() => {}}
+        />,
+      );
+
+      expect(markup).toContain("pointer-events:none");
+      expect(markup).not.toContain("cursor:move");
+    });
+
+    it("n'affiche pas cursor move sur une courbe en mode dessin", () => {
+      const doc = {
+        ...createEmptyDoc(),
+        shapes: [makeCubicPathShape({ id: "path-1" })],
+      };
+
+      const markup = renderToStaticMarkup(
+        <VectorCanvas
+          doc={doc}
+          shapePointerEvents="none"
+          onShapePointerDown={() => {}}
+          onPointerDown={() => {}}
+        />,
+      );
+
+      expect(markup).toContain("pointer-events:none");
+      expect(markup).not.toContain("cursor:move");
+    });
+
+    it("conserve cursor move en mode sélection pour comparaison", () => {
+      const doc = {
+        ...createEmptyDoc(),
+        shapes: [makeLineShape({ id: "line-1" })],
+      };
+
+      const markup = renderToStaticMarkup(
+        <VectorCanvas
+          doc={doc}
+          shapePointerEvents="auto"
+          onShapePointerDown={() => {}}
+          onPointerDown={() => {}}
+        />,
+      );
+
+      expect(markup).toContain("cursor:move");
+    });
+  });
+
   describe("sélection et déplacement", () => {
     it("déplace toute la courbe sans modifier les segments locaux", () => {
       const initial = makeEditorWithCubicPath();
 
       const result = runGesture(initial, [
-        { type: "shape-down", shapeId: "path-1", world: CUBIC_REFERENCE_WORLD.p0 },
+        {
+          type: "shape-down",
+          shapeId: "path-1",
+          world: CUBIC_REFERENCE_WORLD.p0,
+        },
         { type: "move", world: { x: 20, y: 30 } },
         { type: "up" },
       ]);
@@ -305,7 +469,11 @@ describe("courbe cubique", () => {
       initial.doc.viewBox = viewBox;
 
       const result = runGesture(initial, [
-        { type: "shape-down", shapeId: "path-1", world: CUBIC_REFERENCE_WORLD.p0 },
+        {
+          type: "shape-down",
+          shapeId: "path-1",
+          world: CUBIC_REFERENCE_WORLD.p0,
+        },
         { type: "move", world: { x: 200, y: 200 } },
         { type: "up" },
       ]);
@@ -329,7 +497,11 @@ describe("courbe cubique", () => {
       initial.doc.shapes = [makeCubicPathShape({ id: "path-1", locked: true })];
 
       const result = runGesture(initial, [
-        { type: "shape-down", shapeId: "path-1", world: CUBIC_REFERENCE_WORLD.p0 },
+        {
+          type: "shape-down",
+          shapeId: "path-1",
+          world: CUBIC_REFERENCE_WORLD.p0,
+        },
         { type: "move", world: { x: 20, y: 30 } },
         { type: "up" },
       ]);
@@ -407,7 +579,12 @@ describe("courbe cubique", () => {
       const nextC1 = { x: 35, y: 15 };
 
       const result = runGesture(initial, [
-        { type: "cubic-handle-down", shapeId: "path-1", handle: "c1", world: CUBIC_REFERENCE_WORLD.c1 },
+        {
+          type: "cubic-handle-down",
+          shapeId: "path-1",
+          handle: "c1",
+          world: CUBIC_REFERENCE_WORLD.c1,
+        },
         { type: "move", world: nextC1 },
       ]);
 
@@ -426,7 +603,10 @@ describe("courbe cubique", () => {
 
       const result = runGesture(
         initial,
-        cubicHandleDrag("path-1", "p3", CUBIC_REFERENCE_WORLD.p3, { x: 150, y: 150 }),
+        cubicHandleDrag("path-1", "p3", CUBIC_REFERENCE_WORLD.p3, {
+          x: 150,
+          y: 150,
+        }),
       );
 
       const shape = getShapeById(result.state.doc, "path-1");
@@ -443,7 +623,10 @@ describe("courbe cubique", () => {
 
       const result = runGesture(
         initial,
-        cubicHandleDrag("path-1", "c1", CUBIC_REFERENCE_WORLD.c1, { x: 35, y: 15 }),
+        cubicHandleDrag("path-1", "c1", CUBIC_REFERENCE_WORLD.c1, {
+          x: 35,
+          y: 15,
+        }),
       );
 
       expect(result.session.kind).toBe("idle");
@@ -458,7 +641,10 @@ describe("courbe cubique", () => {
 
       const result = runGesture(
         initial,
-        cubicHandleDrag("path-1", "c1", CUBIC_REFERENCE_WORLD.c1, { x: 35, y: 15 }),
+        cubicHandleDrag("path-1", "c1", CUBIC_REFERENCE_WORLD.c1, {
+          x: 35,
+          y: 15,
+        }),
       );
 
       expect(result.session.kind).toBe("idle");
@@ -485,7 +671,10 @@ describe("courbe cubique", () => {
       const initial = makeEditorWithCubicPath();
 
       const result = runGesture(initial, [
-        ...cubicHandleDrag("path-1", "c1", CUBIC_REFERENCE_WORLD.c1, { x: 35, y: 15 }),
+        ...cubicHandleDrag("path-1", "c1", CUBIC_REFERENCE_WORLD.c1, {
+          x: 35,
+          y: 15,
+        }),
         { type: "undo" },
       ]);
 
