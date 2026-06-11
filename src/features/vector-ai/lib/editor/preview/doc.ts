@@ -175,6 +175,7 @@ export function docWithPointerPreview(
     session.kind === "create-rect" ||
     session.kind === "create-circle" ||
     session.kind === "create-line" ||
+    session.kind === "create-text" ||
     session.kind === "create-cubic"
   ) {
     return doc;

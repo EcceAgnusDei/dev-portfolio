@@ -9,7 +9,13 @@ export {
   hasShapePatch,
   shapePatchFromMove,
 } from "@/features/vector-ai/lib/editor/core/shape-patch";
-export { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
+export {
+  commitTextEditActions,
+  hasSignificantTextContent,
+  parseTextFontSizeInput,
+  type TextEditCommit,
+} from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
+export { screenToWorld, worldToScreen } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 export { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 export { styleToSvgProps } from "@/features/vector-ai/lib/view/style-to-svg-props";
 export {

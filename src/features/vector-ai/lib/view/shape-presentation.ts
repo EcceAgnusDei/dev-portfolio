@@ -6,7 +6,7 @@ import {
   hasTransformExtras,
 } from "@/features/vector-ai/lib/view/transform-to-svg";
 
-export type SvgPrimitiveTag = "rect" | "circle" | "line" | "path";
+export type SvgPrimitiveTag = "rect" | "circle" | "line" | "path" | "text";
 
 export type ShapeLayer = {
   tag: SvgPrimitiveTag;
@@ -15,6 +15,7 @@ export type ShapeLayer = {
 
 export type ShapePresentation = ShapeLayer & {
   groupTransform?: string;
+  textContent?: string;
 };
 
 export function viewBoxToAttr(viewBox: ViewBox): string {
@@ -75,6 +76,21 @@ export function presentationFromShape(shape: Shape): ShapePresentation {
           ...style,
         },
         groupTransform: buildSvgTransform(shape.transform),
+      };
+    case "text":
+      return {
+        tag: "text",
+        attrs: {
+          x: local ? 0 : shape.transform.x,
+          y: local ? 0 : shape.transform.y,
+          fontSize: shape.fontSize,
+          fontFamily: shape.fontFamily,
+          dominantBaseline: "hanging",
+          textAnchor: "middle",
+          ...style,
+        },
+        textContent: shape.content,
+        groupTransform,
       };
     default: {
       const _exhaustive: never = shape;

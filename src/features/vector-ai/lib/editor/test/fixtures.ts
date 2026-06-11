@@ -6,8 +6,13 @@ import type {
   LineShape,
   PathShape,
   RectShape,
+  TextShape,
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
+import {
+  VECTOR_AI_DEFAULT_FONT_FAMILY,
+  VECTOR_AI_DEFAULT_FONT_SIZE,
+} from "@/features/vector-ai/lib/vector-ai-config";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import { cubicWorldToLocalSegments } from "@/features/vector-ai/lib/editor/geometry/path-segments";
 import { segmentsToPathD } from "@/features/vector-ai/lib/view/segments-to-path-d";
@@ -97,6 +102,25 @@ export function makeLineShape(overrides?: Partial<LineShape>): LineShape {
     },
     x2: 320,
     y2: 320,
+  };
+  if (!overrides) return base;
+  return {
+    ...base,
+    ...overrides,
+    transform: { ...base.transform, ...overrides.transform },
+    style: { ...base.style, ...overrides.style },
+  };
+}
+
+export function makeTextShape(overrides?: Partial<TextShape>): TextShape {
+  const base: TextShape = {
+    id: "text-1",
+    type: "text",
+    transform: { x: 40, y: 50 },
+    content: "Hello",
+    fontSize: VECTOR_AI_DEFAULT_FONT_SIZE,
+    fontFamily: VECTOR_AI_DEFAULT_FONT_FAMILY,
+    style: { fill: "#000000" },
   };
   if (!overrides) return base;
   return {

@@ -42,7 +42,10 @@ describe("clampInRange", () => {
 
 describe("clampPointToViewBox", () => {
   it("borne un point au viewBox", () => {
-    expect(clampPointToViewBox({ x: -5, y: 150 }, VB)).toEqual({ x: 0, y: 100 });
+    expect(clampPointToViewBox({ x: -5, y: 150 }, VB)).toEqual({
+      x: 0,
+      y: 100,
+    });
   });
 });
 
@@ -109,10 +112,7 @@ describe("clampCirclePreviewToViewBox", () => {
 describe("clampLinePreviewToViewBox", () => {
   it("borne chaque extrémité au viewBox", () => {
     expect(
-      clampLinePreviewToViewBox(
-        { x1: -10, y1: 20, x2: 150, y2: 60 },
-        VB,
-      ),
+      clampLinePreviewToViewBox({ x1: -10, y1: 20, x2: 150, y2: 60 }, VB),
     ).toEqual({ x1: 0, y1: 20, x2: 100, y2: 60 });
   });
 

@@ -1,4 +1,4 @@
-import { forwardRef, type PointerEvent } from "react";
+import { forwardRef, type MouseEvent, type PointerEvent } from "react";
 
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
@@ -26,6 +26,7 @@ export type VectorCanvasProps = {
   "aria-label"?: string;
   shapePointerEvents?: "auto" | "none";
   onShapePointerDown?: (shapeId: string, event: PointerEvent) => void;
+  onShapeDoubleClick?: (shapeId: string, event: MouseEvent) => void;
   onLineEndPointerDown?: (
     shapeId: string,
     end: LineEnd,
@@ -54,6 +55,7 @@ export type VectorCanvasProps = {
   circlePreview?: CirclePreview | null;
   linePreview?: LinePreview | null;
   cubicPreview?: CubicPathPreview | null;
+  editingTextId?: string | null;
 };
 
 export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
@@ -65,6 +67,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       "aria-label": ariaLabel = "Zone de dessin vectoriel",
       shapePointerEvents = "auto",
       onShapePointerDown,
+      onShapeDoubleClick,
       onLineEndPointerDown,
       onCubicHandlePointerDown,
       onRectHandlePointerDown,
@@ -77,6 +80,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       circlePreview,
       linePreview,
       cubicPreview,
+      editingTextId = null,
     },
     ref,
   ) {
@@ -92,7 +96,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
         xmlns="http://www.w3.org/2000/svg"
         className={cn(
           "block border border-border bg-background",
-          interactive && "touch-none",
+          interactive && "touch-none select-none",
           className,
         )}
         aria-label={ariaLabel}
@@ -116,9 +120,15 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               key={shape.id}
               shape={shape}
               selected={shape.id === selectedId}
+              hidden={shape.id === editingTextId}
               onPointerDown={
                 shapePointerEvents === "auto" && onShapePointerDown
                   ? (event) => onShapePointerDown(shape.id, event)
+                  : undefined
+              }
+              onDoubleClick={
+                shapePointerEvents === "auto" && onShapeDoubleClick
+                  ? (event) => onShapeDoubleClick(shape.id, event)
                   : undefined
               }
             />

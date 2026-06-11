@@ -14,6 +14,7 @@ import {
 import { advanceCreateCubicSession } from "@/features/vector-ai/lib/editor/session/advance-create-cubic";
 import { beginCreateSession } from "@/features/vector-ai/lib/editor/session/begin-create";
 import { beginCreateCubicSession } from "@/features/vector-ai/lib/editor/session/begin-create-cubic";
+import { beginCreateTextSession } from "@/features/vector-ai/lib/editor/session/begin-create-text";
 import {
   beginCircleResizeSession,
   beginCubicHandleMoveSession,
@@ -47,6 +48,7 @@ export function shouldCapturePointerForSession(session: PointerSession): boolean
     session.kind === "create-rect" ||
     session.kind === "create-circle" ||
     session.kind === "create-line" ||
+    session.kind === "create-text" ||
     session.kind === "move" ||
     session.kind === "move-line-end" ||
     session.kind === "move-cubic-handle" ||
@@ -118,6 +120,13 @@ export function handleBackgroundPointerDown(
   if (state.tool === "cubic") {
     return {
       session: beginCreateCubicSession(world, pointerId),
+      actions: [],
+    };
+  }
+
+  if (state.tool === "text") {
+    return {
+      session: beginCreateTextSession(world, pointerId),
       actions: [],
     };
   }

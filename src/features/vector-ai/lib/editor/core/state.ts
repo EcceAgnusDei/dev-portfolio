@@ -8,7 +8,8 @@ export type EditorTool =
   | "rect"
   | "circle"
   | "line"
-  | "cubic";
+  | "cubic"
+  | "text";
 
 export type EditorHistory = {
   past: VectorDoc[];
@@ -34,6 +35,9 @@ export type ShapePatch = {
   x2?: number;
   y2?: number;
   segments?: PathSegmentLocal[];
+  content?: string;
+  fontSize?: number;
+  fontFamily?: string;
 };
 
 export type EditorAction =

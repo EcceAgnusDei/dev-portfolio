@@ -6,6 +6,8 @@ import {
 import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 
+import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
+import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import type {
   EditorAction,
   EditorState,
@@ -21,6 +23,14 @@ export type RenderedInteractionHook = {
   unmount: () => void;
 };
 
+export type RenderedInteractiveCanvas = {
+  interaction: UseVectorInteractionResult;
+  container: HTMLDivElement;
+  svgRef: RefObject<SVGSVGElement | null>;
+  getState: () => EditorState;
+  unmount: () => void;
+};
+
 vi.mock("@/features/vector-ai/lib/editor/geometry/screen-to-world", () => ({
   screenToWorld: vi.fn(
     (_svg: SVGSVGElement, clientX: number, clientY: number) => ({
@@ -28,12 +38,43 @@ vi.mock("@/features/vector-ai/lib/editor/geometry/screen-to-world", () => ({
       y: clientY,
     }),
   ),
+  worldToScreen: vi.fn(
+    (_svg: SVGSVGElement, world: { x: number; y: number }) => ({
+      x: world.x,
+      y: world.y,
+    }),
+  ),
+  worldToContainerOffset: vi.fn(
+    (
+      _svg: SVGSVGElement,
+      container: HTMLElement,
+      world: { x: number; y: number },
+    ) => {
+      const rect = container.getBoundingClientRect();
+      return {
+        left: world.x - rect.left,
+        top: world.y - rect.top,
+      };
+    },
+  ),
 }));
+
+export function makeDoubleClickEvent(options?: {
+  target?: Element;
+}): React.MouseEvent {
+  const target = options?.target ?? document.createElement("div");
+  return {
+    target,
+    stopPropagation: vi.fn(),
+  } as unknown as React.MouseEvent;
+}
 
 export function makePointerEvent(options: {
   pointerId?: number;
   clientX: number;
   clientY: number;
+  detail?: number;
+  timeStamp?: number;
   target?: Element;
 }): ReactPointerEvent {
   const target = options.target ?? document.createElement("div");
@@ -41,6 +82,8 @@ export function makePointerEvent(options: {
     pointerId: options.pointerId ?? 1,
     clientX: options.clientX,
     clientY: options.clientY,
+    detail: options.detail ?? 1,
+    timeStamp: options.timeStamp ?? 0,
     target,
     stopPropagation: vi.fn(),
   } as unknown as ReactPointerEvent;
@@ -106,6 +149,68 @@ export function renderInteractionHook(
       return interaction;
     },
     svgRef,
+    unmount() {
+      act(() => {
+        root.unmount();
+        container.remove();
+      });
+    },
+  };
+}
+
+export function renderInteractiveCanvas(
+  initialState: EditorState,
+): RenderedInteractiveCanvas {
+  const svgRef = setupSvgRef();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  let interaction: UseVectorInteractionResult | null = null;
+  let currentState = initialState;
+
+  const dispatch = (action: EditorAction) => {
+    currentState = editorReducer(currentState, action);
+    rerender();
+  };
+
+  function rerender() {
+    act(() => {
+      root.render(<InteractiveCanvasHost />);
+    });
+  }
+
+  function InteractiveCanvasHost() {
+    interaction = useVectorInteraction({
+      state: currentState,
+      dispatch,
+      svgRef,
+    });
+    return (
+      <VectorCanvasInteractive
+        svgRef={svgRef}
+        interaction={interaction}
+        doc={currentState.doc}
+        selectedId={currentState.selection.ids[0] ?? null}
+      />
+    );
+  }
+
+  rerender();
+
+  if (interaction === null) {
+    throw new Error("Hook non initialisé.");
+  }
+
+  return {
+    get interaction(): UseVectorInteractionResult {
+      if (interaction === null) {
+        throw new Error("Hook non initialisé.");
+      }
+      return interaction;
+    },
+    container,
+    svgRef,
+    getState: () => currentState,
     unmount() {
       act(() => {
         root.unmount();

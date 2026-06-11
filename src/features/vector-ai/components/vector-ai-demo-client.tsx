@@ -18,6 +18,7 @@ const TOOLS: { id: EditorTool; label: string }[] = [
   { id: "circle", label: "Cercle" },
   { id: "line", label: "Ligne" },
   { id: "cubic", label: "Courbe" },
+  { id: "text", label: "Texte" },
 ];
 
 export function VectorAiDemoClient() {
@@ -85,6 +86,7 @@ export function VectorAiDemoClient() {
         <VectorCanvasInteractive
           svgRef={svgRef}
           interaction={interaction}
+          doc={state.doc}
           selectedId={state.selection.ids[0] ?? null}
         />
       </div>

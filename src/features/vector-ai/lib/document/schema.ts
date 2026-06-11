@@ -10,6 +10,7 @@ import type {
   RectShape,
   Shape,
   ShapeStyle,
+  TextShape,
   Transform,
   VectorDoc,
   ViewBox,
@@ -17,11 +18,14 @@ import type {
 import {
   VECTOR_AI_DOC_VERSION,
   VECTOR_AI_DEFAULT_VIEWBOX,
+  VECTOR_AI_MAX_FONT_FAMILY_LENGTH,
+  VECTOR_AI_MAX_FONT_SIZE,
   VECTOR_AI_MAX_SHAPE_DIMENSION,
   VECTOR_AI_MAX_SHAPE_ID_LENGTH,
   VECTOR_AI_MAX_SHAPE_NAME_LENGTH,
   VECTOR_AI_MAX_SHAPES,
   VECTOR_AI_MAX_STROKE_WIDTH,
+  VECTOR_AI_MAX_TEXT_LENGTH,
   VECTOR_AI_MAX_VIEWBOX_DIMENSION,
 } from "@/features/vector-ai/lib/vector-ai-config";
 
@@ -122,11 +126,23 @@ const pathShapeSchema = shapeBaseSchema.extend({
   segments: cubicMvpSegmentsSchema,
 }) satisfies z.ZodType<PathShape>;
 
+const textShapeSchema = shapeBaseSchema.extend({
+  type: z.literal("text"),
+  content: z.string().max(VECTOR_AI_MAX_TEXT_LENGTH),
+  fontSize: z
+    .number()
+    .finite()
+    .positive()
+    .max(VECTOR_AI_MAX_FONT_SIZE),
+  fontFamily: z.string().min(1).max(VECTOR_AI_MAX_FONT_FAMILY_LENGTH),
+}) satisfies z.ZodType<TextShape>;
+
 export const shapeSchema = z.discriminatedUnion("type", [
   rectShapeSchema,
   circleShapeSchema,
   lineShapeSchema,
   pathShapeSchema,
+  textShapeSchema,
 ]) satisfies z.ZodType<Shape>;
 
 export {

@@ -102,6 +102,12 @@ export type PointerSession =
       currentWorld: WorldPoint;
     }
   | {
+      kind: "create-text";
+      pointerId: number;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
+    }
+  | {
       kind: "create-cubic";
       step: CubicCreateStep;
       placed: Partial<CubicWorldPoints>;

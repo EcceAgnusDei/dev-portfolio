@@ -1,5 +1,6 @@
 import { parseVectorDoc } from "@/features/vector-ai/lib/document/schema";
 import type { Shape, VectorDoc, ViewBox } from "@/features/vector-ai/lib/document/types";
+import { clampShapeToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";
 import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
 import type { EditorAction, EditorState } from "@/features/vector-ai/lib/editor/core/state";
@@ -72,9 +73,14 @@ export function editorReducer(
       if (!shape || shape.locked) return state;
       const nextDoc: VectorDoc = {
         ...state.doc,
-        shapes: state.doc.shapes.map((s) =>
-          s.id === action.id ? applyShapePatch(s, action.patch) : s,
-        ),
+        shapes: state.doc.shapes.map((s) => {
+          if (s.id !== action.id) return s;
+          const patched = applyShapePatch(s, action.patch);
+          if (patched.type === "text") {
+            return clampShapeToViewBox(patched, state.doc.viewBox);
+          }
+          return patched;
+        }),
       };
       return replaceDoc(state, nextDoc, action.recordHistory);
     }

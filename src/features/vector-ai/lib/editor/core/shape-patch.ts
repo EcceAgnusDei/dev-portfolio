@@ -41,11 +41,26 @@ export function applyShapePatch(shape: Shape, patch: ShapePatch): Shape {
     };
   }
 
-  return {
-    ...patchShapeBase(shape, patch),
-    type: "path",
-    segments: patch.segments ?? shape.segments,
-  };
+  if (shape.type === "path") {
+    return {
+      ...patchShapeBase(shape, patch),
+      type: "path",
+      segments: patch.segments ?? shape.segments,
+    };
+  }
+
+  if (shape.type === "text") {
+    return {
+      ...patchShapeBase(shape, patch),
+      type: "text",
+      content: patch.content ?? shape.content,
+      fontSize: patch.fontSize ?? shape.fontSize,
+      fontFamily: patch.fontFamily ?? shape.fontFamily,
+    };
+  }
+
+  const _exhaustive: never = shape;
+  return _exhaustive;
 }
 
 export function shapePatchFromMove(before: Shape, after: Shape): ShapePatch {
@@ -93,6 +108,9 @@ export function hasShapePatch(patch: ShapePatch): boolean {
     patch.r != null ||
     patch.x2 != null ||
     patch.y2 != null ||
-    patch.segments != null
+    patch.segments != null ||
+    patch.content != null ||
+    patch.fontSize != null ||
+    patch.fontFamily != null
   );
 }

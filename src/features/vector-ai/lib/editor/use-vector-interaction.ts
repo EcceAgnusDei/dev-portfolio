@@ -7,11 +7,17 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
 
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import {
+  commitTextEditActions,
+  type TextEditCommit,
+} from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
@@ -45,6 +51,7 @@ import {
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
+import { VECTOR_AI_TEXT_DOUBLE_CLICK_MS } from "@/features/vector-ai/lib/vector-ai-config";
 import type {
   CircleResizeHandle,
   LineEnd,
@@ -78,12 +85,16 @@ export type UseVectorInteractionResult = {
   circlePreview: CirclePreview | null;
   linePreview: LinePreview | null;
   cubicPreview: CubicPathPreview | null;
+  editingTextId: string | null;
+  commitTextEdit: (input: TextEditCommit) => void;
+  cancelTextEdit: () => void;
   shapePointerEvents: "auto" | "none";
   onSvgPointerDown: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerMove: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerUp: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerCancel: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onShapePointerDown: (shapeId: string, event: ReactPointerEvent) => void;
+  onShapeDoubleClick: (shapeId: string, event: ReactMouseEvent) => void;
   onLineEndPointerDown: (
     shapeId: string,
     end: LineEnd,
@@ -112,6 +123,12 @@ export function useVectorInteraction({
   svgRef,
 }: UseVectorInteractionParams): UseVectorInteractionResult {
   const [session, setSession] = useState<PointerSession>(IDLE_POINTER_SESSION);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const lastTextPointerDownRef = useRef<{
+    shapeId: string;
+    time: number;
+  } | null>(null);
+  const pendingTextEditShapeIdRef = useRef<string | null>(null);
   const sessionRef = useRef(session);
   useLayoutEffect(() => {
     sessionRef.current = session;
@@ -148,14 +165,80 @@ export function useVectorInteraction({
       if (current.pointerId !== event.pointerId) return;
 
       releaseSvgPointer(svgRef.current, event.pointerId);
-      dispatchActions(commitSession(interactionState, current));
+      const actions = commitSession(interactionState, current);
+      dispatchActions(actions);
+      for (const action of actions) {
+        if (action.type === "SHAPE_ADD" && action.shape.type === "text") {
+          setEditingTextId(action.shape.id);
+        }
+      }
       setSession(IDLE_POINTER_SESSION);
     },
     [interactionState, dispatchActions, svgRef],
   );
 
+  const commitTextEdit = useCallback(
+    (input: TextEditCommit) => {
+      if (!editingTextId) return;
+      dispatchActions(commitTextEditActions(editingTextId, input));
+      setEditingTextId(null);
+    },
+    [dispatchActions, editingTextId],
+  );
+
+  const cancelTextEdit = useCallback(() => {
+    if (!editingTextId) return;
+    const shape = getShapeById(state.doc, editingTextId);
+    if (shape?.type === "text" && shape.content.length === 0) {
+      dispatchActions([{ type: "SHAPE_DELETE", id: editingTextId }]);
+    }
+    setEditingTextId(null);
+  }, [dispatchActions, editingTextId, state.doc]);
+
+  const openTextEditor = useCallback(
+    (shapeId: string) => {
+      pendingTextEditShapeIdRef.current = null;
+      lastTextPointerDownRef.current = null;
+      setSession(IDLE_POINTER_SESSION);
+      setEditingTextId(shapeId);
+      dispatch({ type: "SELECTION_SET", ids: [shapeId] });
+    },
+    [dispatch],
+  );
+
+  const onShapeDoubleClick = useCallback(
+    (shapeId: string, event: ReactMouseEvent) => {
+      const shape = getShapeById(state.doc, shapeId);
+      if (shape?.type !== "text" || state.tool !== "select") return;
+
+      event.preventDefault();
+      openTextEditor(shapeId);
+    },
+    [openTextEditor, state.doc, state.tool],
+  );
+
   const onShapePointerDown = useCallback(
     (shapeId: string, event: ReactPointerEvent) => {
+      const shape = getShapeById(state.doc, shapeId);
+      if (shape?.type === "text" && state.tool === "select") {
+        const now = event.timeStamp;
+        const last = lastTextPointerDownRef.current;
+        if (
+          last?.shapeId === shapeId &&
+          now - last.time <= VECTOR_AI_TEXT_DOUBLE_CLICK_MS
+        ) {
+          releaseSvgPointer(svgRef.current, event.pointerId);
+          pendingTextEditShapeIdRef.current = shapeId;
+          event.stopPropagation();
+          lastTextPointerDownRef.current = null;
+          return;
+        }
+
+        lastTextPointerDownRef.current = { shapeId, time: now };
+      } else {
+        lastTextPointerDownRef.current = null;
+      }
+
       const world = worldFromEvent(svgRef.current, event);
       if (!world) return;
 
@@ -172,7 +255,7 @@ export function useVectorInteraction({
       dispatchActions(result.actions);
       setSession(result.session);
     },
-    [interactionState, dispatchActions, svgRef],
+    [interactionState, dispatchActions, state.doc, state.tool, svgRef],
   );
 
   const onLineEndPointerDown = useCallback(
@@ -309,9 +392,17 @@ export function useVectorInteraction({
 
   const onSvgPointerUp = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
+      const pendingShapeId = pendingTextEditShapeIdRef.current;
+      if (pendingShapeId) {
+        pendingTextEditShapeIdRef.current = null;
+        releaseSvgPointer(svgRef.current, event.pointerId);
+        openTextEditor(pendingShapeId);
+        return;
+      }
+
       endSession(event);
     },
-    [endSession],
+    [endSession, openTextEditor, svgRef],
   );
 
   const onSvgPointerCancel = useCallback(
@@ -355,12 +446,16 @@ export function useVectorInteraction({
     circlePreview: previews.circle,
     linePreview: previews.line,
     cubicPreview: previews.cubic,
+    editingTextId,
+    commitTextEdit,
+    cancelTextEdit,
     shapePointerEvents: shapePointerEventsForTool(state.tool),
     onSvgPointerDown,
     onSvgPointerMove,
     onSvgPointerUp,
     onSvgPointerCancel,
     onShapePointerDown,
+    onShapeDoubleClick,
     onLineEndPointerDown,
     onCubicHandlePointerDown,
     onRectHandlePointerDown,

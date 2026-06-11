@@ -24,7 +24,7 @@ export type ShapeStyle = {
   opacity?: number;
 };
 
-export type ShapeType = "rect" | "circle" | "line" | "path";
+export type ShapeType = "rect" | "circle" | "line" | "path" | "text";
 
 export type ShapeBase = {
   id: string;
@@ -58,7 +58,19 @@ export type PathShape = ShapeBase & {
   segments: PathSegmentLocal[];
 };
 
-export type Shape = RectShape | CircleShape | LineShape | PathShape;
+export type TextShape = ShapeBase & {
+  type: "text";
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+};
+
+export type Shape =
+  | RectShape
+  | CircleShape
+  | LineShape
+  | PathShape
+  | TextShape;
 
 export type VectorDoc = {
   version: VectorDocVersion;

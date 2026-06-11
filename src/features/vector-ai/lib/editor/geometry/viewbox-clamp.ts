@@ -5,8 +5,10 @@ import type {
   PathShape,
   RectShape,
   Shape,
+  TextShape,
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
+import { estimateTextBounds } from "@/features/vector-ai/lib/editor/geometry/text-bounds";
 import {
   cubicWorldBounds,
   cubicWorldPointsFromPathShape,
@@ -280,9 +282,45 @@ function clampLineShape(shape: LineShape, viewBox: ViewBox): LineShape {
   };
 }
 
+function clampTextShape(shape: TextShape, viewBox: ViewBox): TextShape {
+  const { minX, minY, maxX, maxY } = viewBoxEdges(viewBox);
+  const bounds = estimateTextBounds(shape);
+  const halfW = bounds.w / 2;
+  const halfH = bounds.h / 2;
+
+  let cx = shape.transform.x;
+  let cy = shape.transform.y;
+
+  if (cx - halfW < minX) {
+    cx = minX + halfW;
+  }
+  if (cy - halfH < minY) {
+    cy = minY + halfH;
+  }
+  if (cx + halfW > maxX) {
+    cx = maxX - halfW;
+  }
+  if (cy + halfH > maxY) {
+    cy = maxY - halfH;
+  }
+
+  if (bounds.w > maxX - minX) {
+    cx = minX + (maxX - minX) / 2;
+  }
+  if (bounds.h > maxY - minY) {
+    cy = minY + (maxY - minY) / 2;
+  }
+
+  return {
+    ...shape,
+    transform: { ...shape.transform, x: cx, y: cy },
+  };
+}
+
 export function clampShapeToViewBox(shape: Shape, viewBox: ViewBox): Shape {
   if (shape.type === "rect") return clampRectShape(shape, viewBox);
   if (shape.type === "circle") return clampCircleShape(shape, viewBox);
   if (shape.type === "path") return clampPathShape(shape, viewBox);
+  if (shape.type === "text") return clampTextShape(shape, viewBox);
   return clampLineShape(shape, viewBox);
 }

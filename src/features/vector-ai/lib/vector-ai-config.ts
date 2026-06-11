@@ -52,3 +52,18 @@ export const VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE: ShapeStyle = {
   stroke: "#000000",
   strokeWidth: 2,
 };
+
+export const VECTOR_AI_DEFAULT_FONT_SIZE = 16;
+export const VECTOR_AI_DEFAULT_FONT_FAMILY = "sans-serif";
+export const VECTOR_AI_MAX_FONT_SIZE = 512;
+export const VECTOR_AI_MAX_FONT_FAMILY_LENGTH = 200;
+export const VECTOR_AI_MAX_TEXT_LENGTH = 2_000;
+
+export const VECTOR_AI_DEFAULT_TEXT_STYLE: ShapeStyle = {
+  fill: "#000000",
+};
+
+export const VECTOR_AI_HIT_TEXT_MIN_WIDTH = 24;
+export const VECTOR_AI_HIT_TEXT_MIN_HEIGHT = 20;
+export const VECTOR_AI_TEXT_LINE_HEIGHT_FACTOR = 1.2;
+export const VECTOR_AI_TEXT_DOUBLE_CLICK_MS = 400;
