@@ -8,6 +8,7 @@ import {
   makeDocWithRect,
   makeEditorWithRect,
   makeRectShape,
+  makeTextShape,
 } from "@/features/vector-ai/lib/editor/test/fixtures";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";
 
@@ -78,6 +79,45 @@ describe("editorReducer", () => {
     const viewBox = { x: 1, y: 2, w: 400, h: 300 };
     const next = editorReducer(state, { type: "VIEWBOX_SET", viewBox });
     expect(next.doc.viewBox).toEqual(viewBox);
+  });
+
+  it("VIEWBOX_SET identique ne pousse pas l'historique", () => {
+    const state = createInitialEditorState();
+    const next = editorReducer(state, {
+      type: "VIEWBOX_SET",
+      viewBox: { ...state.doc.viewBox },
+    });
+    expect(next).toBe(state);
+    expect(next.history.past).toHaveLength(0);
+  });
+
+  it("SHAPE_UPDATE identique ne pousse pas l'historique", () => {
+    const state = createInitialEditorState({
+      ...createEmptyDoc(),
+      shapes: [makeTextShape({ id: "text-1", content: "Hello" })],
+    });
+    const next = editorReducer(state, {
+      type: "SHAPE_UPDATE",
+      id: "text-1",
+      patch: { content: "Hello" },
+    });
+    expect(next).toBe(state);
+    expect(next.history.past).toHaveLength(0);
+  });
+
+  it("SHAPE_UPDATE réel pousse l'historique", () => {
+    const state = createInitialEditorState({
+      ...createEmptyDoc(),
+      shapes: [makeTextShape({ id: "text-1", content: "Hello" })],
+    });
+    const next = editorReducer(state, {
+      type: "SHAPE_UPDATE",
+      id: "text-1",
+      patch: { content: "Bonjour" },
+    });
+    const updated = next.doc.shapes[0];
+    expect(updated?.type === "text" && updated.content).toBe("Bonjour");
+    expect(next.history.past).toHaveLength(1);
   });
 
   it("DOC_SET remplace le document valide", () => {

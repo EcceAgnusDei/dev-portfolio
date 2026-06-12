@@ -2,6 +2,7 @@ import { parseVectorDoc } from "@/features/vector-ai/lib/document/schema";
 import type { Shape, VectorDoc, ViewBox } from "@/features/vector-ai/lib/document/types";
 import { clampShapeToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";
+import { isSameVectorDoc } from "@/features/vector-ai/lib/editor/core/doc-equality";
 import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
 import type { EditorAction, EditorState } from "@/features/vector-ai/lib/editor/core/state";
 
@@ -25,6 +26,9 @@ function replaceDoc(
   nextDoc: VectorDoc,
   recordHistory: boolean | undefined,
 ): EditorState {
+  if (isSameVectorDoc(state.doc, nextDoc)) {
+    return state;
+  }
   if (!shouldRecordHistory(recordHistory)) {
     return { ...state, doc: nextDoc };
   }
