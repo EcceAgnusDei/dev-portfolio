@@ -15,9 +15,18 @@ import type {
   CircleResizeHandle,
   RectResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
+import { TextEditForeignObject } from "@/features/vector-ai/components/text-edit-foreign-object";
+import type { TextEditCommit } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { viewBoxToAttr } from "@/features/vector-ai/lib/view/shape-presentation";
 import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 import { cn } from "@/lib/utils";
+
+export type VectorCanvasTextEdit = {
+  shapeId: string;
+  doc: VectorDoc;
+  onCommit: (input: TextEditCommit) => void;
+  onCancel: () => void;
+};
 
 export type VectorCanvasProps = {
   doc: VectorDoc;
@@ -56,6 +65,7 @@ export type VectorCanvasProps = {
   linePreview?: LinePreview | null;
   cubicPreview?: CubicPathPreview | null;
   editingTextId?: string | null;
+  textEdit?: VectorCanvasTextEdit | null;
 };
 
 export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
@@ -81,6 +91,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       linePreview,
       cubicPreview,
       editingTextId = null,
+      textEdit = null,
     },
     ref,
   ) {
@@ -230,6 +241,15 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               onCircleHandlePointerDown={onCircleHandlePointerDown}
             />
           </g>
+          {textEdit ? (
+            <TextEditForeignObject
+              key={textEdit.shapeId}
+              doc={textEdit.doc}
+              shapeId={textEdit.shapeId}
+              onCommit={textEdit.onCommit}
+              onCancel={textEdit.onCancel}
+            />
+          ) : null}
         </g>
       </svg>
     );

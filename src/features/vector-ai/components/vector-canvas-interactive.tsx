@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, type RefObject } from "react";
+import type { RefObject } from "react";
 
-import { TextEditOverlay } from "@/features/vector-ai/components/text-edit-overlay";
 import type { UseVectorInteractionResult } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
@@ -23,10 +22,8 @@ export function VectorCanvasInteractive({
   selectedId,
   className,
 }: VectorCanvasInteractiveProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={containerRef} className={cn("relative h-full w-full", className)}>
+    <div className={cn("h-full w-full", className)}>
       <VectorCanvas
         ref={svgRef}
         doc={interaction.displayDoc}
@@ -38,6 +35,16 @@ export function VectorCanvasInteractive({
         linePreview={interaction.linePreview}
         cubicPreview={interaction.cubicPreview}
         editingTextId={interaction.editingTextId}
+        textEdit={
+          interaction.editingTextId
+            ? {
+                shapeId: interaction.editingTextId,
+                doc,
+                onCommit: interaction.commitTextEdit,
+                onCancel: interaction.cancelTextEdit,
+              }
+            : null
+        }
         onPointerDown={interaction.onSvgPointerDown}
         onPointerMove={interaction.onSvgPointerMove}
         onPointerUp={interaction.onSvgPointerUp}
@@ -49,17 +56,6 @@ export function VectorCanvasInteractive({
         onRectHandlePointerDown={interaction.onRectHandlePointerDown}
         onCircleHandlePointerDown={interaction.onCircleHandlePointerDown}
       />
-      {interaction.editingTextId ? (
-        <TextEditOverlay
-          key={interaction.editingTextId}
-          svgRef={svgRef}
-          containerRef={containerRef}
-          doc={doc}
-          shapeId={interaction.editingTextId}
-          onCommit={interaction.commitTextEdit}
-          onCancel={interaction.cancelTextEdit}
-        />
-      ) : null}
     </div>
   );
 }

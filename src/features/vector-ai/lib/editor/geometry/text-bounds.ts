@@ -1,12 +1,14 @@
 import type { TextShape } from "@/features/vector-ai/lib/document/types";
 import {
+  measureTextBlockHeight,
+  measureTextBlockWidth,
+} from "@/features/vector-ai/lib/editor/geometry/measure-text";
+import {
+  VECTOR_AI_DEFAULT_FONT_FAMILY,
   VECTOR_AI_HIT_TEXT_MIN_HEIGHT,
   VECTOR_AI_HIT_TEXT_MIN_WIDTH,
 } from "@/features/vector-ai/lib/vector-ai-config";
-import {
-  splitTextLines,
-  textLineHeight,
-} from "@/features/vector-ai/lib/editor/geometry/text-lines";
+import { splitTextLines } from "@/features/vector-ai/lib/editor/geometry/text-lines";
 
 export type TextBounds = {
   x: number;
@@ -15,22 +17,22 @@ export type TextBounds = {
   h: number;
 };
 
-export function estimateTextBounds(
-  shape: Pick<TextShape, "transform" | "content" | "fontSize">,
-): TextBounds {
+export type TextBoundsInput = Pick<
+  TextShape,
+  "transform" | "content" | "fontSize" | "fontFamily"
+>;
+
+export function estimateTextBounds(shape: TextBoundsInput): TextBounds {
   const lines = splitTextLines(shape.content);
-  const maxLineLength = lines.reduce(
-    (max, line) => Math.max(max, line.length),
-    0,
-  );
+  const fontFamily = shape.fontFamily || VECTOR_AI_DEFAULT_FONT_FAMILY;
 
   const w = Math.max(
     VECTOR_AI_HIT_TEXT_MIN_WIDTH,
-    maxLineLength > 0 ? maxLineLength * shape.fontSize * 0.55 : 0,
+    measureTextBlockWidth(lines, shape.fontSize, fontFamily),
   );
   const h = Math.max(
     VECTOR_AI_HIT_TEXT_MIN_HEIGHT,
-    lines.length * textLineHeight(shape.fontSize),
+    measureTextBlockHeight(lines, shape.fontSize, fontFamily),
   );
 
   return {
@@ -42,7 +44,7 @@ export function estimateTextBounds(
 }
 
 export function textRenderPosition(
-  shape: Pick<TextShape, "transform" | "content" | "fontSize">,
+  shape: TextBoundsInput,
 ): { x: number; y: number } {
   const bounds = estimateTextBounds(shape);
   return {

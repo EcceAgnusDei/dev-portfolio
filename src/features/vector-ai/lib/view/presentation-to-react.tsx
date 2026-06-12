@@ -17,7 +17,6 @@ import {
   VECTOR_AI_HIT_CIRCLE_PADDING,
   VECTOR_AI_HIT_LINE_STROKE_WIDTH,
 } from "@/features/vector-ai/lib/vector-ai-config";
-import type { TextShape } from "@/features/vector-ai/lib/document/types";
 import {
   splitTextLines,
   textLineHeight,
@@ -122,7 +121,8 @@ function hitLayerFromPresentation(
         },
         content: presentation.textContent ?? "",
         fontSize: Number(presentation.attrs.fontSize ?? 16),
-      } satisfies Pick<TextShape, "transform" | "content" | "fontSize">);
+        fontFamily: String(presentation.attrs.fontFamily ?? "sans-serif"),
+      });
       return {
         tag: "rect",
         attrs: {
@@ -152,6 +152,7 @@ function textNodeFromPresentation(
     transform: { x: centerX, y: centerY },
     content: presentation.textContent ?? "",
     fontSize,
+    fontFamily: String(presentation.attrs.fontFamily ?? "sans-serif"),
   });
   const lines = splitTextLines(presentation.textContent ?? "");
   const lineHeight = textLineHeight(fontSize);

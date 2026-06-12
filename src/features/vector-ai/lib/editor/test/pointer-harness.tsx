@@ -44,19 +44,6 @@ vi.mock("@/features/vector-ai/lib/editor/geometry/screen-to-world", () => ({
       y: world.y,
     }),
   ),
-  worldToContainerOffset: vi.fn(
-    (
-      _svg: SVGSVGElement,
-      container: HTMLElement,
-      world: { x: number; y: number },
-    ) => {
-      const rect = container.getBoundingClientRect();
-      return {
-        left: world.x - rect.left,
-        top: world.y - rect.top,
-      };
-    },
-  ),
 }));
 
 export function makeDoubleClickEvent(options?: {
