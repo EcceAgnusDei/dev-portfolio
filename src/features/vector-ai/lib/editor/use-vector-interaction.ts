@@ -22,6 +22,10 @@ import {
   commitTextEditActions,
   type TextEditCommit,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
+import {
+  canDeleteShape,
+  deleteShapeActions,
+} from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
 import { clampTextPlacement } from "@/features/vector-ai/lib/editor/dispatch/create-text";
 import { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
@@ -56,7 +60,10 @@ import {
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
-import { VECTOR_AI_DEFAULT_FONT_SIZE, VECTOR_AI_TEXT_DOUBLE_CLICK_MS } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_DEFAULT_FONT_SIZE,
+  VECTOR_AI_TEXT_DOUBLE_CLICK_MS,
+} from "@/features/vector-ai/lib/vector-ai-config";
 import type {
   CircleResizeHandle,
   LineEnd,
@@ -75,6 +82,12 @@ import {
   type TextEditSession,
 } from "@/features/vector-ai/lib/editor/session/text-edit-session";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
+
+function isTextEditUiFocused(): boolean {
+  const active = document.activeElement;
+  if (!active) return false;
+  return active.closest("[data-vector-text-edit-ui]") !== null;
+}
 
 function worldFromEvent(
   svg: SVGSVGElement | null,
@@ -105,6 +118,8 @@ export type UseVectorInteractionResult = {
   textEditPreviewFontSize: number | undefined;
   commitTextEdit: (input: TextEditCommit) => void;
   cancelTextEdit: () => void;
+  canDeleteSelectedShape: boolean;
+  deleteSelectedShape: () => void;
   shapePointerEvents: "auto" | "none";
   onSvgPointerDown: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerMove: (event: ReactPointerEvent<SVGSVGElement>) => void;
@@ -258,10 +273,39 @@ export function useVectorInteraction({
     if (!textEditSession) return;
     const shape = getShapeById(state.doc, textEditSession.shapeId);
     if (shape?.type === "text" && shape.content.length === 0) {
-      dispatchActions([{ type: "SHAPE_DELETE", id: textEditSession.shapeId }]);
+      dispatchActions(deleteShapeActions(state.doc, textEditSession.shapeId));
     }
     setTextEditSession(null);
   }, [dispatchActions, textEditSession, state.doc]);
+
+  const selectedShapeId = state.selection.ids[0] ?? null;
+
+  const canDeleteSelectedShape = useMemo(() => {
+    if (state.tool !== "select") return false;
+    if (textEditSession !== null) return false;
+    if (!selectedShapeId) return false;
+    return canDeleteShape(state.doc, selectedShapeId);
+  }, [state.tool, state.doc, textEditSession, selectedShapeId]);
+
+  const deleteSelectedShape = useCallback(() => {
+    if (state.tool !== "select") return;
+    if (textEditSession !== null) return;
+    if (isTextEditUiFocused()) return;
+    if (!selectedShapeId) return;
+    if (!canDeleteShape(state.doc, selectedShapeId)) return;
+
+    if (sessionRef.current.kind !== "idle") {
+      setSession(IDLE_POINTER_SESSION);
+    }
+
+    dispatchActions(deleteShapeActions(state.doc, selectedShapeId));
+  }, [
+    state.tool,
+    state.doc,
+    textEditSession,
+    selectedShapeId,
+    dispatchActions,
+  ]);
 
   const openTextEditor = useCallback(
     (shapeId: string) => {
@@ -490,14 +534,38 @@ export function useVectorInteraction({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      if (sessionRef.current.kind !== "create-cubic") return;
-      setSession(IDLE_POINTER_SESSION);
+      if (event.key === "Escape") {
+        if (sessionRef.current.kind === "create-cubic") {
+          setSession(IDLE_POINTER_SESSION);
+        }
+        return;
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+
+      const shapeId = state.selection.ids[0];
+      if (state.tool !== "select") return;
+      if (textEditSession !== null) return;
+      if (isTextEditUiFocused()) return;
+      if (!shapeId || !canDeleteShape(state.doc, shapeId)) return;
+
+      if (sessionRef.current.kind !== "idle") {
+        setSession(IDLE_POINTER_SESSION);
+      }
+
+      event.preventDefault();
+      dispatchActions(deleteShapeActions(state.doc, shapeId));
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [
+    state.tool,
+    state.doc,
+    state.selection.ids,
+    textEditSession,
+    dispatchActions,
+  ]);
 
   const displayDoc = useMemo(
     () => getDisplayDoc(interactionState, session),
@@ -524,6 +592,8 @@ export function useVectorInteraction({
     textEditPreviewFontSize: textEditPreviewFontSizeValue,
     commitTextEdit,
     cancelTextEdit,
+    canDeleteSelectedShape,
+    deleteSelectedShape,
     shapePointerEvents: shapePointerEventsForTool(state.tool),
     onSvgPointerDown,
     onSvgPointerMove,

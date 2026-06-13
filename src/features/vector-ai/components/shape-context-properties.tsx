@@ -2,9 +2,32 @@
 
 import { type ChangeEvent } from "react";
 
+import { Button } from "@/components/ui/button";
 import type { TextShape } from "@/features/vector-ai/lib/document/types";
 import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { VECTOR_AI_MAX_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
+
+export type SelectedShapeContextPropertiesProps = {
+  canDelete: boolean;
+  onDelete: () => void;
+};
+
+export function SelectedShapeContextProperties({
+  canDelete,
+  onDelete,
+}: SelectedShapeContextPropertiesProps) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={!canDelete}
+      onClick={onDelete}
+    >
+      Supprimer
+    </Button>
+  );
+}
 
 export type TextShapeContextPropertiesProps = {
   shape: TextShape;

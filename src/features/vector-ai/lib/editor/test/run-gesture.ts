@@ -30,10 +30,16 @@ import type {
 } from "@/features/vector-ai/lib/editor/session/types";
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
+import { deleteShapeActions } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
 
 export type GestureStep =
   | { type: "background-down"; world: WorldPoint; pointerId?: number }
-  | { type: "shape-down"; shapeId: string; world: WorldPoint; pointerId?: number }
+  | {
+      type: "shape-down";
+      shapeId: string;
+      world: WorldPoint;
+      pointerId?: number;
+    }
   | {
       type: "line-end-down";
       shapeId: string;
@@ -68,7 +74,8 @@ export type GestureStep =
   | { type: "cancel-session" }
   | { type: "pointer-cancel"; pointerId?: number }
   | { type: "undo" }
-  | { type: "redo" };
+  | { type: "redo" }
+  | { type: "delete-selected" };
 
 export type GestureStepSnapshot = {
   session: PointerSession;
@@ -98,7 +105,8 @@ function pointerIdFromStep(step: GestureStep): number {
     step.type === "undo" ||
     step.type === "redo" ||
     step.type === "tool-set" ||
-    step.type === "cancel-session"
+    step.type === "cancel-session" ||
+    step.type === "delete-selected"
   ) {
     return DEFAULT_POINTER_ID;
   }
@@ -232,6 +240,15 @@ export function runGesture(
       case "redo":
         stepActions = [{ type: "REDO" }];
         break;
+      case "delete-selected":
+        if (editorState.tool === "select") {
+          const shapeId = editorState.selection.ids[0];
+          if (shapeId) {
+            session = IDLE_POINTER_SESSION;
+            stepActions = deleteShapeActions(editorState.doc, shapeId);
+          }
+        }
+        break;
     }
 
     allActions.push(...stepActions);
@@ -239,8 +256,14 @@ export function runGesture(
 
     snapshots.push({
       session,
-      displayDoc: getDisplayDoc(editorInteractionStateFromEditor(editorState), session),
-      previews: getPreviews(editorInteractionStateFromEditor(editorState), session),
+      displayDoc: getDisplayDoc(
+        editorInteractionStateFromEditor(editorState),
+        session,
+      ),
+      previews: getPreviews(
+        editorInteractionStateFromEditor(editorState),
+        session,
+      ),
       stepActions,
     });
   }

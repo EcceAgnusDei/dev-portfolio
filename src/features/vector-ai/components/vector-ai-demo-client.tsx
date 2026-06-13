@@ -2,7 +2,10 @@
 
 import { useCallback, useReducer, useRef, useState } from "react";
 
-import { TextShapeContextProperties } from "@/features/vector-ai/components/text-shape-context-properties";
+import {
+  SelectedShapeContextProperties,
+  TextShapeContextProperties,
+} from "@/features/vector-ai/components/shape-context-properties";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
@@ -43,6 +46,11 @@ export function VectorAiDemoClient() {
           String(interaction.editingTextShape.fontSize)
         }
         onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
+      />
+    ) : selectedId ? (
+      <SelectedShapeContextProperties
+        canDelete={interaction.canDeleteSelectedShape}
+        onDelete={interaction.deleteSelectedShape}
       />
     ) : null;
 
