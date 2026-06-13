@@ -12,12 +12,17 @@ import {
   type RefObject,
 } from "react";
 
-import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
+import { createShapeId } from "@/features/vector-ai/lib/document/schema";
+import type {
+  TextShape,
+  VectorDoc,
+} from "@/features/vector-ai/lib/document/types";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import {
   commitTextEditActions,
   type TextEditCommit,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
+import { clampTextPlacement } from "@/features/vector-ai/lib/editor/dispatch/create-text";
 import { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
@@ -51,7 +56,7 @@ import {
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
-import { VECTOR_AI_TEXT_DOUBLE_CLICK_MS } from "@/features/vector-ai/lib/vector-ai-config";
+import { VECTOR_AI_DEFAULT_FONT_SIZE, VECTOR_AI_TEXT_DOUBLE_CLICK_MS } from "@/features/vector-ai/lib/vector-ai-config";
 import type {
   CircleResizeHandle,
   LineEnd,
@@ -61,6 +66,14 @@ import {
   IDLE_POINTER_SESSION,
   type PointerSession,
 } from "@/features/vector-ai/lib/editor/session/types";
+import {
+  beginTextEditSession,
+  commitFontSizeFromTextEditSession,
+  textEditPreviewFontSize,
+  textShapeForEditSession,
+  updateTextEditFontSizeDraft,
+  type TextEditSession,
+} from "@/features/vector-ai/lib/editor/session/text-edit-session";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
 
 function worldFromEvent(
@@ -86,6 +99,10 @@ export type UseVectorInteractionResult = {
   linePreview: LinePreview | null;
   cubicPreview: CubicPathPreview | null;
   editingTextId: string | null;
+  editingTextShape: TextShape | undefined;
+  textEditFontSizeDraft: string | null;
+  setTextEditFontSizeDraft: (value: string) => void;
+  textEditPreviewFontSize: number | undefined;
   commitTextEdit: (input: TextEditCommit) => void;
   cancelTextEdit: () => void;
   shapePointerEvents: "auto" | "none";
@@ -123,7 +140,8 @@ export function useVectorInteraction({
   svgRef,
 }: UseVectorInteractionParams): UseVectorInteractionResult {
   const [session, setSession] = useState<PointerSession>(IDLE_POINTER_SESSION);
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [textEditSession, setTextEditSession] =
+    useState<TextEditSession | null>(null);
   const lastTextPointerDownRef = useRef<{
     shapeId: string;
     time: number;
@@ -161,49 +179,102 @@ export function useVectorInteraction({
     (event: ReactPointerEvent) => {
       const current = sessionRef.current;
       if (current.kind === "idle") return;
-      if (!shouldCommitSessionOnPointerUp(current)) return;
       if (current.pointerId !== event.pointerId) return;
+
+      if (current.kind === "create-text") {
+        releaseSvgPointer(svgRef.current, event.pointerId);
+        const point = clampTextPlacement(
+          current.startWorld,
+          interactionState.doc.viewBox,
+        );
+        setTextEditSession(
+          beginTextEditSession(
+            createShapeId(),
+            VECTOR_AI_DEFAULT_FONT_SIZE,
+            point,
+          ),
+        );
+        dispatch({ type: "TOOL_SET", tool: "select" });
+        setSession(IDLE_POINTER_SESSION);
+        return;
+      }
+
+      if (!shouldCommitSessionOnPointerUp(current)) return;
 
       releaseSvgPointer(svgRef.current, event.pointerId);
       const actions = commitSession(interactionState, current);
       dispatchActions(actions);
-      for (const action of actions) {
-        if (action.type === "SHAPE_ADD" && action.shape.type === "text") {
-          setEditingTextId(action.shape.id);
-        }
-      }
       setSession(IDLE_POINTER_SESSION);
     },
-    [interactionState, dispatchActions, svgRef],
+    [interactionState, dispatchActions, dispatch, svgRef],
   );
+
+  const editingTextId = textEditSession?.shapeId ?? null;
+  const textEditFontSizeDraft = textEditSession?.fontSizeDraft ?? null;
+
+  const editingTextShape = useMemo((): TextShape | undefined => {
+    if (!textEditSession) return undefined;
+    return textShapeForEditSession(textEditSession, state.doc);
+  }, [textEditSession, state.doc]);
+
+  const setTextEditFontSizeDraft = useCallback((value: string) => {
+    setTextEditSession((prev) =>
+      prev ? updateTextEditFontSizeDraft(prev, value) : null,
+    );
+  }, []);
+
+  const textEditPreviewFontSizeValue = useMemo(() => {
+    if (!textEditSession || !editingTextShape) return undefined;
+    return textEditPreviewFontSize(textEditSession, editingTextShape.fontSize);
+  }, [textEditSession, editingTextShape]);
 
   const commitTextEdit = useCallback(
     (input: TextEditCommit) => {
-      if (!editingTextId) return;
-      dispatchActions(commitTextEditActions(editingTextId, input));
-      setEditingTextId(null);
+      if (!textEditSession) return;
+
+      const fallback = editingTextShape?.fontSize ?? 16;
+      const fontSize = commitFontSizeFromTextEditSession(
+        textEditSession,
+        fallback,
+      );
+
+      dispatchActions(
+        commitTextEditActions({
+          shapeId: textEditSession.shapeId,
+          input: {
+            ...input,
+            fontSize,
+          },
+          doc: state.doc,
+          pendingWorld: textEditSession.world,
+        }),
+      );
+      setTextEditSession(null);
     },
-    [dispatchActions, editingTextId],
+    [dispatchActions, textEditSession, editingTextShape?.fontSize, state.doc],
   );
 
   const cancelTextEdit = useCallback(() => {
-    if (!editingTextId) return;
-    const shape = getShapeById(state.doc, editingTextId);
+    if (!textEditSession) return;
+    const shape = getShapeById(state.doc, textEditSession.shapeId);
     if (shape?.type === "text" && shape.content.length === 0) {
-      dispatchActions([{ type: "SHAPE_DELETE", id: editingTextId }]);
+      dispatchActions([{ type: "SHAPE_DELETE", id: textEditSession.shapeId }]);
     }
-    setEditingTextId(null);
-  }, [dispatchActions, editingTextId, state.doc]);
+    setTextEditSession(null);
+  }, [dispatchActions, textEditSession, state.doc]);
 
   const openTextEditor = useCallback(
     (shapeId: string) => {
+      const shape = getShapeById(state.doc, shapeId);
+      if (shape?.type !== "text") return;
+
       pendingTextEditShapeIdRef.current = null;
       lastTextPointerDownRef.current = null;
       setSession(IDLE_POINTER_SESSION);
-      setEditingTextId(shapeId);
+      setTextEditSession(beginTextEditSession(shapeId, shape.fontSize));
       dispatch({ type: "SELECTION_SET", ids: [shapeId] });
     },
-    [dispatch],
+    [dispatch, state.doc],
   );
 
   const onShapeDoubleClick = useCallback(
@@ -447,6 +518,10 @@ export function useVectorInteraction({
     linePreview: previews.line,
     cubicPreview: previews.cubic,
     editingTextId,
+    editingTextShape,
+    textEditFontSizeDraft,
+    setTextEditFontSizeDraft,
+    textEditPreviewFontSize: textEditPreviewFontSizeValue,
     commitTextEdit,
     cancelTextEdit,
     shapePointerEvents: shapePointerEventsForTool(state.tool),

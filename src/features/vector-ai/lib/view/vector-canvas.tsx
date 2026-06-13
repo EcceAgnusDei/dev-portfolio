@@ -1,6 +1,6 @@
 import { forwardRef, type MouseEvent, type PointerEvent } from "react";
 
-import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
+import type { TextShape, VectorDoc } from "@/features/vector-ai/lib/document/types";
 import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
 import type { CubicPathPreview } from "@/features/vector-ai/lib/editor/preview/cubic";
 import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
@@ -22,8 +22,8 @@ import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 import { cn } from "@/lib/utils";
 
 export type VectorCanvasTextEdit = {
-  shapeId: string;
-  doc: VectorDoc;
+  shape: TextShape;
+  previewFontSize?: number;
   onCommit: (input: TextEditCommit) => void;
   onCancel: () => void;
 };
@@ -243,9 +243,9 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
           </g>
           {textEdit ? (
             <TextEditForeignObject
-              key={textEdit.shapeId}
-              doc={textEdit.doc}
-              shapeId={textEdit.shapeId}
+              key={textEdit.shape.id}
+              shape={textEdit.shape}
+              previewFontSize={textEdit.previewFontSize}
               onCommit={textEdit.onCommit}
               onCancel={textEdit.onCancel}
             />

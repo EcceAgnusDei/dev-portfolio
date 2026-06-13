@@ -5,7 +5,7 @@ import type {
   EditorState,
   EditorTool,
 } from "@/features/vector-ai/lib/editor/core/state";
-import { commitPointerSession } from "@/features/vector-ai/lib/editor/dispatch/commit-session";
+import { commitPointerSession } from "@/features/vector-ai/lib/editor/dispatch/commit-pointer-session";
 import { docWithPointerPreview } from "@/features/vector-ai/lib/editor/preview/doc";
 import {
   getSessionPreviews,

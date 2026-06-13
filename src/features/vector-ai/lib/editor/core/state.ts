@@ -42,7 +42,11 @@ export type ShapePatch = {
 
 export type EditorAction =
   | { type: "DOC_SET"; doc: VectorDoc; recordHistory?: boolean }
-  | { type: "SHAPE_ADD"; shape: VectorDoc["shapes"][number]; recordHistory?: boolean }
+  | {
+      type: "SHAPE_ADD";
+      shape: VectorDoc["shapes"][number];
+      recordHistory?: boolean;
+    }
   | {
       type: "SHAPE_UPDATE";
       id: string;
@@ -50,7 +54,11 @@ export type EditorAction =
       recordHistory?: boolean;
     }
   | { type: "SHAPE_DELETE"; id: string; recordHistory?: boolean }
-  | { type: "VIEWBOX_SET"; viewBox: VectorDoc["viewBox"]; recordHistory?: boolean }
+  | {
+      type: "VIEWBOX_SET";
+      viewBox: VectorDoc["viewBox"];
+      recordHistory?: boolean;
+    }
   | { type: "SELECTION_SET"; ids: string[] }
   | { type: "TOOL_SET"; tool: EditorTool }
   | { type: "UNDO" }

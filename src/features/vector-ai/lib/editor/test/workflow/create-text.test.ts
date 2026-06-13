@@ -11,7 +11,6 @@ import type {
   EditorTool,
 } from "@/features/vector-ai/lib/editor/core/state";
 import {
-  expectAfterCreate,
   expectAfterMove,
   expectShapeCount,
   expectShapeInDoc,
@@ -36,6 +35,7 @@ import {
   makeTextShape as makeTextShapeFixture,
 } from "@/features/vector-ai/lib/editor/test/fixtures";
 import {
+  canvasBackgroundTarget,
   makePointerEvent,
   renderInteractiveCanvas,
 } from "@/features/vector-ai/lib/editor/test/pointer-harness";
@@ -81,7 +81,15 @@ function textStaysInViewBox(shape: TextShape, viewBox: ViewBox): boolean {
 }
 
 describe("workflow: création texte", () => {
-  it("crée un texte au clic et repasse en select", () => {
+  beforeAll(() => {
+    (
+      globalThis as typeof globalThis & {
+        IS_REACT_ACT_ENVIRONMENT?: boolean;
+      }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+
+  it("ouvre l'édition au clic sans ajouter le shape au doc", () => {
     const initial = withTextTool(makeEditorWithRect());
 
     const result = runGesture(initial, [
@@ -89,15 +97,50 @@ describe("workflow: création texte", () => {
       { type: "up" },
     ]);
 
-    expectAfterCreate(result, "new-shape-id", {
+    expect(actionsOfType(result.allActions, "SHAPE_ADD")).toHaveLength(0);
+    expect(result.state.tool).toBe("select");
+    expect(result.state.history.past).toHaveLength(0);
+    expectShapeCount(result.state, initial.doc.shapes.length);
+  });
+
+  it("crée le texte au commit de l'éditeur avec un seul push undo", () => {
+    const initial = withTextTool(makeEditorWithRect());
+    const canvas = renderInteractiveCanvas(initial);
+
+    act(() => {
+      canvas.interaction.onSvgPointerDown(
+        makePointerEvent({
+          clientX: 40,
+          clientY: 50,
+          target: canvasBackgroundTarget(),
+        }) as never,
+      );
+    });
+    act(() => {
+      canvas.interaction.onSvgPointerUp(
+        makePointerEvent({ clientX: 40, clientY: 50 }) as never,
+      );
+    });
+
+    expect(canvas.getState().history.past).toHaveLength(0);
+    expectShapeCount(canvas.getState(), initial.doc.shapes.length);
+    expect(canvas.interaction.editingTextId).toBe("new-shape-id");
+
+    act(() => {
+      canvas.interaction.commitTextEdit({ content: "Hello" });
+    });
+
+    expectShapeInDoc(canvas.getState(), "new-shape-id", {
       type: "text",
       transform: { x: 40, y: 50 },
-      content: TEXT_DEFAULTS.content,
+      content: "Hello",
       fontSize: TEXT_DEFAULTS.fontSize,
       fontFamily: TEXT_DEFAULTS.fontFamily,
       style: TEXT_DEFAULTS.style,
     });
-    expectShapeCount(result.state, initial.doc.shapes.length + 1);
+    expect(canvas.getState().history.past).toHaveLength(1);
+
+    canvas.unmount();
   });
 });
 
@@ -337,7 +380,11 @@ describe("workflow: édition contenu texte", () => {
 
     const next = applyEditorActions(
       initial,
-      commitTextEditActions("text-1", { content: "" }),
+      commitTextEditActions({
+        shapeId: "text-1",
+        input: { content: "" },
+        doc: initial.doc,
+      }),
     );
 
     expectShapeCount(next, 0);
@@ -352,7 +399,11 @@ describe("workflow: édition contenu texte", () => {
 
       const next = applyEditorActions(
         initial,
-        commitTextEditActions("text-1", { content }),
+        commitTextEditActions({
+          shapeId: "text-1",
+          input: { content },
+          doc: initial.doc,
+        }),
       );
 
       expectShapeCount(next, 0);
@@ -369,11 +420,16 @@ describe("workflow: édition contenu texte", () => {
       { type: "up" },
     ]);
 
-    expect(actionsOfType(afterCreate.allActions, "SHAPE_ADD")).toHaveLength(1);
+    expect(actionsOfType(afterCreate.allActions, "SHAPE_ADD")).toHaveLength(0);
 
     const afterCommit = applyEditorActions(
       afterCreate.state,
-      commitTextEditActions("new-shape-id", { content: " \n\t " }),
+      commitTextEditActions({
+        shapeId: "new-shape-id",
+        input: { content: " \n\t " },
+        doc: afterCreate.state.doc,
+        pendingWorld: { x: 40, y: 50 },
+      }),
     );
 
     expectShapeCount(afterCommit, shapeCountBefore);

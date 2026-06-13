@@ -4,7 +4,6 @@ import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import { commitCreateCircle } from "@/features/vector-ai/lib/editor/dispatch/create-circle";
 import { commitCreateLine } from "@/features/vector-ai/lib/editor/dispatch/create-line";
 import { commitCreateRect } from "@/features/vector-ai/lib/editor/dispatch/create-rect";
-import { commitCreateText } from "@/features/vector-ai/lib/editor/dispatch/create-text";
 import { commitMutateMove } from "@/features/vector-ai/lib/editor/dispatch/mutate-move";
 import { commitMutateResize } from "@/features/vector-ai/lib/editor/dispatch/mutate-resize";
 import type { PointerSession } from "@/features/vector-ai/lib/editor/session/types";
@@ -43,10 +42,6 @@ export function commitPointerSession(
 
   if (session.kind === "create-line") {
     return commitCreateLine(session, doc.viewBox);
-  }
-
-  if (session.kind === "create-text") {
-    return commitCreateText(session, doc.viewBox);
   }
 
   return [];

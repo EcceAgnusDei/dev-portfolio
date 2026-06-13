@@ -9,22 +9,23 @@ import {
   type CSSProperties,
 } from "react";
 
-import type {
-  TextShape,
-  VectorDoc,
-} from "@/features/vector-ai/lib/document/types";
+import type { TextShape } from "@/features/vector-ai/lib/document/types";
 import type { TextEditCommit } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import { estimateTextBounds } from "@/features/vector-ai/lib/editor/geometry/text-bounds";
 import {
-  VECTOR_AI_DEFAULT_FONT_SIZE,
   VECTOR_AI_TEXT_DOUBLE_CLICK_MS,
   VECTOR_AI_TEXT_LINE_HEIGHT_FACTOR,
 } from "@/features/vector-ai/lib/vector-ai-config";
 
+function isTextEditUiFocused(): boolean {
+  const active = document.activeElement;
+  if (!active) return false;
+  return active.closest("[data-vector-text-edit-ui]") !== null;
+}
+
 export type TextEditForeignObjectProps = {
-  doc: VectorDoc;
-  shapeId: string;
+  shape: TextShape;
+  previewFontSize?: number;
   onCommit: (input: TextEditCommit) => void;
   onCancel: () => void;
 };
@@ -33,19 +34,16 @@ const XHTML_ROOT_ATTRS = {
   xmlns: "http://www.w3.org/1999/xhtml",
 } as { xmlns: string };
 
-function readTextShape(doc: VectorDoc, shapeId: string): TextShape | null {
-  const shape = getShapeById(doc, shapeId);
-  if (!shape || shape.type !== "text") return null;
-  return shape;
-}
-
 function textShapeFill(shape: TextShape): string {
   return shape.style.fill && shape.style.fill !== "none"
     ? shape.style.fill
     : "#000000";
 }
 
-function inPlaceTextEditStyle(shape: TextShape): CSSProperties {
+function inPlaceTextEditStyle(
+  shape: TextShape,
+  fontSize: number,
+): CSSProperties {
   const fill = textShapeFill(shape);
 
   return {
@@ -59,7 +57,7 @@ function inPlaceTextEditStyle(shape: TextShape): CSSProperties {
     background: "transparent",
     color: fill,
     caretColor: fill,
-    fontSize: shape.fontSize,
+    fontSize,
     fontFamily: shape.fontFamily,
     lineHeight: VECTOR_AI_TEXT_LINE_HEIGHT_FACTOR,
     textAlign: "center",
@@ -72,27 +70,26 @@ function inPlaceTextEditStyle(shape: TextShape): CSSProperties {
 }
 
 export function TextEditForeignObject({
-  doc,
-  shapeId,
+  shape,
+  previewFontSize,
   onCommit,
   onCancel,
 }: TextEditForeignObjectProps) {
-  const shape = readTextShape(doc, shapeId);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const draftRef = useRef(shape?.content ?? "");
+  const draftRef = useRef(shape.content);
   const suppressBlurUntilRef = useRef(0);
-  const [draft, setDraft] = useState(shape?.content ?? "");
+  const [draft, setDraft] = useState(shape.content);
 
-  const fontSize = shape?.fontSize ?? VECTOR_AI_DEFAULT_FONT_SIZE;
+  const fontSize = previewFontSize ?? shape.fontSize;
 
   const bounds = useMemo(() => {
-    if (!shape) return null;
     return estimateTextBounds({
       transform: shape.transform,
       content: draft,
       fontSize,
+      fontFamily: shape.fontFamily,
     });
-  }, [draft, fontSize, shape]);
+  }, [draft, fontSize, shape.fontFamily, shape.transform]);
 
   useEffect(() => {
     suppressBlurUntilRef.current =
@@ -107,9 +104,7 @@ export function TextEditForeignObject({
     }, 0);
 
     return () => window.clearTimeout(focusId);
-  }, [shapeId]);
-
-  if (!shape || !bounds) return null;
+  }, [shape.id]);
 
   function commitEditor() {
     onCommit({ content: draftRef.current });
@@ -119,6 +114,7 @@ export function TextEditForeignObject({
     window.setTimeout(() => {
       if (performance.now() < suppressBlurUntilRef.current) return;
       if (document.activeElement === textareaRef.current) return;
+      if (isTextEditUiFocused()) return;
       commitEditor();
     }, 0);
   }
@@ -170,7 +166,7 @@ export function TextEditForeignObject({
             wrap="off"
             className="select-text"
             aria-label="Édition du texte"
-            style={inPlaceTextEditStyle(shape)}
+            style={inPlaceTextEditStyle(shape, fontSize)}
           />
         </div>
       </foreignObject>

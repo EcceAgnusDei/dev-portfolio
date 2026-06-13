@@ -18,7 +18,6 @@ export type VectorCanvasInteractiveProps = {
 export function VectorCanvasInteractive({
   svgRef,
   interaction,
-  doc,
   selectedId,
   className,
 }: VectorCanvasInteractiveProps) {
@@ -36,10 +35,10 @@ export function VectorCanvasInteractive({
         cubicPreview={interaction.cubicPreview}
         editingTextId={interaction.editingTextId}
         textEdit={
-          interaction.editingTextId
+          interaction.editingTextShape
             ? {
-                shapeId: interaction.editingTextId,
-                doc,
+                shape: interaction.editingTextShape,
+                previewFontSize: interaction.textEditPreviewFontSize,
                 onCommit: interaction.commitTextEdit,
                 onCancel: interaction.cancelTextEdit,
               }

@@ -204,6 +204,11 @@ export function runGesture(
         session = updateSessionPointerWorld(session, pointerId, step.world);
         break;
       case "up":
+        if (session.kind === "create-text") {
+          stepActions = [{ type: "TOOL_SET", tool: "select" }];
+          session = IDLE_POINTER_SESSION;
+          break;
+        }
         if (shouldCommitSessionOnPointerUp(session)) {
           stepActions = commitSession(interaction, session);
           session = IDLE_POINTER_SESSION;

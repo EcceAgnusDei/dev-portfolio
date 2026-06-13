@@ -2,24 +2,15 @@
 
 import { useCallback, useReducer, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { TextShapeContextProperties } from "@/features/vector-ai/components/text-shape-context-properties";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
+import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/core/selectors";
-import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { makeEditorWithSampleDoc } from "@/features/vector-ai/lib/editor/test/fixtures";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import { cn } from "@/lib/utils";
-
-const TOOLS: { id: EditorTool; label: string }[] = [
-  { id: "select", label: "Sélection" },
-  { id: "rect", label: "Rectangle" },
-  { id: "circle", label: "Cercle" },
-  { id: "line", label: "Ligne" },
-  { id: "cubic", label: "Courbe" },
-  { id: "text", label: "Texte" },
-];
 
 export function VectorAiDemoClient() {
   const [state, dispatch] = useReducer(
@@ -31,6 +22,8 @@ export function VectorAiDemoClient() {
   const svgRef = useRef<SVGSVGElement>(null);
   const interaction = useVectorInteraction({ state, dispatch, svgRef });
 
+  const selectedId = state.selection.ids[0] ?? null;
+
   const handleExportSvg = useCallback(async () => {
     const svg = serializeToSvg(state.doc);
     try {
@@ -41,53 +34,36 @@ export function VectorAiDemoClient() {
     }
   }, [state.doc]);
 
+  const contextProperties =
+    interaction.editingTextShape !== undefined ? (
+      <TextShapeContextProperties
+        shape={interaction.editingTextShape}
+        fontSizeDraft={
+          interaction.textEditFontSizeDraft ??
+          String(interaction.editingTextShape.fontSize)
+        }
+        onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
+      />
+    ) : null;
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        {TOOLS.map((tool) => (
-          <Button
-            key={tool.id}
-            type="button"
-            variant={state.tool === tool.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => interaction.setTool(tool.id)}
-          >
-            {tool.label}
-          </Button>
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!canUndo(state)}
-          onClick={() => dispatch({ type: "UNDO" })}
-        >
-          Annuler
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!canRedo(state)}
-          onClick={() => dispatch({ type: "REDO" })}
-        >
-          Rétablir
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void handleExportSvg()}
-        >
-          Copier SVG
-        </Button>
-      </div>
-      <div className="aspect-[4/3] w-full max-w-3xl">
+      <VectorEditorToolbar
+        activeTool={state.tool}
+        onToolChange={interaction.setTool}
+        canUndo={canUndo(state)}
+        canRedo={canRedo(state)}
+        onUndo={() => dispatch({ type: "UNDO" })}
+        onRedo={() => dispatch({ type: "REDO" })}
+        onExportSvg={() => void handleExportSvg()}
+        contextProperties={contextProperties}
+      />
+      <div className="mx-auto aspect-[4/3] w-full max-w-3xl">
         <VectorCanvasInteractive
           svgRef={svgRef}
           interaction={interaction}
           doc={state.doc}
-          selectedId={state.selection.ids[0] ?? null}
+          selectedId={selectedId}
         />
       </div>
       <p
