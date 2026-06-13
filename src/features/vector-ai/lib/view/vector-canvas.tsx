@@ -26,6 +26,7 @@ export type VectorCanvasTextEdit = {
   previewFontSize?: number;
   onCommit: (input: TextEditCommit) => void;
   onCancel: () => void;
+  onRegisterDraftGetter: (getter: (() => string) | null) => void;
 };
 
 export type VectorCanvasProps = {
@@ -248,6 +249,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               previewFontSize={textEdit.previewFontSize}
               onCommit={textEdit.onCommit}
               onCancel={textEdit.onCancel}
+              onRegisterDraftGetter={textEdit.onRegisterDraftGetter}
             />
           ) : null}
         </g>

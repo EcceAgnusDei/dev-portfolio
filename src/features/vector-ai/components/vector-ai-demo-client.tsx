@@ -1,18 +1,19 @@
 "use client";
 
-import { useCallback, useReducer, useRef, useState } from "react";
+import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 
-import {
-  SelectedShapeContextProperties,
-  TextShapeContextProperties,
-} from "@/features/vector-ai/components/shape-context-properties";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
-import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/core/selectors";
+import {
+  canRedo,
+  canUndo,
+  getShapeById,
+} from "@/features/vector-ai/lib/editor/core/selectors";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { makeEditorWithSampleDoc } from "@/features/vector-ai/lib/editor/test/fixtures";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
+import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
 export function VectorAiDemoClient() {
@@ -27,6 +28,20 @@ export function VectorAiDemoClient() {
 
   const selectedId = state.selection.ids[0] ?? null;
 
+  const selectedTextShape = useMemo(() => {
+    if (!selectedId) return undefined;
+    const shape = getShapeById(state.doc, selectedId);
+    return shape?.type === "text" ? shape : undefined;
+  }, [selectedId, state.doc]);
+
+  const fontSizeFallback =
+    interaction.editingTextShape?.fontSize ??
+    selectedTextShape?.fontSize ??
+    VECTOR_AI_DEFAULT_FONT_SIZE;
+
+  const fontSizeDraft =
+    interaction.textEditFontSizeDraft ?? String(fontSizeFallback);
+
   const handleExportSvg = useCallback(async () => {
     const svg = serializeToSvg(state.doc);
     try {
@@ -36,23 +51,6 @@ export function VectorAiDemoClient() {
       setExportNotice("Impossible de copier le SVG.");
     }
   }, [state.doc]);
-
-  const contextProperties =
-    interaction.editingTextShape !== undefined ? (
-      <TextShapeContextProperties
-        shape={interaction.editingTextShape}
-        fontSizeDraft={
-          interaction.textEditFontSizeDraft ??
-          String(interaction.editingTextShape.fontSize)
-        }
-        onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
-      />
-    ) : selectedId ? (
-      <SelectedShapeContextProperties
-        canDelete={interaction.canDeleteSelectedShape}
-        onDelete={interaction.deleteSelectedShape}
-      />
-    ) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -64,7 +62,13 @@ export function VectorAiDemoClient() {
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onExportSvg={() => void handleExportSvg()}
-        contextProperties={contextProperties}
+        fontSizeDraft={fontSizeDraft}
+        fontSizeFallback={fontSizeFallback}
+        fontSizeEnabled={interaction.editingTextShape !== undefined}
+        onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
+        onFontSizeBlur={interaction.commitTextEditOnFontSizeBlur}
+        canDelete={interaction.canDeleteSelectedShape}
+        onDelete={interaction.deleteSelectedShape}
       />
       <div className="mx-auto aspect-[4/3] w-full max-w-3xl">
         <VectorCanvasInteractive

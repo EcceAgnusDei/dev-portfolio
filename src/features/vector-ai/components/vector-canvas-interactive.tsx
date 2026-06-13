@@ -41,6 +41,7 @@ export function VectorCanvasInteractive({
                 previewFontSize: interaction.textEditPreviewFontSize,
                 onCommit: interaction.commitTextEdit,
                 onCancel: interaction.cancelTextEdit,
+                onRegisterDraftGetter: interaction.registerTextEditDraftGetter,
               }
             : null
         }

@@ -12,22 +12,18 @@ import {
 import type { TextShape } from "@/features/vector-ai/lib/document/types";
 import type { TextEditCommit } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { estimateTextBounds } from "@/features/vector-ai/lib/editor/geometry/text-bounds";
+import { isTextEditUiFocused } from "@/features/vector-ai/lib/editor/session/text-edit-focus";
 import {
   VECTOR_AI_TEXT_DOUBLE_CLICK_MS,
   VECTOR_AI_TEXT_LINE_HEIGHT_FACTOR,
 } from "@/features/vector-ai/lib/vector-ai-config";
-
-function isTextEditUiFocused(): boolean {
-  const active = document.activeElement;
-  if (!active) return false;
-  return active.closest("[data-vector-text-edit-ui]") !== null;
-}
 
 export type TextEditForeignObjectProps = {
   shape: TextShape;
   previewFontSize?: number;
   onCommit: (input: TextEditCommit) => void;
   onCancel: () => void;
+  onRegisterDraftGetter: (getter: (() => string) | null) => void;
 };
 
 const XHTML_ROOT_ATTRS = {
@@ -74,6 +70,7 @@ export function TextEditForeignObject({
   previewFontSize,
   onCommit,
   onCancel,
+  onRegisterDraftGetter,
 }: TextEditForeignObjectProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const draftRef = useRef(shape.content);
@@ -90,6 +87,11 @@ export function TextEditForeignObject({
       fontFamily: shape.fontFamily,
     });
   }, [draft, fontSize, shape.fontFamily, shape.transform]);
+
+  useEffect(() => {
+    onRegisterDraftGetter(() => draftRef.current);
+    return () => onRegisterDraftGetter(null);
+  }, [onRegisterDraftGetter]);
 
   useEffect(() => {
     suppressBlurUntilRef.current =

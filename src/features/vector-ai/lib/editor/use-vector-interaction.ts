@@ -82,12 +82,11 @@ import {
   type TextEditSession,
 } from "@/features/vector-ai/lib/editor/session/text-edit-session";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
-
-function isTextEditUiFocused(): boolean {
-  const active = document.activeElement;
-  if (!active) return false;
-  return active.closest("[data-vector-text-edit-ui]") !== null;
-}
+import {
+  isTextEditLayerElement,
+  isTextEditLayerFocused,
+  isTextEditUiFocused,
+} from "@/features/vector-ai/lib/editor/session/text-edit-focus";
 
 function worldFromEvent(
   svg: SVGSVGElement | null,
@@ -116,6 +115,11 @@ export type UseVectorInteractionResult = {
   textEditFontSizeDraft: string | null;
   setTextEditFontSizeDraft: (value: string) => void;
   textEditPreviewFontSize: number | undefined;
+  registerTextEditDraftGetter: (getter: (() => string) | null) => void;
+  commitTextEditOnFontSizeBlur: (
+    fontSize: number,
+    relatedTarget: EventTarget | null,
+  ) => void;
   commitTextEdit: (input: TextEditCommit) => void;
   cancelTextEdit: () => void;
   canDeleteSelectedShape: boolean;
@@ -162,7 +166,12 @@ export function useVectorInteraction({
     time: number;
   } | null>(null);
   const pendingTextEditShapeIdRef = useRef<string | null>(null);
+  const textEditSessionRef = useRef(textEditSession);
+  const textEditDraftGetterRef = useRef<(() => string) | null>(null);
   const sessionRef = useRef(session);
+  useLayoutEffect(() => {
+    textEditSessionRef.current = textEditSession;
+  }, [textEditSession]);
   useLayoutEffect(() => {
     sessionRef.current = session;
   }, [session]);
@@ -248,10 +257,9 @@ export function useVectorInteraction({
       if (!textEditSession) return;
 
       const fallback = editingTextShape?.fontSize ?? 16;
-      const fontSize = commitFontSizeFromTextEditSession(
-        textEditSession,
-        fallback,
-      );
+      const fontSize =
+        input.fontSize ??
+        commitFontSizeFromTextEditSession(textEditSession, fallback);
 
       dispatchActions(
         commitTextEditActions({
@@ -267,6 +275,41 @@ export function useVectorInteraction({
       setTextEditSession(null);
     },
     [dispatchActions, textEditSession, editingTextShape?.fontSize, state.doc],
+  );
+
+  const registerTextEditDraftGetter = useCallback(
+    (getter: (() => string) | null) => {
+      textEditDraftGetterRef.current = getter;
+    },
+    [],
+  );
+
+  const commitTextEditOnFontSizeBlur = useCallback(
+    (fontSize: number, relatedTarget: EventTarget | null) => {
+      window.setTimeout(() => {
+        const session = textEditSessionRef.current;
+        if (!session) return;
+        if (isTextEditLayerElement(relatedTarget)) return;
+        if (isTextEditLayerFocused()) return;
+
+        const getDraft = textEditDraftGetterRef.current;
+        if (!getDraft) return;
+
+        dispatchActions(
+          commitTextEditActions({
+            shapeId: session.shapeId,
+            input: {
+              content: getDraft(),
+              fontSize,
+            },
+            doc: state.doc,
+            pendingWorld: session.world,
+          }),
+        );
+        setTextEditSession(null);
+      }, 0);
+    },
+    [dispatchActions, state.doc],
   );
 
   const cancelTextEdit = useCallback(() => {
@@ -590,6 +633,8 @@ export function useVectorInteraction({
     textEditFontSizeDraft,
     setTextEditFontSizeDraft,
     textEditPreviewFontSize: textEditPreviewFontSizeValue,
+    registerTextEditDraftGetter,
+    commitTextEditOnFontSizeBlur,
     commitTextEdit,
     cancelTextEdit,
     canDeleteSelectedShape,

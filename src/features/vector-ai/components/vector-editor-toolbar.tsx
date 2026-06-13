@@ -1,9 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ChangeEvent, type FocusEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
+import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
+import { VECTOR_AI_MAX_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
 export const VECTOR_EDITOR_TOOLS: { id: EditorTool; label: string }[] = [
@@ -23,7 +25,13 @@ export type VectorEditorToolbarProps = {
   onUndo: () => void;
   onRedo: () => void;
   onExportSvg: () => void;
-  contextProperties?: ReactNode;
+  fontSizeDraft: string;
+  fontSizeFallback: number;
+  fontSizeEnabled: boolean;
+  onFontSizeDraftChange: (value: string) => void;
+  onFontSizeBlur?: (fontSize: number, relatedTarget: EventTarget | null) => void;
+  canDelete: boolean;
+  onDelete: () => void;
   className?: string;
 };
 
@@ -35,9 +43,27 @@ export function VectorEditorToolbar({
   onUndo,
   onRedo,
   onExportSvg,
-  contextProperties = null,
+  fontSizeDraft,
+  fontSizeFallback,
+  fontSizeEnabled,
+  onFontSizeDraftChange,
+  onFontSizeBlur,
+  canDelete,
+  onDelete,
   className,
 }: VectorEditorToolbarProps) {
+  function handleFontSizeChange(event: ChangeEvent<HTMLInputElement>) {
+    if (!fontSizeEnabled) return;
+    onFontSizeDraftChange(event.target.value);
+  }
+
+  function handleFontSizeBlur(event: FocusEvent<HTMLInputElement>) {
+    if (!fontSizeEnabled) return;
+    const parsed = parseTextFontSizeInput(fontSizeDraft, fontSizeFallback);
+    onFontSizeDraftChange(String(parsed));
+    onFontSizeBlur?.(parsed, event.relatedTarget);
+  }
+
   return (
     <div
       className={cn(
@@ -65,14 +91,41 @@ export function VectorEditorToolbar({
         </div>
       </fieldset>
 
-      {contextProperties ? (
-        <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
-          <legend className="text-center text-sm font-medium">Propriétés</legend>
-          <div className="flex min-w-0 flex-wrap items-end justify-center gap-3">
-            {contextProperties}
-          </div>
-        </fieldset>
-      ) : null}
+      <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
+        <legend className="text-center text-sm font-medium">Propriétés</legend>
+        <div className="flex min-w-0 flex-wrap items-end justify-center gap-3">
+          <label
+            data-vector-text-edit-ui
+            className={cn(
+              "flex min-w-[5.5rem] flex-col gap-1 text-sm",
+              !fontSizeEnabled && "opacity-50",
+            )}
+          >
+            <span className="text-muted-foreground text-xs">Taille</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={fontSizeDraft}
+              onChange={handleFontSizeChange}
+              onBlur={handleFontSizeBlur}
+              disabled={!fontSizeEnabled}
+              min={3}
+              max={VECTOR_AI_MAX_FONT_SIZE}
+              aria-label="Taille de police"
+              className="h-8 rounded-md border border-border bg-background px-2 text-center text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canDelete}
+            onClick={onDelete}
+          >
+            Supprimer
+          </Button>
+        </div>
+      </fieldset>
 
       <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
         <legend className="text-center text-sm font-medium">Document</legend>
