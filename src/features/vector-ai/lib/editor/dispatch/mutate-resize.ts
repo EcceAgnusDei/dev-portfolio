@@ -12,10 +12,7 @@ import {
 } from "@/features/vector-ai/lib/vector-ai-config";
 
 export function commitMutateResize(
-  session: Extract<
-    PointerSession,
-    { kind: "resize-rect" | "resize-circle" }
-  >,
+  session: Extract<PointerSession, { kind: "resize-rect" | "resize-circle" }>,
   shape: Shape | undefined,
   viewBox: { x: number; y: number; w: number; h: number },
 ): EditorAction[] {

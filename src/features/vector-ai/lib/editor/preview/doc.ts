@@ -82,7 +82,11 @@ function applyResizeRectPreview(
   viewBox: ViewBox,
 ): RectShape {
   const preview = clampRectPreviewToViewBox(
-    resizeRectFromHandle(session.startBounds, session.handle, session.currentWorld),
+    resizeRectFromHandle(
+      session.startBounds,
+      session.handle,
+      session.currentWorld,
+    ),
     viewBox,
   );
   return applyShapePatch(shape, {
