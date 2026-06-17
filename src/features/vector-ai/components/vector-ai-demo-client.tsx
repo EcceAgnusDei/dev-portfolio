@@ -6,6 +6,7 @@ import { VectorAiPromptPanel } from "@/features/vector-ai/components/vector-ai-p
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
 import { postVectorAiCommand } from "@/features/vector-ai/lib/ai/post-vector-ai-command";
+import { resolveAiUserMessage } from "@/features/vector-ai/lib/ai/resolve-ai-user-message";
 import { isSameVectorDoc } from "@/features/vector-ai/lib/editor/core/doc-equality";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import {
@@ -127,13 +128,17 @@ export function VectorAiDemoClient() {
         return;
       }
 
-      if (isSameVectorDoc(state.doc, result.doc)) {
-        showInfo("L'IA n'a pas modifié le dessin.");
-        return;
+      const docChanged = !isSameVectorDoc(state.doc, result.doc);
+
+      if (docChanged) {
+        dispatch({ type: "DOC_SET", doc: result.doc, recordHistory: true });
       }
 
-      dispatch({ type: "DOC_SET", doc: result.doc, recordHistory: true });
-      showInfo("Dessin modifié par l'IA.");
+      const { text } = resolveAiUserMessage({
+        message: result.message,
+        docChanged,
+      });
+      showInfo(text);
     } finally {
       if (requestId === aiRequestIdRef.current) {
         setAiPending(false);

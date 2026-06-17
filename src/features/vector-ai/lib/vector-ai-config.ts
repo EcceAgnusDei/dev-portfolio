@@ -1,4 +1,7 @@
-import type { ShapeStyle } from "@/features/vector-ai/lib/document/types";
+import type {
+  ShapeStyle,
+  ShapeType,
+} from "@/features/vector-ai/lib/document/types";
 
 export const VECTOR_AI_DOC_VERSION = 1 as const;
 
@@ -67,3 +70,30 @@ export const VECTOR_AI_HIT_TEXT_MIN_WIDTH = 24;
 export const VECTOR_AI_HIT_TEXT_MIN_HEIGHT = 20;
 export const VECTOR_AI_TEXT_LINE_HEIGHT_FACTOR = 1.2;
 export const VECTOR_AI_TEXT_DOUBLE_CLICK_MS = 400;
+
+export const VECTOR_AI_PROMPT_MAX_LENGTH = 1000;
+
+export const VECTOR_AI_LLM_MESSAGE_MAX_LENGTH = 400;
+
+export const VECTOR_AI_MAX_OUTPUT_TOKENS = 16_384;
+
+export const VECTOR_AI_RATE_LIMIT_MAX = 10;
+export const VECTOR_AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+export const VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES = [
+  "rect",
+  "circle",
+  "line",
+  "text",
+] as const satisfies readonly ShapeType[];
+
+export const VECTOR_AI_PREVIEW_PNG_MAX_LONG_EDGE = 256;
+
+export const VECTOR_AI_PREVIEW_PNG_MAX_BASE64_LENGTH = 400_000;
+
+export const VECTOR_AI_PREVIEW_MEDIA_RESOLUTION = "MEDIA_RESOLUTION_MEDIUM" as const;
+
+export type VectorAiPreviewPng = {
+  base64: string;
+  mimeType: "image/png";
+};

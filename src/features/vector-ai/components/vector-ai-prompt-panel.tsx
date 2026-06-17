@@ -3,7 +3,7 @@
 import { type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { VECTOR_AI_PROMPT_MAX_LENGTH } from "@/features/vector-ai/lib/ai/config";
+import { VECTOR_AI_PROMPT_MAX_LENGTH } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
 export type VectorAiPromptPanelProps = {

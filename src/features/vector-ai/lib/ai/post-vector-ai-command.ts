@@ -1,7 +1,7 @@
 import {
   VECTOR_AI_PROMPT_MAX_LENGTH,
   type VectorAiPreviewPng,
-} from "@/features/vector-ai/lib/ai/config";
+} from "@/features/vector-ai/lib/vector-ai-config";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 
 export type PostVectorAiCommandBody = {
@@ -12,7 +12,7 @@ export type PostVectorAiCommandBody = {
 };
 
 export type PostVectorAiCommandResult =
-  | { ok: true; doc: VectorDoc }
+  | { ok: true; doc: VectorDoc; message?: string }
   | { ok: false; aborted: true }
   | { ok: false; error: string };
 
@@ -65,7 +65,7 @@ export async function postVectorAiCommand(
     return { ok: false, error: "Réponse serveur illisible." };
   }
 
-  const obj = data as { error?: unknown; doc?: VectorDoc };
+  const obj = data as { error?: unknown; doc?: VectorDoc; message?: unknown };
 
   if (!res.ok) {
     const msg =
@@ -79,5 +79,14 @@ export async function postVectorAiCommand(
     return { ok: false, error: "Réponse serveur invalide." };
   }
 
-  return { ok: true, doc: obj.doc };
+  const message =
+    typeof obj.message === "string" && obj.message.trim().length > 0
+      ? obj.message.trim()
+      : undefined;
+
+  return {
+    ok: true,
+    doc: obj.doc,
+    ...(message ? { message } : {}),
+  };
 }

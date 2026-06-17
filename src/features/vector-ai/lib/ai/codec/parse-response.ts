@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { VectorAiOp } from "@/features/vector-ai/lib/ai/codec/types";
+import { VECTOR_AI_LLM_MESSAGE_MAX_LENGTH } from "@/features/vector-ai/lib/vector-ai-config";
 
 const compactShapeSchema = z
   .array(z.unknown())
@@ -21,10 +22,16 @@ const opSchema = z.union([addOpSchema, clearOpSchema]);
 
 const opsResponseSchema = z.object({
   ops: z.array(opSchema),
+  message: z
+    .string()
+    .trim()
+    .min(1)
+    .max(VECTOR_AI_LLM_MESSAGE_MAX_LENGTH)
+    .optional(),
 });
 
 export type ParseVectorAiOpsJsonResult =
-  | { ok: true; ops: VectorAiOp[] }
+  | { ok: true; ops: VectorAiOp[]; message?: string }
   | { ok: false; error: string };
 
 export function parseVectorAiOpsJson(raw: string): ParseVectorAiOpsJsonResult {
@@ -40,5 +47,11 @@ export function parseVectorAiOpsJson(raw: string): ParseVectorAiOpsJsonResult {
     return { ok: false, error: "Réponse IA invalide." };
   }
 
-  return { ok: true, ops: result.data.ops as VectorAiOp[] };
+  const { ops, message } = result.data;
+
+  return {
+    ok: true,
+    ops: ops as VectorAiOp[],
+    ...(message ? { message } : {}),
+  };
 }

@@ -2,19 +2,18 @@ import { FinishReason, GoogleGenerativeAI } from "@google/generative-ai";
 import type { GenerationConfig, Part } from "@google/generative-ai";
 
 import { encodeDocForLlm } from "@/features/vector-ai/lib/ai/codec/encode-doc";
-import {
-  VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES,
-  VECTOR_AI_MAX_OUTPUT_TOKENS,
-  VECTOR_AI_PREVIEW_MEDIA_RESOLUTION,
-} from "@/features/vector-ai/lib/ai/config";
-import type { VectorAiPreviewPng } from "@/features/vector-ai/lib/ai/config";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import {
+  VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES,
+  VECTOR_AI_LLM_MESSAGE_MAX_LENGTH,
   VECTOR_AI_MAX_FONT_SIZE,
+  VECTOR_AI_MAX_OUTPUT_TOKENS,
   VECTOR_AI_MAX_SHAPE_DIMENSION,
   VECTOR_AI_MAX_SHAPES,
   VECTOR_AI_MAX_STROKE_WIDTH,
   VECTOR_AI_MAX_TEXT_LENGTH,
+  VECTOR_AI_PREVIEW_MEDIA_RESOLUTION,
+  type VectorAiPreviewPng,
 } from "@/features/vector-ai/lib/vector-ai-config";
 
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
@@ -36,7 +35,7 @@ Tuples (positions fixes) :
 - line : ["l", id, x, y, x2, y2, stroke, strokeWidth (optionel)]
 - text : ["t", id, x, y, content, fontSize, fill]
 
-Réponse : UN SEUL objet JSON { "ops": [ ... ] }, sans markdown.
+Réponse : UN SEUL objet JSON { "ops": [ ... ], "message"?: "..." }, sans markdown.
 Ops autorisées :
 - ["add", tuple] : ajoute une forme (ids nouveaux : n1, n2, …)
 - ["clear"] : supprime toutes les formes éditables (les pathCount courbes restent)
@@ -54,7 +53,8 @@ Règles :
 - fontSize : > 0, max ${VECTOR_AI_MAX_FONT_SIZE}.
 - content : max ${VECTOR_AI_MAX_TEXT_LENGTH} caractères.
 - Max ${VECTOR_AI_MAX_SHAPES} formes au total après les ops.
-- Demande incomprise : { "ops": [] }.
+- Si tu ne peux pas traiter la demande (incomprise, ambiguë, impossible, hors périmètre, modification d'une courbe path) : { "ops": [], "message": "explication courte en français" }. message est obligatoire quand ops est vide.
+- message : phrase courte en français, max ${VECTOR_AI_LLM_MESSAGE_MAX_LENGTH} caractères, orientée action.
 - Vider le dessin : { "ops": [["clear"]] }.`;
 
 function resolveModelName(): string {
@@ -249,7 +249,7 @@ function buildGeminiContentParts(
   }
 
   parts.push({
-    text: `Produis uniquement { "ops": [ ... ] } pour ce contexte :\n${payload}`,
+    text: `Produis uniquement { "ops": [ ... ], "message"?: "..." } pour ce contexte :\n${payload}`,
   });
 
   return parts;

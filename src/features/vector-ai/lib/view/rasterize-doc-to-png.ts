@@ -1,6 +1,6 @@
 "use client";
 
-import { VECTOR_AI_PREVIEW_PNG_MAX_LONG_EDGE } from "@/features/vector-ai/lib/ai/config";
+import { VECTOR_AI_PREVIEW_PNG_MAX_LONG_EDGE } from "@/features/vector-ai/lib/vector-ai-config";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import {
   computeAiPreviewPixelSize,

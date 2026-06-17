@@ -4,12 +4,13 @@ import { z } from "zod";
 import { applyVectorAiOps } from "@/features/vector-ai/lib/ai/apply-ops";
 import { parseVectorAiOpsJson } from "@/features/vector-ai/lib/ai/codec/parse-response";
 import { geminiVectorAiOps } from "@/features/vector-ai/lib/ai/gemini-vector-ai-llm";
+import { resolveAiServerMessage } from "@/features/vector-ai/lib/ai/resolve-ai-user-message";
 import {
   VECTOR_AI_PREVIEW_PNG_MAX_BASE64_LENGTH,
   VECTOR_AI_PROMPT_MAX_LENGTH,
   VECTOR_AI_RATE_LIMIT_MAX,
   VECTOR_AI_RATE_LIMIT_WINDOW_MS,
-} from "@/features/vector-ai/lib/ai/config";
+} from "@/features/vector-ai/lib/vector-ai-config";
 import { vectorDocSchema } from "@/features/vector-ai/lib/document/schema";
 import {
   checkRateLimit,
@@ -143,5 +144,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: applied.error }, { status: 500 });
   }
 
-  return NextResponse.json({ doc: applied.doc });
+  const message = resolveAiServerMessage(parsedOps.ops, parsedOps.message);
+
+  return NextResponse.json({
+    doc: applied.doc,
+    ...(message ? { message } : {}),
+  });
 }

@@ -53,6 +53,11 @@ export type VectorAiClearOp = ["clear"];
 
 export type VectorAiOp = VectorAiAddOp | VectorAiClearOp;
 
+export type VectorAiLlmResponse = {
+  ops: VectorAiOp[];
+  message?: string;
+};
+
 export type LlmDocContext = {
   vb: [number, number, number, number];
   s: CompactShape[];
