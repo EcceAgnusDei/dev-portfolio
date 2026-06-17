@@ -35,6 +35,8 @@ export function VectorAiDemoClient() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const aiAbortRef = useRef<AbortController | null>(null);
+  const aiRequestIdRef = useRef(0);
   const interaction = useVectorInteraction({ state, dispatch, svgRef });
 
   const selectedId = state.selection.ids[0] ?? null;
@@ -75,43 +77,69 @@ export function VectorAiDemoClient() {
     }
   }, [showAlert, showInfo, state.doc]);
 
+  const handleCancelAi = useCallback(() => {
+    aiAbortRef.current?.abort();
+  }, []);
+
   const handleSubmitAi = useCallback(async () => {
     if (aiPending) return;
 
     clearNotice();
+    const requestId = ++aiRequestIdRef.current;
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
     setAiPending(true);
 
-    let previewPng: { base64: string; mimeType: "image/png" } | undefined;
-    if (state.doc.shapes.length > 0) {
-      const preview = await rasterizeDocToPng(state.doc);
-      if (preview.ok) {
-        previewPng = {
-          base64: preview.base64,
-          mimeType: preview.mimeType,
-        };
+    try {
+      let previewPng: { base64: string; mimeType: "image/png" } | undefined;
+      if (state.doc.shapes.length > 0) {
+        const preview = await rasterizeDocToPng(state.doc);
+        if (
+          controller.signal.aborted ||
+          requestId !== aiRequestIdRef.current
+        ) {
+          showInfo("Requête annulée.");
+          return;
+        }
+        if (preview.ok) {
+          previewPng = {
+            base64: preview.base64,
+            mimeType: preview.mimeType,
+          };
+        }
+      }
+
+      const result = await postVectorAiCommand({
+        prompt: aiPrompt,
+        doc: state.doc,
+        previewPng,
+        signal: controller.signal,
+      });
+
+      if (requestId !== aiRequestIdRef.current) return;
+
+      if (!result.ok) {
+        if ("aborted" in result) {
+          showInfo("Requête annulée.");
+          return;
+        }
+        showAlert(result.error);
+        return;
+      }
+
+      if (isSameVectorDoc(state.doc, result.doc)) {
+        showInfo("L'IA n'a pas modifié le dessin.");
+        return;
+      }
+
+      dispatch({ type: "DOC_SET", doc: result.doc, recordHistory: true });
+      showInfo("Dessin modifié par l'IA.");
+    } finally {
+      if (requestId === aiRequestIdRef.current) {
+        setAiPending(false);
+        aiAbortRef.current = null;
       }
     }
-
-    const result = await postVectorAiCommand({
-      prompt: aiPrompt,
-      doc: state.doc,
-      previewPng,
-    });
-
-    setAiPending(false);
-
-    if (!result.ok) {
-      showAlert(result.error);
-      return;
-    }
-
-    if (isSameVectorDoc(state.doc, result.doc)) {
-      showInfo("L'IA n'a pas modifié le dessin.");
-      return;
-    }
-
-    dispatch({ type: "DOC_SET", doc: result.doc, recordHistory: true });
-    showInfo("Dessin modifié par l'IA.");
   }, [aiPending, aiPrompt, clearNotice, showAlert, showInfo, state.doc]);
 
   const statusText =
@@ -147,6 +175,7 @@ export function VectorAiDemoClient() {
           setAiPrompt(value);
         }}
         onSubmitAi={() => void handleSubmitAi()}
+        onCancelAi={handleCancelAi}
         aiPending={aiPending}
       />
       <div

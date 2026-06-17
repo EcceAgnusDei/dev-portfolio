@@ -8,11 +8,18 @@ export type PostVectorAiCommandBody = {
   prompt: string;
   doc: VectorDoc;
   previewPng?: VectorAiPreviewPng;
+  signal?: AbortSignal;
 };
 
 export type PostVectorAiCommandResult =
   | { ok: true; doc: VectorDoc }
+  | { ok: false; aborted: true }
   | { ok: false; error: string };
+
+function isAbortError(err: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) return true;
+  return err instanceof DOMException && err.name === "AbortError";
+}
 
 export async function postVectorAiCommand(
   body: PostVectorAiCommandBody,
@@ -39,15 +46,22 @@ export async function postVectorAiCommand(
         doc: body.doc,
         ...(body.previewPng ? { previewPng: body.previewPng } : {}),
       }),
+      signal: body.signal,
     });
-  } catch {
+  } catch (err) {
+    if (isAbortError(err, body.signal)) {
+      return { ok: false, aborted: true };
+    }
     return { ok: false, error: "Réseau indisponible." };
   }
 
   let data: unknown;
   try {
     data = await res.json();
-  } catch {
+  } catch (err) {
+    if (isAbortError(err, body.signal)) {
+      return { ok: false, aborted: true };
+    }
     return { ok: false, error: "Réponse serveur illisible." };
   }
 

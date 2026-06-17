@@ -10,6 +10,7 @@ export type VectorAiPromptPanelProps = {
   aiPrompt: string;
   onAiPromptChange: (value: string) => void;
   onSubmitAi: () => void;
+  onCancelAi: () => void;
   aiPending: boolean;
   className?: string;
 };
@@ -18,6 +19,7 @@ export function VectorAiPromptPanel({
   aiPrompt,
   onAiPromptChange,
   onSubmitAi,
+  onCancelAi,
   aiPending,
   className,
 }: VectorAiPromptPanelProps) {
@@ -30,6 +32,7 @@ export function VectorAiPromptPanel({
 
   return (
     <fieldset
+      aria-busy={aiPending}
       className={cn(
         "mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-2 border-0 p-0",
         className,
@@ -48,14 +51,25 @@ export function VectorAiPromptPanel({
           disabled={aiPending}
           className="min-h-16 w-full min-w-0 flex-1 resize-y rounded-md border border-border bg-background px-2 py-1.5 text-sm sm:max-w-xl"
         />
-        <Button
-          type="button"
-          className="shrink-0"
-          onClick={onSubmitAi}
-          disabled={aiPending || !aiPrompt.trim()}
-        >
-          {aiPending ? "Envoi…" : "Envoyer"}
-        </Button>
+        {aiPending ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0"
+            onClick={onCancelAi}
+          >
+            Arrêter
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            className="shrink-0"
+            onClick={onSubmitAi}
+            disabled={!aiPrompt.trim()}
+          >
+            Envoyer
+          </Button>
+        )}
       </div>
     </fieldset>
   );
