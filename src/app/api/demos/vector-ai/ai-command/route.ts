@@ -5,6 +5,7 @@ import { applyVectorAiOps } from "@/features/vector-ai/lib/ai/apply-ops";
 import { parseVectorAiOpsJson } from "@/features/vector-ai/lib/ai/codec/parse-response";
 import { geminiVectorAiOps } from "@/features/vector-ai/lib/ai/gemini-vector-ai-llm";
 import {
+  VECTOR_AI_PREVIEW_PNG_MAX_BASE64_LENGTH,
   VECTOR_AI_PROMPT_MAX_LENGTH,
   VECTOR_AI_RATE_LIMIT_MAX,
   VECTOR_AI_RATE_LIMIT_WINDOW_MS,
@@ -17,6 +18,27 @@ import {
 
 export const runtime = "nodejs";
 
+const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
+
+function isValidBase64(value: string): boolean {
+  if (value.length === 0 || value.length % 4 !== 0) return false;
+  if (!BASE64_RE.test(value)) return false;
+  try {
+    Buffer.from(value, "base64");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const previewPngSchema = z.object({
+  base64: z
+    .string()
+    .max(VECTOR_AI_PREVIEW_PNG_MAX_BASE64_LENGTH)
+    .refine(isValidBase64, "Aperçu PNG invalide."),
+  mimeType: z.literal("image/png"),
+});
+
 const postBodySchema = z.object({
   prompt: z
     .string()
@@ -26,6 +48,7 @@ const postBodySchema = z.object({
       `Le prompt ne peut pas dépasser ${VECTOR_AI_PROMPT_MAX_LENGTH.toLocaleString("fr-FR")} caractères.`,
     ),
   doc: vectorDocSchema,
+  previewPng: previewPngSchema.optional(),
 });
 
 function parseRateLimitMax(): number {
@@ -87,7 +110,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { prompt, doc } = parsed.data;
+  const { prompt, doc, previewPng } = parsed.data;
 
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiKey) {
@@ -101,7 +124,7 @@ export async function POST(request: Request) {
 
   let opsJson: string;
   try {
-    opsJson = await geminiVectorAiOps(geminiKey, prompt, doc);
+    opsJson = await geminiVectorAiOps(geminiKey, prompt, doc, previewPng);
   } catch (err) {
     const message =
       err instanceof Error && err.message.trim()

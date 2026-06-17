@@ -1,10 +1,13 @@
 import { FinishReason, GoogleGenerativeAI } from "@google/generative-ai";
+import type { GenerationConfig, Part } from "@google/generative-ai";
 
 import { encodeDocForLlm } from "@/features/vector-ai/lib/ai/codec/encode-doc";
 import {
   VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES,
   VECTOR_AI_MAX_OUTPUT_TOKENS,
+  VECTOR_AI_PREVIEW_MEDIA_RESOLUTION,
 } from "@/features/vector-ai/lib/ai/config";
+import type { VectorAiPreviewPng } from "@/features/vector-ai/lib/ai/config";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import {
   VECTOR_AI_MAX_FONT_SIZE,
@@ -22,6 +25,7 @@ const SYSTEM_INSTRUCTION = `Tu es un éditeur de dessin vectoriel SVG.
 
 Contexte :
 - "ctx" décrit le dessin actuel : vb = viewBox [x, y, w, h], s = formes existantes (tuples compacts), pathCount = courbes non modifiables.
+- Une image preview peut accompagner le contexte : utilise-la pour interpréter le dessin. Les coordonnées exactes pour modifier le dessin restent dans ctx.s.
 - Tu modifies le dessin selon userRequest.
 
 Formes autorisées : ${ALLOWED_SHAPE_TYPES}. Jamais de path.
@@ -43,6 +47,7 @@ Règles :
 - circle : (x, y) est le centre ; garde le cercle entier visible (centre ± r dans le viewBox).
 - line : (x,y) = départ, (x2,y2) = arrivée ; les deux extrémités dans le viewBox.
 - text : (x, y) = ancrage ; place le texte entièrement dans le viewBox si possible.
+- ne dépasse jamais les bornes du viewBox, même si l'utilisateur le demande
 - fill et stroke : "#RRGGBB" ou "none".
 - w, h, r : positifs, max ${VECTOR_AI_MAX_SHAPE_DIMENSION}.
 - strokeWidth : > 0, max ${VECTOR_AI_MAX_STROKE_WIDTH}.
@@ -224,10 +229,37 @@ function userFacingResponseTextError(
   return userFacingGeminiError(err);
 }
 
+type GeminiGenerationConfig = GenerationConfig & {
+  mediaResolution?: typeof VECTOR_AI_PREVIEW_MEDIA_RESOLUTION;
+};
+
+function buildGeminiContentParts(
+  payload: string,
+  previewPng?: VectorAiPreviewPng,
+): Part[] {
+  const parts: Part[] = [];
+
+  if (previewPng) {
+    parts.push({
+      inlineData: {
+        mimeType: previewPng.mimeType,
+        data: previewPng.base64,
+      },
+    });
+  }
+
+  parts.push({
+    text: `Produis uniquement { "ops": [ ... ] } pour ce contexte :\n${payload}`,
+  });
+
+  return parts;
+}
+
 export async function geminiVectorAiOps(
   apiKey: string,
   userPrompt: string,
   doc: VectorDoc,
+  previewPng?: VectorAiPreviewPng,
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
@@ -237,7 +269,8 @@ export async function geminiVectorAiOps(
       temperature: 0.1,
       maxOutputTokens: VECTOR_AI_MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
-    },
+      mediaResolution: VECTOR_AI_PREVIEW_MEDIA_RESOLUTION,
+    } as GeminiGenerationConfig as GenerationConfig,
   });
 
   const { context } = encodeDocForLlm(doc);
@@ -253,7 +286,7 @@ export async function geminiVectorAiOps(
   let result;
   try {
     result = await model.generateContent(
-      `Produis uniquement { "ops": [ ... ] } pour ce contexte :\n${payload}`,
+      buildGeminiContentParts(payload, previewPng),
     );
   } catch (err) {
     devLog("[gemini-vector-ai] generateContent error:", err);

@@ -1,9 +1,13 @@
-import { VECTOR_AI_PROMPT_MAX_LENGTH } from "@/features/vector-ai/lib/ai/config";
+import {
+  VECTOR_AI_PROMPT_MAX_LENGTH,
+  type VectorAiPreviewPng,
+} from "@/features/vector-ai/lib/ai/config";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 
 export type PostVectorAiCommandBody = {
   prompt: string;
   doc: VectorDoc;
+  previewPng?: VectorAiPreviewPng;
 };
 
 export type PostVectorAiCommandResult =
@@ -33,6 +37,7 @@ export async function postVectorAiCommand(
       body: JSON.stringify({
         prompt: trimmed,
         doc: body.doc,
+        ...(body.previewPng ? { previewPng: body.previewPng } : {}),
       }),
     });
   } catch {

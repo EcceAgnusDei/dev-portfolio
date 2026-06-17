@@ -15,6 +15,7 @@ import {
 } from "@/features/vector-ai/lib/editor/core/selectors";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
+import { rasterizeDocToPng } from "@/features/vector-ai/lib/view/rasterize-doc-to-png";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
@@ -80,9 +81,21 @@ export function VectorAiDemoClient() {
     clearNotice();
     setAiPending(true);
 
+    let previewPng: { base64: string; mimeType: "image/png" } | undefined;
+    if (state.doc.shapes.length > 0) {
+      const preview = await rasterizeDocToPng(state.doc);
+      if (preview.ok) {
+        previewPng = {
+          base64: preview.base64,
+          mimeType: preview.mimeType,
+        };
+      }
+    }
+
     const result = await postVectorAiCommand({
       prompt: aiPrompt,
       doc: state.doc,
+      previewPng,
     });
 
     setAiPending(false);
