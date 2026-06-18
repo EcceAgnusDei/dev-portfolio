@@ -5,9 +5,8 @@ import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 import { VectorAiPromptPanel } from "@/features/vector-ai/components/vector-ai-prompt-panel";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
-import { postVectorAiCommand } from "@/features/vector-ai/lib/ai/post-vector-ai-command";
-import { resolveAiUserMessage } from "@/features/vector-ai/lib/ai/resolve-ai-user-message";
-import { isSameVectorDoc } from "@/features/vector-ai/lib/editor/core/doc-equality";
+import { postVectorAiCommand } from "@/features/vector-ai/lib/editor/ai/post-vector-ai-command";
+import { runVectorAiSubmit } from "@/features/vector-ai/lib/editor/ai/run-vector-ai-submit";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import {
   canRedo,
@@ -16,7 +15,6 @@ import {
 } from "@/features/vector-ai/lib/editor/core/selectors";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
-import { rasterizeDocToPng } from "@/features/vector-ai/lib/view/rasterize-doc-to-png";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
@@ -92,29 +90,13 @@ export function VectorAiDemoClient() {
     setAiPending(true);
 
     try {
-      let previewPng: { base64: string; mimeType: "image/png" } | undefined;
-      if (state.doc.shapes.length > 0) {
-        const preview = await rasterizeDocToPng(state.doc);
-        if (
-          controller.signal.aborted ||
-          requestId !== aiRequestIdRef.current
-        ) {
-          showInfo("Requête annulée.");
-          return;
-        }
-        if (preview.ok) {
-          previewPng = {
-            base64: preview.base64,
-            mimeType: preview.mimeType,
-          };
-        }
-      }
-
-      const result = await postVectorAiCommand({
-        prompt: aiPrompt,
+      const result = await runVectorAiSubmit({
         doc: state.doc,
-        previewPng,
+        prompt: aiPrompt,
         signal: controller.signal,
+        shouldCancel: () =>
+          controller.signal.aborted ||
+          requestId !== aiRequestIdRef.current,
       });
 
       if (requestId !== aiRequestIdRef.current) return;
@@ -128,17 +110,11 @@ export function VectorAiDemoClient() {
         return;
       }
 
-      const docChanged = !isSameVectorDoc(state.doc, result.doc);
-
-      if (docChanged) {
+      if (result.docChanged) {
         dispatch({ type: "DOC_SET", doc: result.doc, recordHistory: true });
       }
 
-      const { text } = resolveAiUserMessage({
-        message: result.message,
-        docChanged,
-      });
-      showInfo(text);
+      showInfo(result.userMessage);
     } finally {
       if (requestId === aiRequestIdRef.current) {
         setAiPending(false);

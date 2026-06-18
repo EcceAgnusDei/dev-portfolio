@@ -1,10 +1,10 @@
 import type { Shape, VectorDoc } from "@/features/vector-ai/lib/document/types";
-import { createIdMapFromShapes } from "@/features/vector-ai/lib/ai/codec/id-map";
+import { createIdMapFromShapes } from "@/features/vector-ai/lib/editor/ai/codec/id-map";
 import type {
   CompactShape,
   IdMap,
   LlmDocContext,
-} from "@/features/vector-ai/lib/ai/codec/types";
+} from "@/features/vector-ai/lib/editor/ai/codec/types";
 import {
   VECTOR_AI_DEFAULT_FONT_FAMILY,
 } from "@/features/vector-ai/lib/vector-ai-config";

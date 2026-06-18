@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { VectorAiOp } from "@/features/vector-ai/lib/ai/codec/types";
+import type { VectorAiOp } from "@/features/vector-ai/lib/editor/ai/codec/types";
 import { VECTOR_AI_LLM_MESSAGE_MAX_LENGTH } from "@/features/vector-ai/lib/vector-ai-config";
 
 const compactShapeSchema = z

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { applyVectorAiOps } from "@/features/vector-ai/lib/ai/apply-ops";
-import { parseVectorAiOpsJson } from "@/features/vector-ai/lib/ai/codec/parse-response";
-import { geminiVectorAiOps } from "@/features/vector-ai/lib/ai/gemini-vector-ai-llm";
-import { resolveAiServerMessage } from "@/features/vector-ai/lib/ai/resolve-ai-user-message";
+import { applyVectorAiOps } from "@/features/vector-ai/lib/editor/ai/apply-ops";
+import { parseVectorAiOpsJson } from "@/features/vector-ai/lib/editor/ai/codec/parse-response";
+import { geminiVectorAiOps } from "@/features/vector-ai/lib/editor/ai/gemini-vector-ai-llm";
+import { resolveAiServerMessage } from "@/features/vector-ai/lib/editor/ai/resolve-ai-user-message";
 import {
   VECTOR_AI_PREVIEW_PNG_MAX_BASE64_LENGTH,
   VECTOR_AI_PROMPT_MAX_LENGTH,

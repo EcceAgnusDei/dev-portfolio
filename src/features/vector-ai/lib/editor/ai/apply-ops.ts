@@ -1,5 +1,5 @@
-import { decodeCompactShapeFromUnknown } from "@/features/vector-ai/lib/ai/codec/decode-shape";
-import type { VectorAiOp } from "@/features/vector-ai/lib/ai/codec/types";
+import { decodeCompactShapeFromUnknown } from "@/features/vector-ai/lib/editor/ai/codec/decode-shape";
+import type { VectorAiOp } from "@/features/vector-ai/lib/editor/ai/codec/types";
 import { parseVectorDoc } from "@/features/vector-ai/lib/document/schema";
 import type { Shape, VectorDoc } from "@/features/vector-ai/lib/document/types";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";

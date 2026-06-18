@@ -1,5 +1,5 @@
-import type { CompactShape } from "@/features/vector-ai/lib/ai/codec/types";
-import { defaultTextFontFamily } from "@/features/vector-ai/lib/ai/codec/encode-doc";
+import type { CompactShape } from "@/features/vector-ai/lib/editor/ai/codec/types";
+import { defaultTextFontFamily } from "@/features/vector-ai/lib/editor/ai/codec/encode-doc";
 import { createShapeId } from "@/features/vector-ai/lib/document/schema";
 import type { Shape } from "@/features/vector-ai/lib/document/types";
 import {

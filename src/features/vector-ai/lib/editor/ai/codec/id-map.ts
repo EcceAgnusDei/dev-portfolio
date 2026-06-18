@@ -1,5 +1,5 @@
 import type { Shape } from "@/features/vector-ai/lib/document/types";
-import type { IdMap } from "@/features/vector-ai/lib/ai/codec/types";
+import type { IdMap } from "@/features/vector-ai/lib/editor/ai/codec/types";
 
 function isLlmEditableShape(shape: Shape): boolean {
   return shape.type !== "path";

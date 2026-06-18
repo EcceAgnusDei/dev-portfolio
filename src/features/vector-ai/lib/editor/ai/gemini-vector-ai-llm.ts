@@ -1,7 +1,7 @@
 import { FinishReason, GoogleGenerativeAI } from "@google/generative-ai";
 import type { GenerationConfig, Part } from "@google/generative-ai";
 
-import { encodeDocForLlm } from "@/features/vector-ai/lib/ai/codec/encode-doc";
+import { encodeDocForLlm } from "@/features/vector-ai/lib/editor/ai/codec/encode-doc";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import {
   VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES,

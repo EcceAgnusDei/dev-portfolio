@@ -12,6 +12,7 @@ import type {
 import {
   VECTOR_AI_DEFAULT_FONT_FAMILY,
   VECTOR_AI_DEFAULT_FONT_SIZE,
+  VECTOR_AI_MAX_SHAPES,
 } from "@/features/vector-ai/lib/vector-ai-config";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import { cubicWorldToLocalSegments } from "@/features/vector-ai/lib/editor/geometry/path-segments";
@@ -172,3 +173,53 @@ export function makeSampleDoc(): VectorDoc {
 export function makeEditorWithSampleDoc() {
   return createInitialEditorState(makeSampleDoc());
 }
+
+export function makeEmptyVectorDoc(): VectorDoc {
+  return createEmptyDoc();
+}
+
+export function makeDocWithRectAndPath(): VectorDoc {
+  return {
+    ...createEmptyDoc(),
+    shapes: [makeRectShape({ id: "rect-1" }), makeCubicPathShape({ id: "path-1" })],
+  };
+}
+
+export function makeDocAtMaxShapes(): VectorDoc {
+  const shapes: RectShape[] = [];
+  for (let i = 0; i < VECTOR_AI_MAX_SHAPES; i++) {
+    shapes.push(
+      makeRectShape({
+        id: `rect-${i}`,
+        transform: { x: i, y: i },
+        w: 10,
+        h: 10,
+      }),
+    );
+  }
+  return {
+    ...createEmptyDoc(),
+    shapes,
+  };
+}
+
+export function makeDocNearMaxShapes(): VectorDoc {
+  const shapes: RectShape[] = [];
+  for (let i = 0; i < VECTOR_AI_MAX_SHAPES - 1; i++) {
+    shapes.push(
+      makeRectShape({
+        id: `rect-${i}`,
+        transform: { x: i, y: i },
+        w: 10,
+        h: 10,
+      }),
+    );
+  }
+  return {
+    ...createEmptyDoc(),
+    shapes,
+  };
+}
+
+export const MINIMAL_VALID_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
