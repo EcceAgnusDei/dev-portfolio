@@ -5,9 +5,7 @@ import type {
   IdMap,
   LlmDocContext,
 } from "@/features/vector-ai/lib/editor/ai/codec/types";
-import {
-  VECTOR_AI_DEFAULT_FONT_FAMILY,
-} from "@/features/vector-ai/lib/vector-ai-config";
+import { VECTOR_AI_DEFAULT_FONT_FAMILY } from "@/features/vector-ai/lib/vector-ai-config";
 
 function appendStroke(
   tuple: (string | number)[],
@@ -24,8 +22,6 @@ function appendStroke(
 }
 
 function encodeShape(shape: Shape, shortId: string): CompactShape | null {
-  if (shape.type === "path") return null;
-
   const { x, y } = shape.transform;
 
   if (shape.type === "rect") {
@@ -83,6 +79,18 @@ function encodeShape(shape: Shape, shortId: string): CompactShape | null {
     ];
   }
 
+  if (shape.type === "path") {
+    const tuple: (string | number)[] = [
+      "p",
+      shortId,
+      shape.style.stroke ?? "#000000",
+    ];
+    if (shape.style.strokeWidth != null) {
+      tuple.push(shape.style.strokeWidth);
+    }
+    return tuple as CompactShape;
+  }
+
   return null;
 }
 
@@ -96,21 +104,18 @@ export function encodeDocForLlm(doc: VectorDoc): EncodeDocForLlmResult {
   const compactShapes: CompactShape[] = [];
 
   for (const shape of doc.shapes) {
-    if (shape.type === "path") continue;
     const shortId = idMap.realToShort.get(shape.id);
     if (!shortId) continue;
     const compact = encodeShape(shape, shortId);
     if (compact) compactShapes.push(compact);
   }
 
-  const pathCount = doc.shapes.filter((s) => s.type === "path").length;
   const { x, y, w, h } = doc.viewBox;
 
   return {
     context: {
       vb: [x, y, w, h],
       s: compactShapes,
-      pathCount,
     },
     idMap,
   };

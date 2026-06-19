@@ -3,7 +3,17 @@ import { z } from "zod";
 import type { VectorAiOp } from "@/features/vector-ai/lib/editor/ai/codec/types";
 import { VECTOR_AI_LLM_MESSAGE_MAX_LENGTH } from "@/features/vector-ai/lib/vector-ai-config";
 
-const compactShapeSchema = z
+function isCompactShapeKind(kind: unknown): boolean {
+  return (
+    kind === "r" ||
+    kind === "c" ||
+    kind === "l" ||
+    kind === "t" ||
+    kind === "p"
+  );
+}
+
+const compactAddShapeSchema = z
   .array(z.unknown())
   .min(4)
   .refine(
@@ -15,10 +25,23 @@ const compactShapeSchema = z
     "Type de forme compacte invalide.",
   );
 
-const addOpSchema = z.tuple([z.literal("add"), compactShapeSchema]);
-const clearOpSchema = z.tuple([z.literal("clear")]);
+const compactUpdateShapeSchema = z
+  .array(z.unknown())
+  .min(3)
+  .refine((tuple) => isCompactShapeKind(tuple[0]), "Type de forme compacte invalide.");
 
-const opSchema = z.union([addOpSchema, clearOpSchema]);
+const addOpSchema = z.tuple([z.literal("add"), compactAddShapeSchema]);
+const updateOpSchema = z.tuple([z.literal("update"), compactUpdateShapeSchema]);
+const deleteOpSchema = z.tuple([
+  z.literal("delete"),
+  z.string().min(1),
+]);
+
+const opSchema = z.union([
+  addOpSchema,
+  updateOpSchema,
+  deleteOpSchema,
+]);
 
 const opsResponseSchema = z.object({
   ops: z.array(opSchema),

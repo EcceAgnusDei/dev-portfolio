@@ -29,10 +29,51 @@ export const llmResponses = {
     ],
     message: "C'est fait.",
   }),
-  clear: JSON.stringify({ ops: [["clear"]] }),
+  deleteAll: JSON.stringify({
+    ops: [["delete", "s1"]],
+    message: "Dessin vidé.",
+  }),
+  deleteAllWithPath: JSON.stringify({
+    ops: [
+      ["delete", "s1"],
+      ["delete", "s2"],
+    ],
+    message: "Dessin vidé.",
+  }),
+  updateRect: JSON.stringify({
+    ops: [["update", ["r", "s1", 10, 20, 100, 50, "#0000ff", "none"]]],
+    message: "Rectangle mis à jour.",
+  }),
+  deleteRect: JSON.stringify({
+    ops: [["delete", "s1"]],
+    message: "Forme supprimée.",
+  }),
+  updateAndAdd: JSON.stringify({
+    ops: [
+      ["update", ["r", "s1", 10, 20, 100, 50, "#0000ff", "none"]],
+      ["add", ["c", "n1", 200, 120, 40, "none", "#000000", 2]],
+    ],
+  }),
+  updateUnknownId: JSON.stringify({
+    ops: [["update", ["r", "s99", 0, 0, 10, 10, "#000000"]]],
+  }),
+  updateTypeMismatch: JSON.stringify({
+    ops: [["update", ["c", "s1", 100, 100, 25, "#00ff00"]]],
+  }),
+  deleteUnknownId: JSON.stringify({
+    ops: [["delete", "s99"]],
+  }),
+  updatePathStyle: JSON.stringify({
+    ops: [["update", ["p", "s2", "#ff0000", 4]]],
+    message: "Courbe mise à jour.",
+  }),
+  deletePath: JSON.stringify({
+    ops: [["delete", "s2"]],
+    message: "Courbe supprimée.",
+  }),
   refuse: JSON.stringify({
     ops: [],
-    message: "Je ne peux pas modifier une courbe.",
+    message: "Je ne peux pas déplacer une courbe.",
   }),
   emptyOps: JSON.stringify({ ops: [] }),
   invalidJson: "pas du json",

@@ -42,16 +42,23 @@ export type CompactText = [
   string,
 ];
 
+export type CompactPath = ["p", string, string, number?];
+
 export type CompactShape =
   | CompactRect
   | CompactCircle
   | CompactLine
-  | CompactText;
+  | CompactText
+  | CompactPath;
 
 export type VectorAiAddOp = ["add", CompactShape];
-export type VectorAiClearOp = ["clear"];
+export type VectorAiUpdateOp = ["update", CompactShape];
+export type VectorAiDeleteOp = ["delete", string];
 
-export type VectorAiOp = VectorAiAddOp | VectorAiClearOp;
+export type VectorAiOp =
+  | VectorAiAddOp
+  | VectorAiUpdateOp
+  | VectorAiDeleteOp;
 
 export type VectorAiLlmResponse = {
   ops: VectorAiOp[];
@@ -61,7 +68,6 @@ export type VectorAiLlmResponse = {
 export type LlmDocContext = {
   vb: [number, number, number, number];
   s: CompactShape[];
-  pathCount: number;
 };
 
 export type IdMap = {

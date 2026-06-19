@@ -2,7 +2,11 @@ import type { CompactShape } from "@/features/vector-ai/lib/editor/ai/codec/type
 import { defaultTextFontFamily } from "@/features/vector-ai/lib/editor/ai/codec/encode-doc";
 import { isShapeColor } from "@/features/vector-ai/lib/document/color";
 import { createShapeId } from "@/features/vector-ai/lib/document/schema";
-import type { Shape } from "@/features/vector-ai/lib/document/types";
+import type {
+  PathShape,
+  Shape,
+  ShapeType,
+} from "@/features/vector-ai/lib/document/types";
 import {
   VECTOR_AI_DEFAULT_CIRCLE_STYLE,
   VECTOR_AI_DEFAULT_LINE_STYLE,
@@ -36,11 +40,7 @@ function readColor(value: unknown, label: string): string {
   return color;
 }
 
-function readPositive(
-  value: unknown,
-  label: string,
-  max: number,
-): number {
+function readPositive(value: unknown, label: string, max: number): number {
   const n = readFiniteNumber(value, label);
   if (n <= 0 || n > max) {
     throw new Error(`Dimension invalide (${label}).`);
@@ -57,11 +57,18 @@ function readStrokeWidth(value: unknown): number | undefined {
   return n;
 }
 
-function decodeRect(raw: unknown[]): Shape {
+const COMPACT_KIND_TO_TYPE: Record<string, ShapeType> = {
+  r: "rect",
+  c: "circle",
+  l: "line",
+  t: "text",
+  p: "path",
+};
+
+function decodeRect(raw: unknown[], id: string): Shape {
   if (raw.length < 7) {
     throw new Error("Tuple rect incomplet.");
   }
-  const id = createShapeId();
   const x = readFiniteNumber(raw[2], "x");
   const y = readFiniteNumber(raw[3], "y");
   const w = readPositive(raw[4], "w", VECTOR_AI_MAX_SHAPE_DIMENSION);
@@ -87,11 +94,10 @@ function decodeRect(raw: unknown[]): Shape {
   };
 }
 
-function decodeCircle(raw: unknown[]): Shape {
+function decodeCircle(raw: unknown[], id: string): Shape {
   if (raw.length < 6) {
     throw new Error("Tuple circle incomplet.");
   }
-  const id = createShapeId();
   const x = readFiniteNumber(raw[2], "x");
   const y = readFiniteNumber(raw[3], "y");
   const r = readPositive(raw[4], "r", VECTOR_AI_MAX_SHAPE_DIMENSION);
@@ -116,11 +122,10 @@ function decodeCircle(raw: unknown[]): Shape {
   };
 }
 
-function decodeLine(raw: unknown[]): Shape {
+function decodeLine(raw: unknown[], id: string): Shape {
   if (raw.length < 7) {
     throw new Error("Tuple line incomplet.");
   }
-  const id = createShapeId();
   const x = readFiniteNumber(raw[2], "x");
   const y = readFiniteNumber(raw[3], "y");
   const x2 = readFiniteNumber(raw[4], "x2");
@@ -143,11 +148,10 @@ function decodeLine(raw: unknown[]): Shape {
   };
 }
 
-function decodeText(raw: unknown[]): Shape {
+function decodeText(raw: unknown[], id: string, fontFamily?: string): Shape {
   if (raw.length < 7) {
     throw new Error("Tuple text incomplet.");
   }
-  const id = createShapeId();
   const x = readFiniteNumber(raw[2], "x");
   const y = readFiniteNumber(raw[3], "y");
   const content = readString(raw[4], "content");
@@ -166,11 +170,33 @@ function decodeText(raw: unknown[]): Shape {
     },
     content,
     fontSize,
-    fontFamily: defaultTextFontFamily(),
+    fontFamily: fontFamily ?? defaultTextFontFamily(),
   };
 }
 
-export function decodeCompactShape(raw: CompactShape): Shape {
+function decodePathStyleUpdate(raw: unknown[], existing: PathShape): PathShape {
+  if (raw.length < 3) {
+    throw new Error("Tuple path incomplet.");
+  }
+  const stroke = readColor(raw[2], "stroke");
+  const strokeWidth = readStrokeWidth(raw[3]) ?? existing.style.strokeWidth;
+
+  return {
+    ...existing,
+    style: {
+      ...existing.style,
+      fill: existing.style.fill ?? "none",
+      stroke,
+      ...(strokeWidth != null ? { strokeWidth } : {}),
+    },
+  };
+}
+
+function decodeCompactShapeWithId(
+  raw: CompactShape,
+  id: string,
+  existing?: Shape,
+): Shape {
   if (!Array.isArray(raw) || raw.length < 2) {
     throw new Error("Tuple de forme invalide.");
   }
@@ -178,21 +204,71 @@ export function decodeCompactShape(raw: CompactShape): Shape {
   const kind = raw[0];
   switch (kind) {
     case "r":
-      return decodeRect(raw);
+      return decodeRect(raw, id);
     case "c":
-      return decodeCircle(raw);
+      return decodeCircle(raw, id);
     case "l":
-      return decodeLine(raw);
+      return decodeLine(raw, id);
     case "t":
-      return decodeText(raw);
+      return decodeText(
+        raw,
+        id,
+        existing?.type === "text" ? existing.fontFamily : undefined,
+      );
     default:
       throw new Error(`Type de forme inconnu : ${String(kind)}.`);
   }
+}
+
+function preserveShapeMeta(decoded: Shape, existing: Shape): Shape {
+  return {
+    ...decoded,
+    ...(existing.locked !== undefined ? { locked: existing.locked } : {}),
+    ...(existing.name !== undefined ? { name: existing.name } : {}),
+  };
+}
+
+export function decodeCompactShape(raw: CompactShape): Shape {
+  return decodeCompactShapeWithId(raw, createShapeId());
 }
 
 export function decodeCompactShapeFromUnknown(raw: unknown): Shape {
   if (!Array.isArray(raw)) {
     throw new Error("Forme compacte invalide.");
   }
+  if (raw[0] === "p") {
+    throw new Error("Les courbes ne peuvent pas être ajoutées.");
+  }
   return decodeCompactShape(raw as CompactShape);
+}
+
+export function decodeCompactShapeForUpdate(
+  raw: unknown,
+  existing: Shape,
+): Shape {
+  if (!Array.isArray(raw) || raw.length < 2) {
+    throw new Error("Forme compacte invalide.");
+  }
+
+  const kind = raw[0];
+  if (typeof kind !== "string") {
+    throw new Error("Type de forme compacte invalide.");
+  }
+
+  if (kind === "p" && existing.type === "path") {
+    const updated = decodePathStyleUpdate(raw, existing);
+    return preserveShapeMeta(updated, existing);
+  }
+
+  const expectedType = COMPACT_KIND_TO_TYPE[kind];
+  if (!expectedType || existing.type !== expectedType) {
+    throw new Error("Type de forme incompatible.");
+  }
+
+  const decoded = decodeCompactShapeWithId(
+    raw as CompactShape,
+    existing.id,
+    existing,
+  );
+  return preserveShapeMeta(decoded, existing);
 }

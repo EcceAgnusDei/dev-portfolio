@@ -88,11 +88,11 @@ describe("workflow: commande IA", () => {
       expect(result.userMessage).toBe("C'est fait.");
     });
 
-    it("vide le dessin éditable", async () => {
+    it("vide le dessin via delete", async () => {
       const result = await runAiPipeline({
         doc: makeDocWithRect(),
         prompt: "efface tout",
-        llmJson: llmResponses.clear,
+        llmJson: llmResponses.deleteAll,
       });
 
       expect(result.status).toBe("success");
@@ -102,18 +102,17 @@ describe("workflow: commande IA", () => {
       expect(result.doc.shapes).toHaveLength(0);
     });
 
-    it("préserve les courbes lors d'un clear", async () => {
+    it("vide le dessin y compris les courbes", async () => {
       const result = await runAiPipeline({
         doc: makeDocWithRectAndPath(),
         prompt: "vide le dessin",
-        llmJson: llmResponses.clear,
+        llmJson: llmResponses.deleteAllWithPath,
       });
 
       expect(result.status).toBe("success");
       if (result.status !== "success") return;
 
-      expect(result.doc.shapes).toHaveLength(1);
-      expect(result.doc.shapes[0]?.type).toBe("path");
+      expect(result.doc.shapes).toHaveLength(0);
     });
 
     it("envoie un aperçu PNG quand le doc contient des formes", async () => {
@@ -164,13 +163,110 @@ describe("workflow: commande IA", () => {
         undefined,
       );
     });
+
+    it("modifie une forme existante", async () => {
+      const result = await runAiPipeline({
+        doc: makeDocWithRect(),
+        prompt: "mets le rectangle en bleu",
+        llmJson: llmResponses.updateRect,
+      });
+
+      expect(result.status).toBe("success");
+      if (result.status !== "success") return;
+
+      expect(result.docChanged).toBe(true);
+      expect(result.doc.shapes).toHaveLength(1);
+      expect(result.doc.shapes[0]).toMatchObject({
+        id: "rect-1",
+        type: "rect",
+        transform: { x: 10, y: 20 },
+        w: 100,
+        h: 50,
+        style: { fill: "#0000ff", stroke: "none" },
+      });
+      expect(result.userMessage).toBe("Rectangle mis à jour.");
+    });
+
+    it("supprime une forme sans toucher aux autres", async () => {
+      const result = await runAiPipeline({
+        doc: makeDocWithRectAndPath(),
+        prompt: "supprime le rectangle",
+        llmJson: llmResponses.deleteRect,
+      });
+
+      expect(result.status).toBe("success");
+      if (result.status !== "success") return;
+
+      expect(result.docChanged).toBe(true);
+      expect(result.doc.shapes).toHaveLength(1);
+      expect(result.doc.shapes[0]?.type).toBe("path");
+      expect(result.userMessage).toBe("Forme supprimée.");
+    });
+
+    it("combine update et add", async () => {
+      const result = await runAiPipeline({
+        doc: makeDocWithRect(),
+        prompt: "mets le rectangle en bleu et ajoute un cercle",
+        llmJson: llmResponses.updateAndAdd,
+      });
+
+      expect(result.status).toBe("success");
+      if (result.status !== "success") return;
+
+      expect(result.docChanged).toBe(true);
+      expect(result.doc.shapes).toHaveLength(2);
+      expect(result.doc.shapes[0]).toMatchObject({
+        id: "rect-1",
+        style: { fill: "#0000ff", stroke: "none" },
+      });
+      expect(result.doc.shapes[1]).toMatchObject({
+        id: "new-shape-id-1",
+        type: "circle",
+      });
+    });
+
+    it("modifie le style d'une courbe", async () => {
+      const result = await runAiPipeline({
+        doc: makeDocWithRectAndPath(),
+        prompt: "mets la courbe en rouge épaisseur 4",
+        llmJson: llmResponses.updatePathStyle,
+      });
+
+      expect(result.status).toBe("success");
+      if (result.status !== "success") return;
+
+      expect(result.docChanged).toBe(true);
+      expect(result.doc.shapes).toHaveLength(2);
+      expect(result.doc.shapes[1]).toMatchObject({
+        id: "path-1",
+        type: "path",
+        style: { fill: "none", stroke: "#ff0000", strokeWidth: 4 },
+      });
+      expect(result.userMessage).toBe("Courbe mise à jour.");
+    });
+
+    it("supprime une courbe", async () => {
+      const result = await runAiPipeline({
+        doc: makeDocWithRectAndPath(),
+        prompt: "supprime la courbe",
+        llmJson: llmResponses.deletePath,
+      });
+
+      expect(result.status).toBe("success");
+      if (result.status !== "success") return;
+
+      expect(result.docChanged).toBe(true);
+      expect(result.doc.shapes).toHaveLength(1);
+      expect(result.doc.shapes[0]?.type).toBe("rect");
+      expect(result.userMessage).toBe("Courbe supprimée.");
+    });
   });
 
   describe("refus sans modification", () => {
     it("affiche le message LLM quand ops est vide", async () => {
       const result = await runAiPipeline({
         doc: makeDocWithRectAndPath(),
-        prompt: "modifie la courbe",
+        prompt: "déplace la courbe",
         llmJson: llmResponses.refuse,
       });
 
@@ -178,7 +274,7 @@ describe("workflow: commande IA", () => {
       if (result.status !== "success") return;
 
       expect(result.docChanged).toBe(false);
-      expect(result.userMessage).toBe("Je ne peux pas modifier une courbe.");
+      expect(result.userMessage).toBe("Je ne peux pas déplacer une courbe.");
     });
 
     it("injecte le fallback serveur quand ops est vide sans message", async () => {
@@ -492,25 +588,68 @@ describe("workflow: commande IA", () => {
         error: "Nombre maximal de formes atteint.",
       });
     });
+
+    it("rejette un update sur id inconnu", async () => {
+      configureGeminiMock({ llmJson: llmResponses.updateUnknownId });
+
+      const res = await callAiRoute({
+        prompt: "modifie la forme",
+        doc: makeDocWithRect(),
+      });
+
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({
+        error: "Identifiant de forme inconnu.",
+      });
+    });
+
+    it("rejette un update avec type incompatible", async () => {
+      configureGeminiMock({ llmJson: llmResponses.updateTypeMismatch });
+
+      const res = await callAiRoute({
+        prompt: "transforme en cercle",
+        doc: makeDocWithRect(),
+      });
+
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({
+        error: "Type de forme incompatible.",
+      });
+    });
+
+    it("rejette un delete sur id inconnu", async () => {
+      configureGeminiMock({ llmJson: llmResponses.deleteUnknownId });
+
+      const res = await callAiRoute({
+        prompt: "supprime la forme",
+        doc: makeDocWithRect(),
+      });
+
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({
+        error: "Identifiant de forme inconnu.",
+      });
+    });
   });
 
   describe("encodage contexte LLM", () => {
-    it("encode pathCount sans inclure les paths dans ctx.s", async () => {
+    it("encode les paths dans ctx.s", async () => {
       await callAiRoute({
         prompt: "ajoute un rectangle",
         doc: makeSampleDoc(),
       });
 
       const encodedContext = await extractLlmContextFromGeminiCall();
-      expect(encodedContext.pathCount).toBe(1);
-      expect(encodedContext.s).toHaveLength(3);
+      expect(encodedContext.s).toHaveLength(4);
+      expect(encodedContext.s.some((tuple) => tuple[0] === "p")).toBe(true);
       expect(
         encodedContext.s.every(
           (tuple) =>
             tuple[0] === "r" ||
             tuple[0] === "c" ||
             tuple[0] === "l" ||
-            tuple[0] === "t",
+            tuple[0] === "t" ||
+            tuple[0] === "p",
         ),
       ).toBe(true);
     });
