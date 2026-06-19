@@ -4,7 +4,10 @@
 import { act } from "react";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/core/selectors";
+import {
+  canRedo,
+  canUndo,
+} from "@/features/vector-ai/lib/editor/core/selectors";
 import { commitTextEditActions } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { deleteShapeActions } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
 import {
@@ -165,7 +168,8 @@ describe("workflow: suppression de forme", () => {
     for (const key of ["Delete", "Backspace"] as const) {
       const initial = makeEditorWithRect("rect-1");
       initial.selection.ids = [];
-      const { interaction, getState, unmount } = renderInteractiveCanvas(initial);
+      const { interaction, getState, unmount } =
+        renderInteractiveCanvas(initial);
 
       act(() => {
         interaction.onShapePointerDown(
@@ -219,10 +223,12 @@ describe("workflow: suppression de forme", () => {
     expectShapeCount(next, 0);
     expect(next.selection.ids).toEqual([]);
     expect(next.history.past).toHaveLength(1);
-    expect(commitTextEditActions({
-      shapeId: "text-1",
-      input: { content: "   \n\t  " },
-      doc: initial.doc,
-    })).toEqual(deleteShapeActions(initial.doc, "text-1"));
+    expect(
+      commitTextEditActions({
+        shapeId: "text-1",
+        input: { content: "   \n\t  " },
+        doc: initial.doc,
+      }),
+    ).toEqual(deleteShapeActions(initial.doc, "text-1"));
   });
 });

@@ -1,4 +1,5 @@
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
+import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import type {
   EditorAction,
@@ -29,21 +30,22 @@ import type {
   PointerSession,
   RectResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
-import {
-  IDLE_POINTER_SESSION,
-} from "@/features/vector-ai/lib/editor/session/types";
+import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
 import { updateSessionPointerWorld } from "@/features/vector-ai/lib/editor/session/session-mutations";
 
 export type EditorInteractionState = {
   doc: EditorState["doc"];
   tool: EditorTool;
+  draftStyle: DraftStyle;
 };
 
 export function shapePointerEventsForTool(tool: EditorTool): "auto" | "none" {
   return tool === "select" ? "auto" : "none";
 }
 
-export function shouldCapturePointerForSession(session: PointerSession): boolean {
+export function shouldCapturePointerForSession(
+  session: PointerSession,
+): boolean {
   return (
     session.kind === "create-rect" ||
     session.kind === "create-circle" ||
@@ -81,7 +83,7 @@ export function commitSession(
   state: EditorInteractionState,
   session: PointerSession,
 ): EditorAction[] {
-  return commitPointerSession(session, state.doc);
+  return commitPointerSession(session, state.doc, state.draftStyle);
 }
 
 export { updateSessionPointerWorld };
@@ -96,7 +98,12 @@ export function handleBackgroundPointerDown(
     if (state.tool !== "cubic") {
       return { session: IDLE_POINTER_SESSION, actions: [] };
     }
-    return advanceCreateCubicSession(session, world, state.doc.viewBox);
+    return advanceCreateCubicSession(
+      session,
+      world,
+      state.doc.viewBox,
+      state.draftStyle,
+    );
   }
 
   if (state.tool === "select") {
@@ -229,5 +236,5 @@ export function handleCircleHandlePointerDown(
 export function editorInteractionStateFromEditor(
   state: EditorState,
 ): EditorInteractionState {
-  return { doc: state.doc, tool: state.tool };
+  return { doc: state.doc, tool: state.tool, draftStyle: state.draftStyle };
 }

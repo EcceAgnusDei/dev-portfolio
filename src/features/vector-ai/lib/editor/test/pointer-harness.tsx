@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
+import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import type {
   EditorAction,
@@ -30,6 +31,80 @@ export type RenderedInteractiveCanvas = {
   getState: () => EditorState;
   unmount: () => void;
 };
+
+export type RenderedStyleToolbar = {
+  container: HTMLDivElement;
+  getState: () => EditorState;
+  unmount: () => void;
+};
+
+export function queryColorInput(
+  container: ParentNode,
+  ariaLabel: string,
+): HTMLInputElement {
+  const input = container.querySelector(
+    `input[type="color"][aria-label="${ariaLabel}"]`,
+  );
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Input couleur introuvable : ${ariaLabel}`);
+  }
+  return input;
+}
+
+export function queryColorFieldNoneButton(
+  container: ParentNode,
+  colorAriaLabel: string,
+): HTMLButtonElement {
+  const input = queryColorInput(container, colorAriaLabel);
+  const button = input.parentElement?.querySelector("button");
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Bouton Aucun introuvable pour : ${colorAriaLabel}`);
+  }
+  return button;
+}
+
+export function queryStrokeWidthInput(container: ParentNode): HTMLInputElement {
+  const input = container.querySelector(
+    'input[type="number"][aria-label="Épaisseur du contour"]',
+  );
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error("Input épaisseur du contour introuvable.");
+  }
+  return input;
+}
+
+function setNativeInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  if (!setter) {
+    throw new Error("Impossible de définir la valeur native de l'input.");
+  }
+  setter.call(input, value);
+}
+
+export function changeColorInput(input: HTMLInputElement, hex: string) {
+  act(() => {
+    setNativeInputValue(input, hex);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+export function changeNumberInput(input: HTMLInputElement, value: string) {
+  act(() => {
+    setNativeInputValue(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+export function clickButton(button: HTMLButtonElement) {
+  act(() => {
+    button.click();
+  });
+}
 
 vi.mock("@/features/vector-ai/lib/editor/geometry/screen-to-world", () => ({
   screenToWorld: vi.fn(
@@ -197,6 +272,69 @@ export function renderInteractiveCanvas(
     },
     container,
     svgRef,
+    getState: () => currentState,
+    unmount() {
+      act(() => {
+        root.unmount();
+        container.remove();
+      });
+    },
+  };
+}
+
+export function renderStyleToolbarHarness(
+  initialState: EditorState,
+): RenderedStyleToolbar {
+  const svgRef = setupSvgRef();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  let currentState = initialState;
+
+  const dispatch = (action: EditorAction) => {
+    currentState = editorReducer(currentState, action);
+    rerender();
+  };
+
+  function rerender() {
+    act(() => {
+      root.render(<StyleToolbarHost />);
+    });
+  }
+
+  function StyleToolbarHost() {
+    const interaction = useVectorInteraction({
+      state: currentState,
+      dispatch,
+      svgRef,
+    });
+
+    return (
+      <VectorEditorToolbar
+        activeTool={currentState.tool}
+        onToolChange={interaction.setTool}
+        canUndo={false}
+        canRedo={false}
+        onUndo={() => dispatch({ type: "UNDO" })}
+        onRedo={() => dispatch({ type: "REDO" })}
+        onExportSvg={() => {}}
+        fontSizeDraft="16"
+        fontSizeFallback={16}
+        fontSizeEnabled={false}
+        onFontSizeDraftChange={() => {}}
+        canDelete={false}
+        onDelete={() => {}}
+        styleControl={interaction.styleControl}
+        styleControlsEnabled
+        onStylePatch={interaction.applyStyleControlPatch}
+      />
+    );
+  }
+
+  rerender();
+
+  return {
+    container,
     getState: () => currentState,
     unmount() {
       act(() => {

@@ -9,7 +9,14 @@ import {
   expectAfterMove,
   expectDocUnchanged,
   expectShapeCount,
+  expectShapeInDoc,
 } from "@/features/vector-ai/lib/editor/test/expect-editor-state";
+import {
+  applyStyleControlPatch,
+  STYLE_TEST_DRAFT,
+  withShapeSelected,
+  withStyleDraft,
+} from "@/features/vector-ai/lib/editor/test/style-workflow-helpers";
 import {
   actionsOfType,
   lastSnapshot,
@@ -102,6 +109,59 @@ describe("workflow: création rectangle", () => {
     expect(actionsOfType(result.allActions, "SHAPE_ADD")).toHaveLength(0);
     expectDocUnchanged(initial, result.state);
     expect(result.state.tool).toBe("rect");
+  });
+
+  it("applique fill, stroke et strokeWidth du draftStyle à la création", () => {
+    const initial = withStyleDraft(makeEditorWithRect());
+    initial.tool = "rect";
+
+    const result = runGesture(initial, [
+      { type: "background-down", world: { x: 10, y: 20 } },
+      { type: "move", world: { x: 50, y: 60 } },
+      { type: "up" },
+    ]);
+
+    expectAfterCreate(result, "new-shape-id", {
+      type: "rect",
+      style: {
+        fill: STYLE_TEST_DRAFT.fill,
+        stroke: STYLE_TEST_DRAFT.stroke,
+        strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+      },
+    });
+  });
+});
+
+describe("workflow: style rectangle", () => {
+  it("modifie fill, stroke et strokeWidth en sélection", () => {
+    const initial = withShapeSelected(makeEditorWithRect("rect-1"), "rect-1");
+    initial.doc.shapes = [
+      makeRectShape({
+        id: "rect-1",
+        transform: { x: 10, y: 20 },
+        w: 100,
+        h: 50,
+      }),
+    ];
+
+    let state = applyStyleControlPatch(initial, { fill: "#112233" });
+    expectShapeInDoc(state, "rect-1", {
+      style: { fill: "#112233", stroke: "none" },
+    });
+
+    state = applyStyleControlPatch(state, { stroke: "#445566" });
+    expectShapeInDoc(state, "rect-1", {
+      style: { fill: "#112233", stroke: "#445566", strokeWidth: 1 },
+    });
+
+    state = applyStyleControlPatch(state, { strokeWidth: 6 });
+    expectShapeInDoc(state, "rect-1", {
+      style: {
+        fill: "#112233",
+        stroke: "#445566",
+        strokeWidth: 6,
+      },
+    });
   });
 });
 

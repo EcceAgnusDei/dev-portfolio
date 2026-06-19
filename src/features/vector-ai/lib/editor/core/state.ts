@@ -3,6 +3,10 @@ import type {
   PathSegmentLocal,
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
+import {
+  createInitialDraftStyle,
+  type DraftStyle,
+} from "@/features/vector-ai/lib/editor/core/draft-style";
 export type EditorTool =
   | "select"
   | "rect"
@@ -20,6 +24,7 @@ export type EditorState = {
   doc: VectorDoc;
   selection: { ids: string[] };
   tool: EditorTool;
+  draftStyle: DraftStyle;
   history: EditorHistory;
 };
 
@@ -61,6 +66,7 @@ export type EditorAction =
     }
   | { type: "SELECTION_SET"; ids: string[] }
   | { type: "TOOL_SET"; tool: EditorTool }
+  | { type: "DRAFT_STYLE_SET"; draftStyle: Partial<DraftStyle> }
   | { type: "UNDO" }
   | { type: "REDO" };
 
@@ -69,6 +75,7 @@ export function createInitialEditorState(doc?: VectorDoc): EditorState {
     doc: doc ?? createEmptyDoc(),
     selection: { ids: [] },
     tool: "select",
+    draftStyle: createInitialDraftStyle(),
     history: { past: [], future: [] },
   };
 }

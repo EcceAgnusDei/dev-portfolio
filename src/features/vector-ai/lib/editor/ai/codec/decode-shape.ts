@@ -1,5 +1,6 @@
 import type { CompactShape } from "@/features/vector-ai/lib/editor/ai/codec/types";
 import { defaultTextFontFamily } from "@/features/vector-ai/lib/editor/ai/codec/encode-doc";
+import { isShapeColor } from "@/features/vector-ai/lib/document/color";
 import { createShapeId } from "@/features/vector-ai/lib/document/schema";
 import type { Shape } from "@/features/vector-ai/lib/document/types";
 import {
@@ -11,12 +12,6 @@ import {
   VECTOR_AI_MAX_STROKE_WIDTH,
   VECTOR_AI_MAX_TEXT_LENGTH,
 } from "@/features/vector-ai/lib/vector-ai-config";
-
-const COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
-
-function isColor(value: string): boolean {
-  return value === "none" || COLOR_RE.test(value);
-}
 
 function readFiniteNumber(value: unknown, label: string): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -35,7 +30,7 @@ function readString(value: unknown, label: string): string {
 
 function readColor(value: unknown, label: string): string {
   const color = readString(value, label);
-  if (!isColor(color)) {
+  if (!isShapeColor(color)) {
     throw new Error(`Couleur invalide (${label}).`);
   }
   return color;

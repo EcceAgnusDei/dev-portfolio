@@ -66,6 +66,12 @@ export const VECTOR_AI_DEFAULT_TEXT_STYLE: ShapeStyle = {
   fill: "#000000",
 };
 
+export const VECTOR_AI_INITIAL_DRAFT_STYLE = {
+  fill: "#000000",
+  stroke: "none",
+  strokeWidth: 1,
+} as const;
+
 export const VECTOR_AI_HIT_TEXT_MIN_WIDTH = 24;
 export const VECTOR_AI_HIT_TEXT_MIN_HEIGHT = 20;
 export const VECTOR_AI_TEXT_LINE_HEIGHT_FACTOR = 1.2;

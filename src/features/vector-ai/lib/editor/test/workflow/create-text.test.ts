@@ -15,6 +15,12 @@ import {
   expectShapeCount,
   expectShapeInDoc,
 } from "@/features/vector-ai/lib/editor/test/expect-editor-state";
+import {
+  applyStyleControlPatch,
+  STYLE_TEST_DRAFT,
+  withShapeSelected,
+  withStyleDraft,
+} from "@/features/vector-ai/lib/editor/test/style-workflow-helpers";
 import type {
   TextShape,
   ViewBox,
@@ -141,6 +147,52 @@ describe("workflow: création texte", () => {
     expect(canvas.getState().history.past).toHaveLength(1);
 
     canvas.unmount();
+  });
+
+  it("applique le fill du draftStyle à la création", () => {
+    const initial = withStyleDraft(withTextTool(makeEditorWithRect()));
+    const canvas = renderInteractiveCanvas(initial);
+
+    act(() => {
+      canvas.interaction.onSvgPointerDown(
+        makePointerEvent({
+          clientX: 40,
+          clientY: 50,
+          target: canvasBackgroundTarget(),
+        }) as never,
+      );
+    });
+    act(() => {
+      canvas.interaction.onSvgPointerUp(
+        makePointerEvent({ clientX: 40, clientY: 50 }) as never,
+      );
+    });
+
+    act(() => {
+      canvas.interaction.commitTextEdit({ content: "Couleur" });
+    });
+
+    expectShapeInDoc(canvas.getState(), "new-shape-id", {
+      type: "text",
+      style: { fill: STYLE_TEST_DRAFT.fill },
+    });
+
+    canvas.unmount();
+  });
+});
+
+describe("workflow: style texte", () => {
+  it("modifie fill en sélection", () => {
+    const initial = withShapeSelected(makeEditorWithRect(), "text-1");
+    initial.doc.shapes = [
+      makeTextShape({ id: "text-1", content: "Hello" }),
+    ];
+
+    const state = applyStyleControlPatch(initial, { fill: "#654321" });
+    expectShapeInDoc(state, "text-1", {
+      type: "text",
+      style: { fill: "#654321" },
+    });
   });
 });
 
@@ -384,6 +436,7 @@ describe("workflow: édition contenu texte", () => {
         shapeId: "text-1",
         input: { content: "" },
         doc: initial.doc,
+        draftStyle: initial.draftStyle,
       }),
     );
 
@@ -403,6 +456,7 @@ describe("workflow: édition contenu texte", () => {
           shapeId: "text-1",
           input: { content },
           doc: initial.doc,
+          draftStyle: initial.draftStyle,
         }),
       );
 
@@ -429,6 +483,7 @@ describe("workflow: édition contenu texte", () => {
         input: { content: " \n\t " },
         doc: afterCreate.state.doc,
         pendingWorld: { x: 40, y: 50 },
+        draftStyle: afterCreate.state.draftStyle,
       }),
     );
 

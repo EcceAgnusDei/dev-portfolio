@@ -1,4 +1,5 @@
 import type { ViewBox } from "@/features/vector-ai/lib/document/types";
+import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
   commitCreateCubicFromWorld,
@@ -17,6 +18,7 @@ export function advanceCreateCubicSession(
   session: Extract<PointerSession, { kind: "create-cubic" }>,
   world: WorldPoint,
   viewBox: ViewBox,
+  draftStyle: DraftStyle,
 ): AdvanceCreateCubicResult {
   if (shouldIgnoreCubicClick(session.step, session.placed, world)) {
     return { session, actions: [] };
@@ -48,7 +50,7 @@ export function advanceCreateCubicSession(
 
   if (session.step === 4) {
     const complete = { ...session.placed, p3: world };
-    const actions = commitCreateCubicFromWorld(complete, viewBox);
+    const actions = commitCreateCubicFromWorld(complete, viewBox, draftStyle);
     if (actions.length === 0) {
       return { session, actions: [] };
     }

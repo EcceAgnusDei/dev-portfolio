@@ -3,6 +3,9 @@
 import { type ChangeEvent, type FocusEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { VectorStyleControls } from "@/features/vector-ai/components/vector-style-controls";
+import type { StyleControlState } from "@/features/vector-ai/lib/editor/core/selectors";
+import type { StylePatch } from "@/features/vector-ai/lib/editor/dispatch/style-patch-actions";
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { VECTOR_AI_MAX_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
@@ -32,6 +35,9 @@ export type VectorEditorToolbarProps = {
   onFontSizeBlur?: (fontSize: number, relatedTarget: EventTarget | null) => void;
   canDelete: boolean;
   onDelete: () => void;
+  styleControl: StyleControlState;
+  styleControlsEnabled: boolean;
+  onStylePatch: (patch: StylePatch) => void;
   className?: string;
 };
 
@@ -50,6 +56,9 @@ export function VectorEditorToolbar({
   onFontSizeBlur,
   canDelete,
   onDelete,
+  styleControl,
+  styleControlsEnabled,
+  onStylePatch,
   className,
 }: VectorEditorToolbarProps) {
   function handleFontSizeChange(event: ChangeEvent<HTMLInputElement>) {
@@ -94,6 +103,16 @@ export function VectorEditorToolbar({
       <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
         <legend className="text-center text-sm font-medium">Propriétés</legend>
         <div className="flex min-w-0 flex-wrap items-end justify-center gap-3">
+          <VectorStyleControls
+            fill={styleControl.values.fill}
+            stroke={styleControl.values.stroke}
+            strokeWidth={styleControl.values.strokeWidth}
+            visibility={styleControl.visibility}
+            disabled={!styleControlsEnabled}
+            onFillChange={(fill) => onStylePatch({ fill })}
+            onStrokeChange={(stroke) => onStylePatch({ stroke })}
+            onStrokeWidthChange={(strokeWidth) => onStylePatch({ strokeWidth })}
+          />
           <label
             data-vector-text-edit-ui
             className={cn(

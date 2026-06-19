@@ -6,6 +6,10 @@ import type {
   PathSegmentLocal,
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
+import {
+  styleForNewShape,
+  type DraftStyle,
+} from "@/features/vector-ai/lib/editor/core/draft-style";
 import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 import {
   cubicWorldToLocalSegments,
@@ -15,7 +19,6 @@ import { clampCubicWorldPoints } from "@/features/vector-ai/lib/editor/geometry/
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
   VECTOR_AI_CUBIC_PATH_SEGMENT_COUNT_MVP,
-  VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE,
   VECTOR_AI_MIN_CUBIC_POINT_DISTANCE,
 } from "@/features/vector-ai/lib/vector-ai-config";
 
@@ -85,6 +88,7 @@ export function isValidCubicMvpSegments(
 export function commitCreateCubicFromWorld(
   placed: Partial<CubicWorldPoints>,
   viewBox: ViewBox,
+  draftStyle: DraftStyle,
 ): EditorAction[] {
   if (
     placed.p0 == null ||
@@ -117,7 +121,7 @@ export function commitCreateCubicFromWorld(
         type: "path",
         transform: { x: clamped.p0.x, y: clamped.p0.y },
         segments: [...segments],
-        style: { ...VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE },
+        style: styleForNewShape("cubic", draftStyle),
       },
     },
     { type: "SELECTION_SET", ids: [id] },

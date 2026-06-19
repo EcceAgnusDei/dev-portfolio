@@ -9,7 +9,14 @@ import {
   expectAfterMove,
   expectDocUnchanged,
   expectShapeCount,
+  expectShapeInDoc,
 } from "@/features/vector-ai/lib/editor/test/expect-editor-state";
+import {
+  applyStyleControlPatch,
+  STYLE_TEST_DRAFT,
+  withShapeSelected,
+  withStyleDraft,
+} from "@/features/vector-ai/lib/editor/test/style-workflow-helpers";
 import {
   actionsOfType,
   lastSnapshot,
@@ -120,6 +127,54 @@ describe("workflow: création cercle", () => {
     expect(actionsOfType(result.allActions, "SHAPE_ADD")).toHaveLength(0);
     expectDocUnchanged(initial, result.state);
     expect(result.state.tool).toBe("circle");
+  });
+
+  it("applique fill, stroke et strokeWidth du draftStyle à la création", () => {
+    const initial = withStyleDraft(makeEditorWithRect());
+    initial.tool = "circle";
+
+    const result = runGesture(initial, [
+      { type: "background-down", world: { x: 10, y: 20 } },
+      { type: "move", world: { x: 50, y: 20 } },
+      { type: "up" },
+    ]);
+
+    expectAfterCreate(result, "new-shape-id", {
+      type: "circle",
+      style: {
+        fill: STYLE_TEST_DRAFT.fill,
+        stroke: STYLE_TEST_DRAFT.stroke,
+        strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+      },
+    });
+  });
+});
+
+describe("workflow: style cercle", () => {
+  it("modifie fill, stroke et strokeWidth en sélection", () => {
+    const initial = withShapeSelected(makeEditorWithRect(), "circle-1");
+    initial.doc.shapes = [
+      makeCircleShape({
+        id: "circle-1",
+        transform: { x: 50, y: 50 },
+        r: 20,
+      }),
+    ];
+
+    let state = applyStyleControlPatch(initial, { fill: "#aabbcc" });
+    expectShapeInDoc(state, "circle-1", {
+      style: { fill: "#aabbcc", stroke: "#000000", strokeWidth: 2 },
+    });
+
+    state = applyStyleControlPatch(state, { stroke: "none" });
+    expectShapeInDoc(state, "circle-1", {
+      style: { fill: "#aabbcc", stroke: "none", strokeWidth: 2 },
+    });
+
+    state = applyStyleControlPatch(state, { stroke: "#ddeeff", strokeWidth: 3 });
+    expectShapeInDoc(state, "circle-1", {
+      style: { fill: "#aabbcc", stroke: "#ddeeff", strokeWidth: 3 },
+    });
   });
 });
 

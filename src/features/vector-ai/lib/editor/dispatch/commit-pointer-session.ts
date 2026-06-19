@@ -1,6 +1,7 @@
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
-import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
+import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 import { commitCreateCircle } from "@/features/vector-ai/lib/editor/dispatch/create-circle";
 import { commitCreateLine } from "@/features/vector-ai/lib/editor/dispatch/create-line";
 import { commitCreateRect } from "@/features/vector-ai/lib/editor/dispatch/create-rect";
@@ -11,6 +12,7 @@ import type { PointerSession } from "@/features/vector-ai/lib/editor/session/typ
 export function commitPointerSession(
   session: PointerSession,
   doc: VectorDoc,
+  draftStyle: DraftStyle,
 ): EditorAction[] {
   if (
     session.kind === "move" ||
@@ -33,15 +35,15 @@ export function commitPointerSession(
   }
 
   if (session.kind === "create-rect") {
-    return commitCreateRect(session, doc.viewBox);
+    return commitCreateRect(session, doc.viewBox, draftStyle);
   }
 
   if (session.kind === "create-circle") {
-    return commitCreateCircle(session, doc.viewBox);
+    return commitCreateCircle(session, doc.viewBox, draftStyle);
   }
 
   if (session.kind === "create-line") {
-    return commitCreateLine(session, doc.viewBox);
+    return commitCreateLine(session, doc.viewBox, draftStyle);
   }
 
   return [];

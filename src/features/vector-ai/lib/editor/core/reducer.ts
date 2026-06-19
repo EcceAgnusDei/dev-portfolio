@@ -127,6 +127,12 @@ export function editorReducer(
     case "TOOL_SET":
       return { ...state, tool: action.tool };
 
+    case "DRAFT_STYLE_SET":
+      return {
+        ...state,
+        draftStyle: { ...state.draftStyle, ...action.draftStyle },
+      };
+
     case "UNDO": {
       const { past, future } = state.history;
       if (past.length === 0) return state;

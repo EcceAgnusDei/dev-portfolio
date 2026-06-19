@@ -1,10 +1,17 @@
-import type { TextShape, ViewBox } from "@/features/vector-ai/lib/document/types";
+import type {
+  TextShape,
+  ViewBox,
+} from "@/features/vector-ai/lib/document/types";
+import {
+  createInitialDraftStyle,
+  styleForNewShape,
+  type DraftStyle,
+} from "@/features/vector-ai/lib/editor/core/draft-style";
 import { clampPointToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
   VECTOR_AI_DEFAULT_FONT_FAMILY,
   VECTOR_AI_DEFAULT_FONT_SIZE,
-  VECTOR_AI_DEFAULT_TEXT_STYLE,
 } from "@/features/vector-ai/lib/vector-ai-config";
 
 export function buildTextShape(
@@ -12,6 +19,7 @@ export function buildTextShape(
   point: WorldPoint,
   content: string,
   fontSize: number = VECTOR_AI_DEFAULT_FONT_SIZE,
+  draftStyle: DraftStyle = createInitialDraftStyle(),
 ): TextShape {
   return {
     id,
@@ -20,7 +28,7 @@ export function buildTextShape(
     content,
     fontSize,
     fontFamily: VECTOR_AI_DEFAULT_FONT_FAMILY,
-    style: VECTOR_AI_DEFAULT_TEXT_STYLE,
+    style: styleForNewShape("text", draftStyle),
   };
 }
 

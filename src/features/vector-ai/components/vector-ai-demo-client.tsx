@@ -148,6 +148,9 @@ export function VectorAiDemoClient() {
         onFontSizeBlur={interaction.commitTextEditOnFontSizeBlur}
         canDelete={!aiPending && interaction.canDeleteSelectedShape}
         onDelete={interaction.deleteSelectedShape}
+        styleControl={interaction.styleControl}
+        styleControlsEnabled={!aiPending}
+        onStylePatch={interaction.applyStyleControlPatch}
       />
       <VectorAiPromptPanel
         aiPrompt={aiPrompt}

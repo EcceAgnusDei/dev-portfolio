@@ -1,4 +1,8 @@
-import type { TextShape, VectorDoc } from "@/features/vector-ai/lib/document/types";
+import type {
+  TextShape,
+  VectorDoc,
+} from "@/features/vector-ai/lib/document/types";
+import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import {
   isValidTextFontSizeInput,
@@ -39,6 +43,7 @@ export function updateTextEditFontSizeDraft(
 export function textShapeForEditSession(
   session: TextEditSession,
   doc: VectorDoc,
+  draftStyle: DraftStyle,
 ): TextShape | undefined {
   const existing = getShapeById(doc, session.shapeId);
   if (existing?.type === "text") return existing;
@@ -48,7 +53,7 @@ export function textShapeForEditSession(
     session.fontSizeDraft,
     VECTOR_AI_DEFAULT_FONT_SIZE,
   );
-  return buildTextShape(session.shapeId, session.world, "", fontSize);
+  return buildTextShape(session.shapeId, session.world, "", fontSize, draftStyle);
 }
 
 export function textEditPreviewFontSize(

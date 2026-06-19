@@ -19,6 +19,14 @@ import type {
 } from "@/features/vector-ai/lib/document/types";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import {
+  getStyleControlState,
+  type StyleControlState,
+} from "@/features/vector-ai/lib/editor/core/selectors";
+import {
+  styleControlPatchActions,
+  type StylePatch,
+} from "@/features/vector-ai/lib/editor/dispatch/style-patch-actions";
+import {
   commitTextEditActions,
   type TextEditCommit,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
@@ -124,6 +132,8 @@ export type UseVectorInteractionResult = {
   cancelTextEdit: () => void;
   canDeleteSelectedShape: boolean;
   deleteSelectedShape: () => void;
+  styleControl: StyleControlState;
+  applyStyleControlPatch: (patch: StylePatch) => void;
   shapePointerEvents: "auto" | "none";
   onSvgPointerDown: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerMove: (event: ReactPointerEvent<SVGSVGElement>) => void;
@@ -238,8 +248,12 @@ export function useVectorInteraction({
 
   const editingTextShape = useMemo((): TextShape | undefined => {
     if (!textEditSession) return undefined;
-    return textShapeForEditSession(textEditSession, state.doc);
-  }, [textEditSession, state.doc]);
+    return textShapeForEditSession(
+      textEditSession,
+      state.doc,
+      state.draftStyle,
+    );
+  }, [textEditSession, state.doc, state.draftStyle]);
 
   const setTextEditFontSizeDraft = useCallback((value: string) => {
     setTextEditSession((prev) =>
@@ -270,11 +284,18 @@ export function useVectorInteraction({
           },
           doc: state.doc,
           pendingWorld: textEditSession.world,
+          draftStyle: state.draftStyle,
         }),
       );
       setTextEditSession(null);
     },
-    [dispatchActions, textEditSession, editingTextShape?.fontSize, state.doc],
+    [
+      dispatchActions,
+      textEditSession,
+      editingTextShape?.fontSize,
+      state.doc,
+      state.draftStyle,
+    ],
   );
 
   const registerTextEditDraftGetter = useCallback(
@@ -304,12 +325,13 @@ export function useVectorInteraction({
             },
             doc: state.doc,
             pendingWorld: session.world,
+            draftStyle: state.draftStyle,
           }),
         );
         setTextEditSession(null);
       }, 0);
     },
-    [dispatchActions, state.doc],
+    [dispatchActions, state.doc, state.draftStyle],
   );
 
   const cancelTextEdit = useCallback(() => {
@@ -620,6 +642,18 @@ export function useVectorInteraction({
     [interactionState, session],
   );
 
+  const styleControl = useMemo(
+    () => getStyleControlState(state),
+    [state],
+  );
+
+  const applyStyleControlPatch = useCallback(
+    (patch: StylePatch) => {
+      dispatchActions(styleControlPatchActions(state, patch));
+    },
+    [dispatchActions, state],
+  );
+
   return {
     displayDoc,
     session,
@@ -639,6 +673,8 @@ export function useVectorInteraction({
     cancelTextEdit,
     canDeleteSelectedShape,
     deleteSelectedShape,
+    styleControl,
+    applyStyleControlPatch,
     shapePointerEvents: shapePointerEventsForTool(state.tool),
     onSvgPointerDown,
     onSvgPointerMove,

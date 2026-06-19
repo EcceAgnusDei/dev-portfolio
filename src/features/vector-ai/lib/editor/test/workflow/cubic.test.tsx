@@ -23,6 +23,12 @@ import {
   expectShapeInDoc,
 } from "@/features/vector-ai/lib/editor/test/expect-editor-state";
 import {
+  applyStyleControlPatch,
+  STYLE_TEST_DRAFT,
+  withShapeSelected,
+  withStyleDraft,
+} from "@/features/vector-ai/lib/editor/test/style-workflow-helpers";
+import {
   CUBIC_REFERENCE_PATH_D,
   CUBIC_REFERENCE_SEGMENTS,
   CUBIC_REFERENCE_TRANSFORM,
@@ -138,6 +144,24 @@ describe("courbe cubique", () => {
         segments: CUBIC_REFERENCE_SEGMENTS,
       });
       expectShapeCount(result.state, initial.doc.shapes.length + 1);
+    });
+
+    it("applique stroke et strokeWidth du draftStyle à la création", () => {
+      const initial = withStyleDraft(makeEditorWithCubicTool());
+
+      const result = runGesture(
+        initial,
+        cubicCreateSteps(CUBIC_REFERENCE_WORLD),
+      );
+
+      expectAfterCreate(result, "new-shape-id", {
+        type: "path",
+        style: {
+          fill: "none",
+          stroke: STYLE_TEST_DRAFT.stroke,
+          strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+        },
+      });
     });
 
     it("n'affiche pas de preview avant le survol après le 1er clic", () => {
@@ -511,6 +535,24 @@ describe("courbe cubique", () => {
         transform: CUBIC_REFERENCE_TRANSFORM,
       });
       expect(result.state.history.past).toHaveLength(0);
+    });
+  });
+
+  describe("style", () => {
+    it("modifie stroke et strokeWidth en sélection", () => {
+      const initial = withShapeSelected(makeEditorWithCubicPath(), "path-1");
+
+      let state = applyStyleControlPatch(initial, { stroke: "#abcdef" });
+      expectShapeInDoc(state, "path-1", {
+        type: "path",
+        style: { fill: "none", stroke: "#abcdef", strokeWidth: 2 },
+      });
+
+      state = applyStyleControlPatch(state, { strokeWidth: 5 });
+      expectShapeInDoc(state, "path-1", {
+        type: "path",
+        style: { fill: "none", stroke: "#abcdef", strokeWidth: 5 },
+      });
     });
   });
 

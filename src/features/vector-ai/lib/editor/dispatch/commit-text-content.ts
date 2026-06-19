@@ -1,4 +1,5 @@
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
+import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 import { deleteShapeActions } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
@@ -41,6 +42,7 @@ export type CommitTextEditParams = {
   input: TextEditCommit;
   doc: VectorDoc;
   pendingWorld?: WorldPoint;
+  draftStyle: DraftStyle;
 };
 
 export function commitTextEditActions({
@@ -48,6 +50,7 @@ export function commitTextEditActions({
   input,
   doc,
   pendingWorld,
+  draftStyle,
 }: CommitTextEditParams): EditorAction[] {
   const existing = getShapeById(doc, shapeId);
   const shapeExists = existing?.type === "text";
@@ -68,7 +71,13 @@ export function commitTextEditActions({
     return [
       {
         type: "SHAPE_ADD",
-        shape: buildTextShape(shapeId, pendingWorld, input.content, fontSize),
+        shape: buildTextShape(
+          shapeId,
+          pendingWorld,
+          input.content,
+          fontSize,
+          draftStyle,
+        ),
       },
       { type: "SELECTION_SET", ids: [shapeId] },
     ];
