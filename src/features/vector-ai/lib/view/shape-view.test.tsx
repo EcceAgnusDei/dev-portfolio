@@ -79,13 +79,11 @@ describe("ShapeView", () => {
     expect(markup).toContain('y2="40"');
   });
 
-  it("applique le contour de sélection", () => {
-    const markup = renderToStaticMarkup(
-      <ShapeView shape={makeRectShape()} selected />,
-    );
+  it("conserve le style d'origine sans contour de sélection", () => {
+    const markup = renderToStaticMarkup(<ShapeView shape={makeRectShape()} />);
 
-    expect(markup).toContain('stroke="var(--primary)"');
-    expect(markup).toContain('stroke-width="2"');
-    expect(markup).toContain('vector-effect="non-scaling-stroke"');
+    expect(markup).toContain('fill="#000000"');
+    expect(markup).toContain('stroke="none"');
+    expect(markup).not.toContain('stroke="var(--primary)"');
   });
 });

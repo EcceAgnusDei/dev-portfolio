@@ -6,7 +6,6 @@ import { presentationToReact } from "@/features/vector-ai/lib/view/presentation-
 
 export type ShapeViewProps = {
   shape: Shape;
-  selected?: boolean;
   hidden?: boolean;
   onPointerDown?: (event: PointerEvent) => void;
   onDoubleClick?: (event: MouseEvent) => void;
@@ -14,7 +13,6 @@ export type ShapeViewProps = {
 
 export function ShapeView({
   shape,
-  selected,
   hidden,
   onPointerDown,
   onDoubleClick,
@@ -24,7 +22,6 @@ export function ShapeView({
   }
   const presentation = presentationFromShape(shape);
   return presentationToReact(presentation, {
-    selected,
     onPointerDown,
     onDoubleClick,
   });

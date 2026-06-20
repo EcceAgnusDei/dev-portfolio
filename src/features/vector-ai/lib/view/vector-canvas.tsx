@@ -131,7 +131,6 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
             <ShapeView
               key={shape.id}
               shape={shape}
-              selected={shape.id === selectedId}
               hidden={shape.id === editingTextId}
               onPointerDown={
                 shapePointerEvents === "auto" && onShapePointerDown

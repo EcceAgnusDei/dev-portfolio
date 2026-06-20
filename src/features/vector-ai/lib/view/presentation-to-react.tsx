@@ -23,19 +23,9 @@ import {
 } from "@/features/vector-ai/lib/editor/geometry/text-lines";
 
 export type PresentationToReactOptions = {
-  selected?: boolean;
   onPointerDown?: (event: PointerEvent) => void;
   onDoubleClick?: (event: MouseEvent) => void;
 };
-
-function selectionOutlineProps(selected: boolean | undefined) {
-  if (!selected) return {};
-  return {
-    stroke: "var(--primary)",
-    strokeWidth: 2,
-    vectorEffect: "non-scaling-stroke" as const,
-  };
-}
 
 function pointerTargetProps(
   onPointerDown?: (event: PointerEvent) => void,
@@ -187,7 +177,7 @@ export function presentationToReact(
   presentation: ShapePresentation,
   options?: PresentationToReactOptions,
 ): ReactElement {
-  const { selected, onPointerDown, onDoubleClick } = options ?? {};
+  const { onPointerDown, onDoubleClick } = options ?? {};
   const hit =
     onPointerDown != null || onDoubleClick != null
       ? hitLayerFromPresentation(presentation)
@@ -196,16 +186,13 @@ export function presentationToReact(
   if (!hit) {
     const node =
       presentation.tag === "text"
-        ? textNodeFromPresentation(presentation, {
-            ...selectionOutlineProps(selected),
-            ...pointerTargetProps(onPointerDown, onDoubleClick),
-          })
+        ? textNodeFromPresentation(
+            presentation,
+            pointerTargetProps(onPointerDown, onDoubleClick),
+          )
         : layerToReact(
             { tag: presentation.tag, attrs: presentation.attrs },
-            {
-              ...selectionOutlineProps(selected),
-              ...pointerTargetProps(onPointerDown, onDoubleClick),
-            },
+            pointerTargetProps(onPointerDown, onDoubleClick),
           );
 
     if (!presentation.groupTransform) return node;
@@ -221,16 +208,10 @@ export function presentationToReact(
 
   const visibleNode =
     presentation.tag === "text"
-      ? textNodeFromPresentation(presentation, {
-          ...selectionOutlineProps(selected),
-          pointerEvents: "none",
-        })
+      ? textNodeFromPresentation(presentation, { pointerEvents: "none" })
       : layerToReact(
           { tag: presentation.tag, attrs: presentation.attrs },
-          {
-            ...selectionOutlineProps(selected),
-            pointerEvents: "none",
-          },
+          { pointerEvents: "none" },
         );
 
   const children = [hitNode, visibleNode];
