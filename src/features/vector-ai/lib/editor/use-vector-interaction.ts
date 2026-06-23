@@ -31,7 +31,7 @@ import {
   type TextEditCommit,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import {
-  canDeleteShape,
+  canDeleteSelectedShapes,
   deleteShapeActions,
 } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
 import { clampTextPlacement } from "@/features/vector-ai/lib/editor/dispatch/create-text";
@@ -338,37 +338,33 @@ export function useVectorInteraction({
     if (!textEditSession) return;
     const shape = getShapeById(state.doc, textEditSession.shapeId);
     if (shape?.type === "text" && shape.content.length === 0) {
-      dispatchActions(deleteShapeActions(state.doc, textEditSession.shapeId));
+      dispatchActions(deleteShapeActions(state.doc, [textEditSession.shapeId]));
     }
     setTextEditSession(null);
   }, [dispatchActions, textEditSession, state.doc]);
 
-  const selectedShapeId = state.selection.ids[0] ?? null;
-
   const canDeleteSelectedShape = useMemo(() => {
     if (state.tool !== "select") return false;
     if (textEditSession !== null) return false;
-    if (!selectedShapeId) return false;
-    return canDeleteShape(state.doc, selectedShapeId);
-  }, [state.tool, state.doc, textEditSession, selectedShapeId]);
+    return canDeleteSelectedShapes(state.doc, state.selection.ids);
+  }, [state.tool, state.doc, textEditSession, state.selection.ids]);
 
   const deleteSelectedShape = useCallback(() => {
     if (state.tool !== "select") return;
     if (textEditSession !== null) return;
     if (isTextEditUiFocused()) return;
-    if (!selectedShapeId) return;
-    if (!canDeleteShape(state.doc, selectedShapeId)) return;
+    if (!canDeleteSelectedShapes(state.doc, state.selection.ids)) return;
 
     if (sessionRef.current.kind !== "idle") {
       setSession(IDLE_POINTER_SESSION);
     }
 
-    dispatchActions(deleteShapeActions(state.doc, selectedShapeId));
+    dispatchActions(deleteShapeActions(state.doc, state.selection.ids));
   }, [
     state.tool,
     state.doc,
+    state.selection.ids,
     textEditSession,
-    selectedShapeId,
     dispatchActions,
   ]);
 
@@ -427,11 +423,14 @@ export function useVectorInteraction({
         shapeId,
         world,
         event.pointerId,
+        { additive: event.ctrlKey || event.metaKey },
       );
       if (!result) return;
 
       event.stopPropagation();
-      captureSvgPointer(svgRef.current, event.pointerId);
+      if (shouldCapturePointerForSession(result.session)) {
+        captureSvgPointer(svgRef.current, event.pointerId);
+      }
       dispatchActions(result.actions);
       setSession(result.session);
     },
@@ -608,18 +607,17 @@ export function useVectorInteraction({
 
       if (event.key !== "Delete" && event.key !== "Backspace") return;
 
-      const shapeId = state.selection.ids[0];
       if (state.tool !== "select") return;
       if (textEditSession !== null) return;
       if (isTextEditUiFocused()) return;
-      if (!shapeId || !canDeleteShape(state.doc, shapeId)) return;
+      if (!canDeleteSelectedShapes(state.doc, state.selection.ids)) return;
 
       if (sessionRef.current.kind !== "idle") {
         setSession(IDLE_POINTER_SESSION);
       }
 
       event.preventDefault();
-      dispatchActions(deleteShapeActions(state.doc, shapeId));
+      dispatchActions(deleteShapeActions(state.doc, state.selection.ids));
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -642,10 +640,7 @@ export function useVectorInteraction({
     [interactionState, session],
   );
 
-  const styleControl = useMemo(
-    () => getStyleControlState(state),
-    [state],
-  );
+  const styleControl = useMemo(() => getStyleControlState(state), [state]);
 
   const applyStyleControlPatch = useCallback(
     (patch: StylePatch) => {

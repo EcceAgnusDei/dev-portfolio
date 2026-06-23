@@ -8,7 +8,7 @@ import {
 } from "@/features/vector-ai/lib/editor/core/draft-style";
 import type { EditorState } from "@/features/vector-ai/lib/editor/core/state";
 
-export type StyleControlsMode = "draft" | "selection";
+export type StyleControlsMode = "draft" | "selection" | "idle";
 
 export type StyleControlState = {
   mode: StyleControlsMode;
@@ -37,27 +37,65 @@ export function getSelectedShapes(state: EditorState): Shape[] {
   return state.doc.shapes.filter((s) => selected.has(s.id));
 }
 
+export function getPrimarySelectedId(state: EditorState): string | null {
+  return state.selection.ids[0] ?? null;
+}
+
+export function isMultiSelection(state: EditorState): boolean {
+  return state.selection.ids.length > 1;
+}
+
 export function resolveStyleControlsMode(state: EditorState): StyleControlsMode {
-  return getEditableSelectedShape(state) != null ? "selection" : "draft";
+  if (state.tool === "select") {
+    return state.selection.ids.length === 0 ? "idle" : "selection";
+  }
+  return "draft";
 }
 
 export function getStyleControlContext(state: EditorState): StyleControlContext {
   if (state.tool !== "select") {
     return { tool: state.tool };
   }
-  const shape = getSelectedShape(state);
-  if (shape) {
-    return { selectedType: shape.type };
+  const shapes = getSelectedShapes(state);
+  if (shapes.length > 0) {
+    return { selectedTypes: shapes.map((shape) => shape.type) };
   }
   return { tool: "select" };
+}
+
+function resolveHomogeneousStyleValue<T>(
+  values: T[],
+  fallback: T,
+): T {
+  if (values.length === 0) return fallback;
+  const first = values[0]!;
+  return values.every((value) => value === first) ? first : fallback;
 }
 
 export function getSelectionStyleSnapshot(
   state: EditorState,
 ): DraftStyle | null {
-  const shape = getEditableSelectedShape(state);
-  if (!shape) return null;
-  return shapeStyleToDraftStyle(shape.style);
+  if (state.tool !== "select" || state.selection.ids.length === 0) {
+    return null;
+  }
+  const shapes = getSelectedShapes(state);
+  if (shapes.length === 0) return null;
+
+  const drafts = shapes.map((shape) => shapeStyleToDraftStyle(shape.style));
+  return {
+    fill: resolveHomogeneousStyleValue(
+      drafts.map((draft) => draft.fill),
+      state.draftStyle.fill,
+    ),
+    stroke: resolveHomogeneousStyleValue(
+      drafts.map((draft) => draft.stroke),
+      state.draftStyle.stroke,
+    ),
+    strokeWidth: resolveHomogeneousStyleValue(
+      drafts.map((draft) => draft.strokeWidth),
+      state.draftStyle.strokeWidth,
+    ),
+  };
 }
 
 export function getStyleControlState(state: EditorState): StyleControlState {

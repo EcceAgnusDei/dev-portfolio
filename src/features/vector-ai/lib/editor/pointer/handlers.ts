@@ -1,5 +1,6 @@
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
+import { resolveShapeClickSelection, movableSelectedIds } from "@/features/vector-ai/lib/editor/core/selection";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import type {
   EditorAction,
@@ -37,6 +38,7 @@ export type EditorInteractionState = {
   doc: EditorState["doc"];
   tool: EditorTool;
   draftStyle: DraftStyle;
+  selectionIds: string[];
 };
 
 export function shapePointerEventsForTool(tool: EditorTool): "auto" | "none" {
@@ -141,20 +143,36 @@ export function handleBackgroundPointerDown(
   return { session: IDLE_POINTER_SESSION, actions: [] };
 }
 
+export type ShapePointerDownOptions = {
+  additive?: boolean;
+};
+
 export function handleShapePointerDown(
   state: EditorInteractionState,
   shapeId: string,
   world: WorldPoint,
   pointerId: number,
+  options?: ShapePointerDownOptions,
 ): { session: PointerSession; actions: EditorAction[] } | null {
   if (state.tool !== "select") return null;
 
   const shape = getShapeById(state.doc, shapeId);
   if (!shape || shape.locked) return null;
 
+  const nextIds = resolveShapeClickSelection(
+    state.selectionIds,
+    shapeId,
+    options?.additive ? "toggle" : "replace",
+  );
+  const stillSelected = nextIds.includes(shapeId);
+  const movableIds = movableSelectedIds(state.doc, nextIds);
+
   return {
-    session: beginMoveSession(shape, world, pointerId),
-    actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
+    session:
+      stillSelected && movableIds.length > 0
+        ? beginMoveSession(state.doc, movableIds, world, pointerId)
+        : IDLE_POINTER_SESSION,
+    actions: [{ type: "SELECTION_SET", ids: nextIds }],
   };
 }
 
@@ -236,5 +254,10 @@ export function handleCircleHandlePointerDown(
 export function editorInteractionStateFromEditor(
   state: EditorState,
 ): EditorInteractionState {
-  return { doc: state.doc, tool: state.tool, draftStyle: state.draftStyle };
+  return {
+    doc: state.doc,
+    tool: state.tool,
+    draftStyle: state.draftStyle,
+    selectionIds: state.selection.ids,
+  };
 }

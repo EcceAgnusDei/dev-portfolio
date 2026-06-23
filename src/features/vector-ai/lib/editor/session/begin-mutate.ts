@@ -3,8 +3,9 @@ import type {
   LineShape,
   PathShape,
   RectShape,
-  Shape,
+  VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
   cubicWorldPointsFromPathShape,
@@ -13,25 +14,41 @@ import type {
   CircleResizeHandle,
   CubicHandle,
   LineEnd,
+  MoveStartState,
   PointerSession,
   RectResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 
+function moveStartStateFromShape(
+  shape: NonNullable<ReturnType<typeof getShapeById>>,
+): MoveStartState {
+  return {
+    transform: { x: shape.transform.x, y: shape.transform.y },
+    ...(shape.type === "line" ? { x2: shape.x2, y2: shape.y2 } : {}),
+  };
+}
+
 export function beginMoveSession(
-  shape: Shape,
+  doc: VectorDoc,
+  shapeIds: readonly string[],
   world: WorldPoint,
   pointerId: number,
 ): PointerSession {
+  const startByShapeId: Record<string, MoveStartState> = {};
+
+  for (const id of shapeIds) {
+    const shape = getShapeById(doc, id);
+    if (!shape) continue;
+    startByShapeId[id] = moveStartStateFromShape(shape);
+  }
+
   return {
     kind: "move",
     pointerId,
-    shapeId: shape.id,
+    shapeIds: [...shapeIds],
     startWorld: world,
     currentWorld: world,
-    startTransform: { x: shape.transform.x, y: shape.transform.y },
-    ...(shape.type === "line"
-      ? { startX2: shape.x2, startY2: shape.y2 }
-      : {}),
+    startByShapeId,
   };
 }
 

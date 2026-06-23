@@ -19,13 +19,13 @@ import {
 } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 
 export type RenderedInteractionHook = {
-  interaction: UseVectorInteractionResult;
+  get interaction(): UseVectorInteractionResult;
   svgRef: RefObject<SVGSVGElement | null>;
   unmount: () => void;
 };
 
 export type RenderedInteractiveCanvas = {
-  interaction: UseVectorInteractionResult;
+  get interaction(): UseVectorInteractionResult;
   container: HTMLDivElement;
   svgRef: RefObject<SVGSVGElement | null>;
   getState: () => EditorState;
@@ -138,6 +138,8 @@ export function makePointerEvent(options: {
   detail?: number;
   timeStamp?: number;
   target?: Element;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
 }): ReactPointerEvent {
   const target = options.target ?? document.createElement("div");
   return {
@@ -146,6 +148,8 @@ export function makePointerEvent(options: {
     clientY: options.clientY,
     detail: options.detail ?? 1,
     timeStamp: options.timeStamp ?? 0,
+    ctrlKey: options.ctrlKey ?? false,
+    metaKey: options.metaKey ?? false,
     target,
     stopPropagation: vi.fn(),
   } as unknown as ReactPointerEvent;
@@ -177,13 +181,8 @@ export function renderInteractionHook(
   let currentState = initialState;
 
   const wrappedDispatch = (action: EditorAction) => {
-    if (action.type === "TOOL_SET") {
-      currentState = { ...currentState, tool: action.tool };
-    }
+    currentState = editorReducer(currentState, action);
     dispatch(action);
-    act(() => {
-      root.render(<HookHost />);
-    });
   };
 
   function HookHost() {
@@ -252,7 +251,7 @@ export function renderInteractiveCanvas(
         svgRef={svgRef}
         interaction={interaction}
         doc={currentState.doc}
-        selectedId={currentState.selection.ids[0] ?? null}
+        selectedIds={currentState.selection.ids}
       />
     );
   }

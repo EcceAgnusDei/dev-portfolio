@@ -18,6 +18,10 @@ import {
   clampShapeToViewBox,
 } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import {
+  resolvedMoveDelta,
+  shapeAfterMoveStart,
+} from "@/features/vector-ai/lib/editor/geometry/group-move";
+import {
   cubicWorldPointsWithHandleAt,
   pathShapeFromCubicWorldPoints,
 } from "@/features/vector-ai/lib/editor/geometry/path-segments";
@@ -27,38 +31,13 @@ import type { PointerSession } from "@/features/vector-ai/lib/editor/session/typ
 function applyMovePreview(
   shape: Shape,
   session: Extract<PointerSession, { kind: "move" }>,
-  viewBox: ViewBox,
+  doc: VectorDoc,
 ): Shape {
-  const dx = session.currentWorld.x - session.startWorld.x;
-  const dy = session.currentWorld.y - session.startWorld.y;
+  const start = session.startByShapeId[shape.id];
+  if (!start) return shape;
 
-  if (
-    shape.type === "line" &&
-    session.startX2 != null &&
-    session.startY2 != null
-  ) {
-    return clampShapeToViewBox(
-      applyShapePatch(shape, {
-        transform: {
-          x: session.startTransform.x + dx,
-          y: session.startTransform.y + dy,
-        },
-        x2: session.startX2 + dx,
-        y2: session.startY2 + dy,
-      }),
-      viewBox,
-    );
-  }
-
-  return clampShapeToViewBox(
-    applyShapePatch(shape, {
-      transform: {
-        x: session.startTransform.x + dx,
-        y: session.startTransform.y + dy,
-      },
-    }),
-    viewBox,
-  );
+  const { dx, dy } = resolvedMoveDelta(doc, session);
+  return shapeAfterMoveStart(shape, start, dx, dy, doc.viewBox);
 }
 
 function applyCubicHandlePreview(
@@ -148,9 +127,11 @@ export function shapeAfterPointerSession(
     }
   >,
   viewBox: ViewBox,
+  doc?: VectorDoc,
 ): Shape {
   if (session.kind === "move") {
-    return applyMovePreview(shape, session, viewBox);
+    if (!doc) return shape;
+    return applyMovePreview(shape, session, doc);
   }
   if (session.kind === "resize-rect") {
     if (shape.type !== "rect") return shape;
@@ -170,6 +151,35 @@ export function shapeAfterPointerSession(
   return shape;
 }
 
+function isMutateSession(
+  session: PointerSession,
+): session is Extract<
+  PointerSession,
+  {
+    kind:
+      | "move"
+      | "move-line-end"
+      | "move-cubic-handle"
+      | "resize-rect"
+      | "resize-circle";
+  }
+> {
+  return (
+    session.kind === "move" ||
+    session.kind === "move-line-end" ||
+    session.kind === "move-cubic-handle" ||
+    session.kind === "resize-rect" ||
+    session.kind === "resize-circle"
+  );
+}
+
+function sessionTargetsShape(
+  session: Extract<PointerSession, { kind: "move" }>,
+  shapeId: string,
+): boolean {
+  return session.shapeIds.includes(shapeId);
+}
+
 export function docWithPointerPreview(
   doc: VectorDoc,
   session: PointerSession,
@@ -185,18 +195,31 @@ export function docWithPointerPreview(
     return doc;
   }
 
+  if (session.kind === "move") {
+    const { dx, dy } = resolvedMoveDelta(doc, session);
+    if (dx === 0 && dy === 0) return doc;
+
+    return {
+      ...doc,
+      shapes: doc.shapes.map((shape) => {
+        if (!sessionTargetsShape(session, shape.id) || shape.locked) {
+          return shape;
+        }
+
+        const start = session.startByShapeId[shape.id];
+        if (!start) return shape;
+
+        return shapeAfterMoveStart(shape, start, dx, dy, doc.viewBox);
+      }),
+    };
+  }
+
   return {
     ...doc,
     shapes: doc.shapes.map((shape) => {
       if (shape.id !== session.shapeId || shape.locked) return shape;
 
-      if (
-        session.kind === "move" ||
-        session.kind === "move-line-end" ||
-        session.kind === "move-cubic-handle" ||
-        session.kind === "resize-rect" ||
-        session.kind === "resize-circle"
-      ) {
+      if (isMutateSession(session)) {
         return shapeAfterPointerSession(shape, session, doc.viewBox);
       }
 

@@ -5,7 +5,7 @@ import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 import { commitCreateCircle } from "@/features/vector-ai/lib/editor/dispatch/create-circle";
 import { commitCreateLine } from "@/features/vector-ai/lib/editor/dispatch/create-line";
 import { commitCreateRect } from "@/features/vector-ai/lib/editor/dispatch/create-rect";
-import { commitMutateMove } from "@/features/vector-ai/lib/editor/dispatch/mutate-move";
+import { commitMoveSession } from "@/features/vector-ai/lib/editor/dispatch/mutate-move";
 import { commitMutateResize } from "@/features/vector-ai/lib/editor/dispatch/mutate-resize";
 import type { PointerSession } from "@/features/vector-ai/lib/editor/session/types";
 
@@ -19,11 +19,7 @@ export function commitPointerSession(
     session.kind === "move-line-end" ||
     session.kind === "move-cubic-handle"
   ) {
-    return commitMutateMove(
-      session,
-      getShapeById(doc, session.shapeId),
-      doc.viewBox,
-    );
+    return commitMoveSession(session, doc);
   }
 
   if (session.kind === "resize-rect" || session.kind === "resize-circle") {

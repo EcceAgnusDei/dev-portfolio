@@ -27,10 +27,12 @@ describe("docWithPointerPreview", () => {
     const next = docWithPointerPreview(doc, {
       kind: "move",
       pointerId: 1,
-      shapeId: "rect-1",
+      shapeIds: ["rect-1"],
       startWorld: { x: 0, y: 0 },
       currentWorld: { x: 5, y: 10 },
-      startTransform: { x: 10, y: 20 },
+      startByShapeId: {
+        "rect-1": { transform: { x: 10, y: 20 } },
+      },
     });
     const rect = next.shapes[0];
     expect(rect).toEqual(
@@ -56,12 +58,12 @@ describe("docWithPointerPreview", () => {
     const next = docWithPointerPreview(doc, {
       kind: "move",
       pointerId: 1,
-      shapeId: "line-1",
+      shapeIds: ["line-1"],
       startWorld: { x: 0, y: 0 },
       currentWorld: { x: 3, y: 4 },
-      startTransform: { x: 0, y: 0 },
-      startX2: 100,
-      startY2: 0,
+      startByShapeId: {
+        "line-1": { transform: { x: 0, y: 0 }, x2: 100, y2: 0 },
+      },
     });
     const line = next.shapes.find((s) => s.id === "line-1");
     expect(line).toEqual(
@@ -158,10 +160,12 @@ describe("docWithPointerPreview", () => {
     const next = docWithPointerPreview(doc, {
       kind: "move",
       pointerId: 1,
-      shapeId: "rect-1",
+      shapeIds: ["rect-1"],
       startWorld: { x: 0, y: 0 },
       currentWorld: { x: 200, y: 200 },
-      startTransform: { x: 10, y: 20 },
+      startByShapeId: {
+        "rect-1": { transform: { x: 10, y: 20 } },
+      },
     });
     expect(next.shapes[0]).toEqual(
       expect.objectContaining({
@@ -187,12 +191,12 @@ describe("docWithPointerPreview", () => {
     const next = docWithPointerPreview(doc, {
       kind: "move",
       pointerId: 1,
-      shapeId: "line-1",
+      shapeIds: ["line-1"],
       startWorld: { x: 0, y: 0 },
       currentWorld: { x: 20, y: 0 },
-      startTransform: { x: 90, y: 10 },
-      startX2: 110,
-      startY2: 20,
+      startByShapeId: {
+        "line-1": { transform: { x: 90, y: 10 }, x2: 110, y2: 20 },
+      },
     });
     expect(next.shapes[0]).toEqual(
       expect.objectContaining({
@@ -219,10 +223,12 @@ describe("docWithPointerPreview", () => {
     const next = docWithPointerPreview(doc, {
       kind: "move",
       pointerId: 1,
-      shapeId: "circle-1",
+      shapeIds: ["circle-1"],
       startWorld: { x: 0, y: 0 },
       currentWorld: { x: 200, y: 200 },
-      startTransform: { x: 50, y: 50 },
+      startByShapeId: {
+        "circle-1": { transform: { x: 50, y: 50 } },
+      },
     });
     expect(next.shapes[0]).toEqual(
       expect.objectContaining({
@@ -273,10 +279,12 @@ describe("docWithPointerPreview", () => {
     const next = docWithPointerPreview(doc, {
       kind: "move",
       pointerId: 1,
-      shapeId: "rect-1",
+      shapeIds: ["rect-1"],
       startWorld: { x: 0, y: 0 },
       currentWorld: { x: 10, y: 10 },
-      startTransform: { x: 10, y: 20 },
+      startByShapeId: {
+        "rect-1": { transform: { x: 10, y: 20 } },
+      },
     });
     expect(next.shapes[0]).toBe(doc.shapes[0]);
   });

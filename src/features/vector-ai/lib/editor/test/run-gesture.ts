@@ -39,6 +39,7 @@ export type GestureStep =
       shapeId: string;
       world: WorldPoint;
       pointerId?: number;
+      additive?: boolean;
     }
   | {
       type: "line-end-down";
@@ -145,6 +146,7 @@ export function runGesture(
           step.shapeId,
           step.world,
           pointerId,
+          { additive: step.additive ?? false },
         );
         if (result) {
           session = result.session;
@@ -242,10 +244,13 @@ export function runGesture(
         break;
       case "delete-selected":
         if (editorState.tool === "select") {
-          const shapeId = editorState.selection.ids[0];
-          if (shapeId) {
+          const actions = deleteShapeActions(
+            editorState.doc,
+            editorState.selection.ids,
+          );
+          if (actions.length > 0) {
             session = IDLE_POINTER_SESSION;
-            stepActions = deleteShapeActions(editorState.doc, shapeId);
+            stepActions = actions;
           }
         }
         break;

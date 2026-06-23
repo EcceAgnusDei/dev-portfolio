@@ -91,14 +91,4 @@ describe("VectorCanvas", () => {
     expect(markup).toContain('x2="320"');
     expect(markup).toContain('y2="320"');
   });
-
-  it("conserve le style d'origine quand une forme est sélectionnée", () => {
-    const markup = renderToStaticMarkup(
-      <VectorCanvas doc={makeSampleDoc()} selectedId="rect-1" />,
-    );
-
-    expect(markup).toContain('fill="#111111"');
-    expect(markup).toContain('stroke="none"');
-    expect(markup).not.toContain('stroke="var(--primary)"');
-  });
 });

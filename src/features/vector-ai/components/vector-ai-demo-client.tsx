@@ -95,8 +95,7 @@ export function VectorAiDemoClient() {
         prompt: aiPrompt,
         signal: controller.signal,
         shouldCancel: () =>
-          controller.signal.aborted ||
-          requestId !== aiRequestIdRef.current,
+          controller.signal.aborted || requestId !== aiRequestIdRef.current,
       });
 
       if (requestId !== aiRequestIdRef.current) return;
@@ -143,7 +142,9 @@ export function VectorAiDemoClient() {
         onExportSvg={() => void handleExportSvg()}
         fontSizeDraft={fontSizeDraft}
         fontSizeFallback={fontSizeFallback}
-        fontSizeEnabled={!aiPending && interaction.editingTextShape !== undefined}
+        fontSizeEnabled={
+          !aiPending && interaction.editingTextShape !== undefined
+        }
         onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
         onFontSizeBlur={interaction.commitTextEditOnFontSizeBlur}
         canDelete={!aiPending && interaction.canDeleteSelectedShape}
@@ -172,7 +173,7 @@ export function VectorAiDemoClient() {
           svgRef={svgRef}
           interaction={interaction}
           doc={state.doc}
-          selectedId={selectedId}
+          selectedIds={state.selection.ids}
         />
       </div>
       <p
@@ -181,7 +182,10 @@ export function VectorAiDemoClient() {
           notice?.variant === "alert"
             ? "text-destructive"
             : "text-muted-foreground",
-          !notice && state.selection.ids.length === 0 && !aiPending && "opacity-80",
+          !notice &&
+            state.selection.ids.length === 0 &&
+            !aiPending &&
+            "opacity-80",
         )}
         role={notice?.variant === "alert" ? "alert" : "status"}
         aria-live="polite"

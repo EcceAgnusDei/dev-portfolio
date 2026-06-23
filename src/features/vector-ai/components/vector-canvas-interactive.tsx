@@ -11,14 +11,14 @@ export type VectorCanvasInteractiveProps = {
   svgRef: RefObject<SVGSVGElement | null>;
   interaction: UseVectorInteractionResult;
   doc: VectorDoc;
-  selectedId: string | null;
+  selectedIds: readonly string[];
   className?: string;
 };
 
 export function VectorCanvasInteractive({
   svgRef,
   interaction,
-  selectedId,
+  selectedIds,
   className,
 }: VectorCanvasInteractiveProps) {
   return (
@@ -26,7 +26,7 @@ export function VectorCanvasInteractive({
       <VectorCanvas
         ref={svgRef}
         doc={interaction.displayDoc}
-        selectedId={selectedId}
+        selectedIds={selectedIds}
         className="h-full w-full"
         shapePointerEvents={interaction.shapePointerEvents}
         rectPreview={interaction.rectPreview}

@@ -32,7 +32,10 @@ export type VectorEditorToolbarProps = {
   fontSizeFallback: number;
   fontSizeEnabled: boolean;
   onFontSizeDraftChange: (value: string) => void;
-  onFontSizeBlur?: (fontSize: number, relatedTarget: EventTarget | null) => void;
+  onFontSizeBlur?: (
+    fontSize: number,
+    relatedTarget: EventTarget | null,
+  ) => void;
   canDelete: boolean;
   onDelete: () => void;
   styleControl: StyleControlState;
@@ -167,7 +170,12 @@ export function VectorEditorToolbar({
           >
             Rétablir
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={onExportSvg}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onExportSvg}
+          >
             Copier SVG
           </Button>
         </div>

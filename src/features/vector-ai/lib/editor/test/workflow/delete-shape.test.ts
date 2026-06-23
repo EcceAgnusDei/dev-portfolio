@@ -28,6 +28,7 @@ import {
 import {
   makeEditorWithRect,
   makeEditorWithSampleDoc,
+  makeEditorWithTwoRects,
   makeTextShape,
 } from "@/features/vector-ai/lib/editor/test/fixtures";
 
@@ -217,6 +218,7 @@ describe("workflow: suppression de forme", () => {
         shapeId: "text-1",
         input: { content: "   \n\t  " },
         doc: initial.doc,
+        draftStyle: initial.draftStyle,
       }),
     );
 
@@ -228,7 +230,69 @@ describe("workflow: suppression de forme", () => {
         shapeId: "text-1",
         input: { content: "   \n\t  " },
         doc: initial.doc,
+        draftStyle: initial.draftStyle,
       }),
-    ).toEqual(deleteShapeActions(initial.doc, "text-1"));
+    ).toEqual(deleteShapeActions(initial.doc, ["text-1"]));
+  });
+
+  it("supprime toutes les formes d'une multi-sélection en une action", () => {
+    const initial = makeEditorWithTwoRects(["rect-1", "rect-2"]);
+
+    const result = runGesture(initial, [{ type: "delete-selected" }]);
+
+    expectShapeCount(result.state, 0);
+    expect(result.state.selection.ids).toEqual([]);
+    expect(result.state.history.past).toHaveLength(1);
+    expect(actionsOfType(result.allActions, "SHAPE_DELETE")).toEqual([
+      { type: "SHAPE_DELETE", id: "rect-1" },
+      { type: "SHAPE_DELETE", id: "rect-2", recordHistory: false },
+    ]);
+    expect(lastSnapshot(result).session.kind).toBe("idle");
+  });
+
+  it("restaure toute la multi-sélection supprimée en un seul undo", () => {
+    const initial = makeEditorWithTwoRects(["rect-1", "rect-2"]);
+
+    const deleted = runGesture(initial, [{ type: "delete-selected" }]);
+    const restored = runGesture(deleted.state, [{ type: "undo" }]);
+
+    expectShapeCount(restored.state, 2);
+    expect(restored.state.doc.shapes.map((shape) => shape.id)).toEqual([
+      "rect-1",
+      "rect-2",
+    ]);
+    expect(restored.state.selection.ids).toEqual([]);
+    expect(restored.state.history.past).toHaveLength(0);
+    expect(canRedo(restored.state)).toBe(true);
+  });
+
+  it("ne supprime que les formes déverrouillées dans une multi-sélection", () => {
+    const initial = makeEditorWithTwoRects(["rect-1", "rect-2"]);
+    initial.doc.shapes[0]!.locked = true;
+
+    const result = runGesture(initial, [{ type: "delete-selected" }]);
+
+    expectShapeCount(result.state, 1);
+    expect(result.state.doc.shapes[0]?.id).toBe("rect-1");
+    expect(result.state.selection.ids).toEqual(["rect-1"]);
+    expect(actionsOfType(result.allActions, "SHAPE_DELETE")).toEqual([
+      { type: "SHAPE_DELETE", id: "rect-2" },
+    ]);
+  });
+
+  it("supprime la multi-sélection avec Delete ou Backspace", () => {
+    for (const key of ["Delete", "Backspace"] as const) {
+      const initial = makeEditorWithTwoRects(["rect-1", "rect-2"]);
+      const { getState, unmount } = renderInteractiveCanvas(initial);
+
+      fireKeyDown(key);
+
+      expectShapeCount(getState(), 0);
+      expect(getState().selection.ids).toEqual([]);
+      expect(getState().history.past).toHaveLength(1);
+      expect(canUndo(getState())).toBe(true);
+
+      unmount();
+    }
   });
 });

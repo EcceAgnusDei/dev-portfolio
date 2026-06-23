@@ -57,7 +57,7 @@ export function commitTextEditActions({
 
   if (!hasSignificantTextContent(input.content)) {
     if (!shapeExists) return [];
-    return deleteShapeActions(doc, shapeId);
+    return deleteShapeActions(doc, [shapeId]);
   }
 
   const fontSize =

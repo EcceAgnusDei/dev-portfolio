@@ -32,17 +32,21 @@ export function lineEndWorldPoint(shape: LineShape, end: LineEnd): WorldPoint {
   return { x: shape.x2, y: shape.y2 };
 }
 
+export type MoveStartState = {
+  transform: Pick<Transform, "x" | "y">;
+  x2?: number;
+  y2?: number;
+};
+
 export type PointerSession =
   | { kind: "idle" }
   | {
       kind: "move";
       pointerId: number;
-      shapeId: string;
+      shapeIds: string[];
       startWorld: WorldPoint;
       currentWorld: WorldPoint;
-      startTransform: Pick<Transform, "x" | "y">;
-      startX2?: number;
-      startY2?: number;
+      startByShapeId: Record<string, MoveStartState>;
     }
   | {
       kind: "move-line-end";

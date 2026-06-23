@@ -4,9 +4,13 @@ import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/s
 import {
   canRedo,
   canUndo,
+  getPrimarySelectedId,
   getSelectedShapes,
   getShapeById,
+  getStyleControlState,
+  isMultiSelection,
   isShapeSelected,
+  resolveStyleControlsMode,
 } from "@/features/vector-ai/lib/editor/core/selectors";
 import { makeEditorWithRect } from "@/features/vector-ai/lib/editor/test/fixtures";
 
@@ -51,5 +55,48 @@ describe("selectors", () => {
     };
     expect(isShapeSelected(state, "sel")).toBe(true);
     expect(isShapeSelected(state, "other")).toBe(false);
+  });
+
+  it("getPrimarySelectedId renvoie le premier id ou null", () => {
+    const empty = makeEditorWithRect("a");
+    expect(getPrimarySelectedId(empty)).toBeNull();
+
+    const single = {
+      ...empty,
+      selection: { ids: ["a"] },
+    };
+    expect(getPrimarySelectedId(single)).toBe("a");
+
+    const multi = {
+      ...empty,
+      selection: { ids: ["a", "b"] },
+    };
+    expect(getPrimarySelectedId(multi)).toBe("a");
+  });
+
+  it("isMultiSelection est vrai seulement avec plusieurs ids", () => {
+    const empty = makeEditorWithRect("a");
+    expect(isMultiSelection(empty)).toBe(false);
+
+    const single = {
+      ...empty,
+      selection: { ids: ["a"] },
+    };
+    expect(isMultiSelection(single)).toBe(false);
+
+    const multi = {
+      ...empty,
+      selection: { ids: ["a", "b"] },
+    };
+    expect(isMultiSelection(multi)).toBe(true);
+  });
+
+  it("resolveStyleControlsMode est idle en sélection sans forme", () => {
+    const state = makeEditorWithRect("a");
+    state.tool = "select";
+    state.selection = { ids: [] };
+
+    expect(resolveStyleControlsMode(state)).toBe("idle");
+    expect(getStyleControlState(state).mode).toBe("idle");
   });
 });

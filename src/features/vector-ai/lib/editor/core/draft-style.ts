@@ -16,7 +16,7 @@ export type StyleControlVisibility = {
 
 export type StyleControlContext =
   | { tool: EditorTool }
-  | { selectedType: ShapeType };
+  | { selectedTypes: ShapeType[] };
 
 const FILL_CAPABLE_TYPES = new Set<ShapeType>(["rect", "circle", "text"]);
 const STROKE_CAPABLE_TYPES = new Set<ShapeType>([
@@ -75,19 +75,19 @@ function visibilityForTool(tool: EditorTool): StyleControlVisibility {
   return { fill: true, stroke: true, strokeWidth: true };
 }
 
-function visibilityForSelectedType(type: ShapeType): StyleControlVisibility {
+function visibilityForSelectedTypes(types: ShapeType[]): StyleControlVisibility {
   return {
-    fill: FILL_CAPABLE_TYPES.has(type),
-    stroke: STROKE_CAPABLE_TYPES.has(type),
-    strokeWidth: STROKE_CAPABLE_TYPES.has(type),
+    fill: types.some((type) => FILL_CAPABLE_TYPES.has(type)),
+    stroke: types.some((type) => STROKE_CAPABLE_TYPES.has(type)),
+    strokeWidth: types.some((type) => STROKE_CAPABLE_TYPES.has(type)),
   };
 }
 
 export function getStyleControlVisibility(
   context: StyleControlContext,
 ): StyleControlVisibility {
-  if ("selectedType" in context) {
-    return visibilityForSelectedType(context.selectedType);
+  if ("selectedTypes" in context) {
+    return visibilityForSelectedTypes(context.selectedTypes);
   }
   if (context.tool === "select") {
     return { fill: false, stroke: false, strokeWidth: false };

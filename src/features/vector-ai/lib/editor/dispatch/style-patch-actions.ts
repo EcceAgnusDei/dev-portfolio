@@ -4,7 +4,7 @@ import type {
 } from "@/features/vector-ai/lib/document/types";
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import {
-  getEditableSelectedShape,
+  getSelectedShapes,
   resolveStyleControlsMode,
 } from "@/features/vector-ai/lib/editor/core/selectors";
 import type {
@@ -70,28 +70,35 @@ export function applyStyleToSelectedShape(
   state: EditorState,
   patch: StylePatch,
 ): EditorAction[] {
-  const shape = getEditableSelectedShape(state);
-  if (!shape || shape.locked) return [];
+  if (state.tool !== "select") return [];
 
-  const stylePatch = buildStylePatchForShape(shape, patch);
-  if (!stylePatch) return [];
+  const actions: EditorAction[] = [];
+  for (const shape of getSelectedShapes(state)) {
+    if (shape.locked) continue;
 
-  return [
-    {
+    const stylePatch = buildStylePatchForShape(shape, patch);
+    if (!stylePatch) continue;
+
+    actions.push({
       type: "SHAPE_UPDATE",
       id: shape.id,
       patch: { style: stylePatch },
-      recordHistory: true,
-    },
-  ];
+      recordHistory: actions.length === 0 ? undefined : false,
+    });
+  }
+  return actions;
 }
 
 export function styleControlPatchActions(
   state: EditorState,
   patch: StylePatch,
 ): EditorAction[] {
-  if (resolveStyleControlsMode(state) === "selection") {
+  const mode = resolveStyleControlsMode(state);
+  if (mode === "selection") {
     return applyStyleToSelectedShape(state, patch);
   }
-  return [{ type: "DRAFT_STYLE_SET", draftStyle: patch }];
+  if (mode === "draft") {
+    return [{ type: "DRAFT_STYLE_SET", draftStyle: patch }];
+  }
+  return [];
 }

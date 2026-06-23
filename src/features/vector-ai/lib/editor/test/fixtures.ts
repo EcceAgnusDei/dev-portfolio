@@ -68,6 +68,16 @@ export function makeEditorWithRect(id = "rect-1") {
   return createInitialEditorState(makeDocWithRect(id));
 }
 
+export function makeEditorWithTwoRects(selectedIds: string[] = []) {
+  const state = makeEditorWithRect("rect-1");
+  state.doc.shapes = [
+    makeRectShape({ id: "rect-1" }),
+    makeRectShape({ id: "rect-2", transform: { x: 120, y: 20 } }),
+  ];
+  state.selection = { ids: selectedIds };
+  return state;
+}
+
 export function makeCircleShape(
   overrides?: Partial<CircleShape>,
 ): CircleShape {

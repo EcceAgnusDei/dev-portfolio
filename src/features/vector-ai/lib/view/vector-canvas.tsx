@@ -10,6 +10,7 @@ import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
 import { SelectionCircleHandles } from "@/features/vector-ai/lib/view/overlays/selection-circle-handles";
 import { SelectionCubicHandles } from "@/features/vector-ai/lib/view/overlays/selection-cubic-handles";
 import { SelectionLineHandles } from "@/features/vector-ai/lib/view/overlays/selection-line-handles";
+import { SelectionOutlines } from "@/features/vector-ai/lib/view/overlays/selection-outlines";
 import { SelectionRectHandles } from "@/features/vector-ai/lib/view/overlays/selection-rect-handles";
 import type {
   CircleResizeHandle,
@@ -31,7 +32,7 @@ export type VectorCanvasTextEdit = {
 
 export type VectorCanvasProps = {
   doc: VectorDoc;
-  selectedId?: string | null;
+  selectedIds?: readonly string[];
   className?: string;
   "aria-label"?: string;
   shapePointerEvents?: "auto" | "none";
@@ -73,7 +74,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
   function VectorCanvas(
     {
       doc,
-      selectedId = null,
+      selectedIds = [],
       className,
       "aria-label": ariaLabel = "Zone de dessin vectoriel",
       shapePointerEvents = "auto",
@@ -98,6 +99,8 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
   ) {
     const { viewBox } = doc;
     const interactive = Boolean(onPointerDown);
+    const primarySelectedId =
+      selectedIds.length === 1 ? (selectedIds[0] ?? null) : null;
 
     return (
       <svg
@@ -210,6 +213,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               </g>
             ) : null}
           </g>
+          <SelectionOutlines doc={doc} selectedIds={selectedIds} />
           <g
             pointerEvents={
               onLineEndPointerDown ||
@@ -222,22 +226,22 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
           >
             <SelectionLineHandles
               doc={doc}
-              selectedId={selectedId}
+              selectedId={primarySelectedId}
               onLineEndPointerDown={onLineEndPointerDown}
             />
             <SelectionCubicHandles
               doc={doc}
-              selectedId={selectedId}
+              selectedId={primarySelectedId}
               onCubicHandlePointerDown={onCubicHandlePointerDown}
             />
             <SelectionRectHandles
               doc={doc}
-              selectedId={selectedId}
+              selectedId={primarySelectedId}
               onRectHandlePointerDown={onRectHandlePointerDown}
             />
             <SelectionCircleHandles
               doc={doc}
-              selectedId={selectedId}
+              selectedId={primarySelectedId}
               onCircleHandlePointerDown={onCircleHandlePointerDown}
             />
           </g>
