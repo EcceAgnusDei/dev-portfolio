@@ -33,6 +33,5 @@ export function commitCreateCircle(
       },
     },
     { type: "SELECTION_SET", ids: [id] },
-    { type: "TOOL_SET", tool: "select" },
   ];
 }

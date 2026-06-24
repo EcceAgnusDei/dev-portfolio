@@ -3,7 +3,7 @@ import {
   hasShapePatch,
   shapePatchFromMove,
 } from "@/features/vector-ai/lib/editor/core/shape-patch";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 import {
   resolvedMoveDelta,

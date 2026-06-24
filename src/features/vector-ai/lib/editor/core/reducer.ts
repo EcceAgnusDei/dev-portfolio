@@ -6,6 +6,7 @@ import type {
 } from "@/features/vector-ai/lib/document/types";
 import { clampShapeToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";
+import { draftStyleForTool } from "@/features/vector-ai/lib/editor/core/draft-style";
 import { isSameVectorDoc } from "@/features/vector-ai/lib/editor/core/doc-equality";
 import { reorderShapes } from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
@@ -137,7 +138,11 @@ export function editorReducer(
       };
 
     case "TOOL_SET":
-      return { ...state, tool: action.tool };
+      return {
+        ...state,
+        tool: action.tool,
+        draftStyle: draftStyleForTool(action.tool, state.draftStyle),
+      };
 
     case "DRAFT_STYLE_SET":
       return {

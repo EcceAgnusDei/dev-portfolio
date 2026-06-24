@@ -1,7 +1,7 @@
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import { resolveShapeClickSelection, movableSelectedIds } from "@/features/vector-ai/lib/editor/core/selection";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type {
   EditorAction,
   EditorState,

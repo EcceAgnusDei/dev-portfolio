@@ -64,11 +64,16 @@ describe("workflow: création cercle", () => {
       anchorY: 20,
     });
 
-    expectAfterCreate(result, "new-shape-id", {
-      type: "circle",
-      transform: { x: 30, y: 20 },
-      r: 20,
-    });
+    expectAfterCreate(
+      result,
+      "new-shape-id",
+      {
+        type: "circle",
+        transform: { x: 30, y: 20 },
+        r: 20,
+      },
+      "circle",
+    );
     expectShapeCount(result.state, initial.doc.shapes.length + 1);
   });
 
@@ -139,14 +144,19 @@ describe("workflow: création cercle", () => {
       { type: "up" },
     ]);
 
-    expectAfterCreate(result, "new-shape-id", {
-      type: "circle",
-      style: {
-        fill: STYLE_TEST_DRAFT.fill,
-        stroke: STYLE_TEST_DRAFT.stroke,
-        strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+    expectAfterCreate(
+      result,
+      "new-shape-id",
+      {
+        type: "circle",
+        style: {
+          fill: STYLE_TEST_DRAFT.fill,
+          stroke: STYLE_TEST_DRAFT.stroke,
+          strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+        },
       },
-    });
+      "circle",
+    );
   });
 });
 

@@ -11,10 +11,10 @@ import {
   isMultiSelection,
   isShapeSelected,
   resolveStyleControlsMode,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { makeEditorWithRect } from "@/features/vector-ai/lib/editor/test/fixtures";
 
-describe("selectors", () => {
+describe("editor-queries", () => {
   it("getShapeById trouve une forme", () => {
     const state = makeEditorWithRect("a");
     expect(getShapeById(state.doc, "a")?.type).toBe("rect");

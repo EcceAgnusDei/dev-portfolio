@@ -27,6 +27,7 @@ type StyleColorFieldProps = {
   label: string;
   color: string;
   disabled: boolean;
+  allowNone: boolean;
   noneLabel: string;
   colorAriaLabel: string;
   onChange: (color: string) => void;
@@ -36,6 +37,7 @@ function StyleColorField({
   label,
   color,
   disabled,
+  allowNone,
   noneLabel,
   colorAriaLabel,
   onChange,
@@ -87,17 +89,19 @@ function StyleColorField({
             isNone && "opacity-40",
           )}
         />
-        <Button
-          type="button"
-          variant={isNone ? "default" : "outline"}
-          size="sm"
-          className="h-8 shrink-0 px-2 text-xs"
-          disabled={disabled}
-          onClick={handleNoneClick}
-          aria-pressed={isNone}
-        >
-          {noneLabel}
-        </Button>
+        {allowNone ? (
+          <Button
+            type="button"
+            variant={isNone ? "default" : "outline"}
+            size="sm"
+            className="h-8 shrink-0 px-2 text-xs"
+            disabled={disabled}
+            onClick={handleNoneClick}
+            aria-pressed={isNone}
+          >
+            {noneLabel}
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -114,6 +118,7 @@ export function VectorStyleControls({
   onStrokeWidthChange,
   className,
 }: VectorStyleControlsProps) {
+  const allowNone = visibility.fill && visibility.stroke;
   const showStrokeWidth = visibility.strokeWidth && stroke !== "none";
 
   function handleStrokeWidthChange(event: ChangeEvent<HTMLInputElement>) {
@@ -134,6 +139,7 @@ export function VectorStyleControls({
           label="Remplissage"
           color={fill}
           disabled={disabled}
+          allowNone={allowNone}
           noneLabel="Aucun"
           colorAriaLabel="Couleur de remplissage"
           onChange={onFillChange}
@@ -144,6 +150,7 @@ export function VectorStyleControls({
           label="Contour"
           color={stroke}
           disabled={disabled}
+          allowNone={allowNone}
           noneLabel="Aucun"
           colorAriaLabel="Couleur de contour"
           onChange={onStrokeChange}

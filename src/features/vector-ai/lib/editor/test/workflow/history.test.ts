@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/core/selectors";
+import { canRedo, canUndo } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { expectShapeInDoc } from "@/features/vector-ai/lib/editor/test/expect-editor-state";
 import {
   applyEditorActions,

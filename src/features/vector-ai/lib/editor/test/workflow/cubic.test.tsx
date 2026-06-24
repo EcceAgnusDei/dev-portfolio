@@ -12,7 +12,7 @@ import type {
   CubicHandle,
   CubicWorldPoints,
 } from "@/features/vector-ai/lib/document/types";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { cubicWorldPointsFromPathShape } from "@/features/vector-ai/lib/editor/geometry/path-segments";
 import { shapePointerEventsForTool } from "@/features/vector-ai/lib/editor/pointer/handlers";
 import {
@@ -51,7 +51,10 @@ import { ShapeView } from "@/features/vector-ai/lib/view/shape-view";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import { segmentsToPathD } from "@/features/vector-ai/lib/view/segments-to-path-d";
 import { VectorCanvas } from "@/features/vector-ai/lib/view/vector-canvas";
-import { VECTOR_AI_MIN_CUBIC_POINT_DISTANCE } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE,
+  VECTOR_AI_MIN_CUBIC_POINT_DISTANCE,
+} from "@/features/vector-ai/lib/vector-ai-config";
 
 const LINE_REFERENCE_MIDPOINT = { x: 200, y: 300 };
 
@@ -138,11 +141,21 @@ describe("courbe cubique", () => {
         cubicCreateSteps(CUBIC_REFERENCE_WORLD),
       );
 
-      expectAfterCreate(result, "new-shape-id", {
-        type: "path",
-        transform: CUBIC_REFERENCE_TRANSFORM,
-        segments: CUBIC_REFERENCE_SEGMENTS,
-      });
+      expectAfterCreate(
+        result,
+        "new-shape-id",
+        {
+          type: "path",
+          transform: CUBIC_REFERENCE_TRANSFORM,
+          segments: CUBIC_REFERENCE_SEGMENTS,
+          style: {
+            fill: "none",
+            stroke: VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE.stroke,
+            strokeWidth: VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE.strokeWidth,
+          },
+        },
+        "select",
+      );
       expectShapeCount(result.state, initial.doc.shapes.length + 1);
     });
 
@@ -154,14 +167,19 @@ describe("courbe cubique", () => {
         cubicCreateSteps(CUBIC_REFERENCE_WORLD),
       );
 
-      expectAfterCreate(result, "new-shape-id", {
-        type: "path",
-        style: {
-          fill: "none",
-          stroke: STYLE_TEST_DRAFT.stroke,
-          strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+      expectAfterCreate(
+        result,
+        "new-shape-id",
+        {
+          type: "path",
+          style: {
+            fill: "none",
+            stroke: STYLE_TEST_DRAFT.stroke,
+            strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+          },
         },
-      });
+        "select",
+      );
     });
 
     it("n'affiche pas de preview avant le survol après le 1er clic", () => {

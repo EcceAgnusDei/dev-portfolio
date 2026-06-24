@@ -3,7 +3,7 @@ import type {
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import {
   isValidTextFontSizeInput,
   parseTextFontSizeInput,

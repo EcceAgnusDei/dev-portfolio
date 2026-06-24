@@ -7,7 +7,7 @@ import {
   canUndo,
   getShapeById,
   getStyleControlState,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { EditorState, EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import {
   makeEditorWithRect,

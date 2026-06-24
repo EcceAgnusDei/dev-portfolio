@@ -43,6 +43,5 @@ export function commitCreateLine(
       },
     },
     { type: "SELECTION_SET", ids: [id] },
-    { type: "TOOL_SET", tool: "select" },
   ];
 }

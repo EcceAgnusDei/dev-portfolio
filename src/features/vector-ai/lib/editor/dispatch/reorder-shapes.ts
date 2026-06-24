@@ -1,5 +1,5 @@
 import type { Shape, VectorDoc } from "@/features/vector-ai/lib/document/types";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { EditorAction } from "@/features/vector-ai/lib/editor/core/state";
 
 export type ZOrderCommand = "forward" | "backward" | "front" | "back";

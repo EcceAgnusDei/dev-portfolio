@@ -54,7 +54,7 @@ function rectHandleWorldPoint(
 }
 
 describe("workflow: création rectangle", () => {
-  it("crée un rectangle au drag et repasse en select", () => {
+  it("crée un rectangle au drag et conserve l'outil rect", () => {
     const initial = makeEditorWithRect();
     initial.tool = "rect";
 
@@ -71,12 +71,17 @@ describe("workflow: création rectangle", () => {
       h: 40,
     });
 
-    expectAfterCreate(result, "new-shape-id", {
-      type: "rect",
-      transform: { x: 10, y: 20 },
-      w: 40,
-      h: 40,
-    });
+    expectAfterCreate(
+      result,
+      "new-shape-id",
+      {
+        type: "rect",
+        transform: { x: 10, y: 20 },
+        w: 40,
+        h: 40,
+      },
+      "rect",
+    );
     expectShapeCount(result.state, initial.doc.shapes.length + 1);
     expect(lastSnapshot(result).session.kind).toBe("idle");
   });
@@ -121,14 +126,19 @@ describe("workflow: création rectangle", () => {
       { type: "up" },
     ]);
 
-    expectAfterCreate(result, "new-shape-id", {
-      type: "rect",
-      style: {
-        fill: STYLE_TEST_DRAFT.fill,
-        stroke: STYLE_TEST_DRAFT.stroke,
-        strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+    expectAfterCreate(
+      result,
+      "new-shape-id",
+      {
+        type: "rect",
+        style: {
+          fill: STYLE_TEST_DRAFT.fill,
+          stroke: STYLE_TEST_DRAFT.stroke,
+          strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
+        },
       },
-    });
+      "rect",
+    );
   });
 });
 

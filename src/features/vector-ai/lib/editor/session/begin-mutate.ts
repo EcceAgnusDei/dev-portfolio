@@ -5,7 +5,7 @@ import type {
   RectShape,
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
   cubicWorldPointsFromPathShape,

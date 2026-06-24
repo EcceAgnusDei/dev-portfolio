@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   canRedo,
   canUndo,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { commitTextEditActions } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { deleteShapeActions } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
 import {
@@ -165,46 +165,58 @@ describe("workflow: suppression de forme", () => {
     expect(lastSnapshot(result).session.kind).toBe("idle");
   });
 
-  it("supprime la forme sélectionnée avec Delete ou Backspace", () => {
-    for (const key of ["Delete", "Backspace"] as const) {
-      const initial = makeEditorWithRect("rect-1");
-      initial.selection.ids = [];
-      const { interaction, getState, unmount } =
-        renderInteractiveCanvas(initial);
+  it("supprime la forme sélectionnée avec Delete", () => {
+    const initial = makeEditorWithRect("rect-1");
+    initial.selection.ids = [];
+    const { interaction, getState, unmount } =
+      renderInteractiveCanvas(initial);
 
-      act(() => {
-        interaction.onShapePointerDown(
-          "rect-1",
-          makePointerEvent({ clientX: 10, clientY: 20 }),
-        );
-      });
+    act(() => {
+      interaction.onShapePointerDown(
+        "rect-1",
+        makePointerEvent({ clientX: 10, clientY: 20 }),
+      );
+    });
 
-      expect(getState().selection.ids).toEqual(["rect-1"]);
+    expect(getState().selection.ids).toEqual(["rect-1"]);
 
-      fireKeyDown(key);
+    fireKeyDown("Delete");
 
-      expectShapeCount(getState(), 0);
-      expect(getState().selection.ids).toEqual([]);
-      expect(getState().history.past).toHaveLength(1);
-      expect(getState().history.future).toEqual([]);
-      expect(interaction.session.kind).toBe("idle");
-      expect(canUndo(getState())).toBe(true);
+    expectShapeCount(getState(), 0);
+    expect(getState().selection.ids).toEqual([]);
+    expect(getState().history.past).toHaveLength(1);
+    expect(getState().history.future).toEqual([]);
+    expect(interaction.session.kind).toBe("idle");
+    expect(canUndo(getState())).toBe(true);
 
-      const restored = applyEditorActions(getState(), [{ type: "UNDO" }]);
-      expectShapeInDoc(restored, "rect-1", {
-        type: "rect",
-        transform: { x: 10, y: 20 },
-      });
-      expect(restored.selection.ids).toEqual([]);
-      expect(canRedo(restored)).toBe(true);
+    const restored = applyEditorActions(getState(), [{ type: "UNDO" }]);
+    expectShapeInDoc(restored, "rect-1", {
+      type: "rect",
+      transform: { x: 10, y: 20 },
+    });
+    expect(restored.selection.ids).toEqual([]);
+    expect(canRedo(restored)).toBe(true);
 
-      const redone = applyEditorActions(restored, [{ type: "REDO" }]);
-      expectShapeCount(redone, 0);
-      expect(redone.selection.ids).toEqual([]);
-      expect(canRedo(redone)).toBe(false);
+    const redone = applyEditorActions(restored, [{ type: "REDO" }]);
+    expectShapeCount(redone, 0);
+    expect(redone.selection.ids).toEqual([]);
+    expect(canRedo(redone)).toBe(false);
 
-      unmount();
-    }
+    unmount();
+  });
+
+  it("ne supprime pas la forme sélectionnée avec Backspace", () => {
+    const initial = makeEditorWithRect("rect-1");
+    initial.selection.ids = ["rect-1"];
+    const { getState, unmount } = renderInteractiveCanvas(initial);
+
+    fireKeyDown("Backspace");
+
+    expectShapeCount(getState(), 1);
+    expect(getState().selection.ids).toEqual(["rect-1"]);
+    expect(getState().history.past).toHaveLength(0);
+
+    unmount();
   });
 
   it("supprime le texte quand le contenu validé est vide", () => {
@@ -280,19 +292,17 @@ describe("workflow: suppression de forme", () => {
     ]);
   });
 
-  it("supprime la multi-sélection avec Delete ou Backspace", () => {
-    for (const key of ["Delete", "Backspace"] as const) {
-      const initial = makeEditorWithTwoRects(["rect-1", "rect-2"]);
-      const { getState, unmount } = renderInteractiveCanvas(initial);
+  it("supprime la multi-sélection avec Delete", () => {
+    const initial = makeEditorWithTwoRects(["rect-1", "rect-2"]);
+    const { getState, unmount } = renderInteractiveCanvas(initial);
 
-      fireKeyDown(key);
+    fireKeyDown("Delete");
 
-      expectShapeCount(getState(), 0);
-      expect(getState().selection.ids).toEqual([]);
-      expect(getState().history.past).toHaveLength(1);
-      expect(canUndo(getState())).toBe(true);
+    expectShapeCount(getState(), 0);
+    expect(getState().selection.ids).toEqual([]);
+    expect(getState().history.past).toHaveLength(1);
+    expect(canUndo(getState())).toBe(true);
 
-      unmount();
-    }
+    unmount();
   });
 });

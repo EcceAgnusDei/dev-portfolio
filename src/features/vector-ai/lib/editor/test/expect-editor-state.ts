@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { EditorState } from "@/features/vector-ai/lib/editor/core/state";
 import type { RunGestureResult } from "@/features/vector-ai/lib/editor/test/run-gesture";
 
@@ -17,8 +17,11 @@ export function expectAfterCreate(
   result: RunGestureResult,
   shapeId: string,
   partial: Record<string, unknown>,
+  expectedTool?: string,
 ) {
-  expect(result.state.tool).toBe("select");
+  if (expectedTool !== undefined) {
+    expect(result.state.tool).toBe(expectedTool);
+  }
   expect(result.state.selection.ids).toEqual([shapeId]);
   expect(result.state.history.past.length).toBeGreaterThan(0);
   expect(result.state.history.future).toEqual([]);

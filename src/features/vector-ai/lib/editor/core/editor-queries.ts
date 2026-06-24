@@ -1,5 +1,10 @@
-import type { Shape, VectorDoc } from "@/features/vector-ai/lib/document/types";
+import type {
+  Shape,
+  TextShape,
+  VectorDoc,
+} from "@/features/vector-ai/lib/document/types";
 import {
+  draftStyleForTool,
   getStyleControlVisibility,
   shapeStyleToDraftStyle,
   type DraftStyle,
@@ -98,12 +103,31 @@ export function getSelectionStyleSnapshot(
   };
 }
 
-export function getStyleControlState(state: EditorState): StyleControlState {
+const TEXT_EDIT_STYLE_VISIBILITY: StyleControlVisibility = {
+  fill: true,
+  stroke: false,
+  strokeWidth: false,
+};
+
+export function getStyleControlState(
+  state: EditorState,
+  editingTextShape?: TextShape,
+): StyleControlState {
+  if (editingTextShape) {
+    return {
+      mode: "selection",
+      visibility: TEXT_EDIT_STYLE_VISIBILITY,
+      values: shapeStyleToDraftStyle(editingTextShape.style),
+    };
+  }
+
   const mode = resolveStyleControlsMode(state);
   const visibility = getStyleControlVisibility(getStyleControlContext(state));
   const snapshot = getSelectionStyleSnapshot(state);
   const values =
-    mode === "selection" && snapshot != null ? snapshot : state.draftStyle;
+    mode === "selection" && snapshot != null
+      ? snapshot
+      : draftStyleForTool(state.tool, state.draftStyle);
   return { mode, visibility, values };
 }
 

@@ -1,5 +1,5 @@
 import type { Shape, ShapeType, VectorDoc } from "@/features/vector-ai/lib/document/types";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 
 export function selectedShapeOfType<T extends ShapeType>(
   doc: VectorDoc,

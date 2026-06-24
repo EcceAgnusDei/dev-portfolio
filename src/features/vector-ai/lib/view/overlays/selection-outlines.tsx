@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
 import type { Shape, VectorDoc } from "@/features/vector-ai/lib/document/types";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { estimateTextBounds } from "@/features/vector-ai/lib/editor/geometry/text-bounds";
 import {
   selectionOutlinePad,

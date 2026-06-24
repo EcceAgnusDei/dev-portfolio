@@ -8,7 +8,7 @@ import {
   canRedo,
   canUndo,
   getShapeById,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { EditorState } from "@/features/vector-ai/lib/editor/core/state";
 import {
   getZOrderAvailability,

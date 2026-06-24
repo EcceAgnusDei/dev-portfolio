@@ -17,13 +17,14 @@ import type {
   TextShape,
   VectorDoc,
 } from "@/features/vector-ai/lib/document/types";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import {
   getStyleControlState,
   type StyleControlState,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import {
   styleControlPatchActions,
+  textEditStylePatchActions,
   type StylePatch,
 } from "@/features/vector-ai/lib/editor/dispatch/style-patch-actions";
 import {
@@ -649,7 +650,7 @@ export function useVectorInteraction({
         return;
       }
 
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      if (event.key !== "Delete") return;
 
       if (state.tool !== "select") return;
       if (textEditSession !== null) return;
@@ -684,13 +685,22 @@ export function useVectorInteraction({
     [interactionState, session],
   );
 
-  const styleControl = useMemo(() => getStyleControlState(state), [state]);
+  const styleControl = useMemo(
+    () => getStyleControlState(state, editingTextShape),
+    [state, editingTextShape],
+  );
 
   const applyStyleControlPatch = useCallback(
     (patch: StylePatch) => {
+      if (textEditSession) {
+        dispatchActions(
+          textEditStylePatchActions(state, textEditSession.shapeId, patch),
+        );
+        return;
+      }
       dispatchActions(styleControlPatchActions(state, patch));
     },
-    [dispatchActions, state],
+    [dispatchActions, state, textEditSession],
   );
 
   return {

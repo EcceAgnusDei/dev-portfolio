@@ -11,7 +11,7 @@ import {
   canRedo,
   canUndo,
   getShapeById,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
@@ -165,19 +165,6 @@ export function VectorAiDemoClient() {
         onCancelAi={handleCancelAi}
         aiPending={aiPending}
       />
-      <div
-        className={cn(
-          "mx-auto aspect-[4/3] w-full max-w-3xl",
-          aiPending && "pointer-events-none opacity-60",
-        )}
-      >
-        <VectorCanvasInteractive
-          svgRef={svgRef}
-          interaction={interaction}
-          doc={state.doc}
-          selectedIds={state.selection.ids}
-        />
-      </div>
       <p
         className={cn(
           "text-sm",
@@ -194,6 +181,19 @@ export function VectorAiDemoClient() {
       >
         {statusText}
       </p>
+      <div
+        className={cn(
+          "mx-auto aspect-[4/3] w-full max-w-3xl",
+          aiPending && "pointer-events-none opacity-60",
+        )}
+      >
+        <VectorCanvasInteractive
+          svgRef={svgRef}
+          interaction={interaction}
+          doc={state.doc}
+          selectedIds={state.selection.ids}
+        />
+      </div>
     </div>
   );
 }

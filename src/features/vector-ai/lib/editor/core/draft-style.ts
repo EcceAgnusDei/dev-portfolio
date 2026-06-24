@@ -1,6 +1,10 @@
 import type { ShapeStyle, ShapeType } from "@/features/vector-ai/lib/document/types";
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
-import { VECTOR_AI_INITIAL_DRAFT_STYLE } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE,
+  VECTOR_AI_DEFAULT_LINE_STYLE,
+  VECTOR_AI_INITIAL_DRAFT_STYLE,
+} from "@/features/vector-ai/lib/vector-ai-config";
 
 export type DraftStyle = {
   fill: string;
@@ -26,6 +30,26 @@ const STROKE_CAPABLE_TYPES = new Set<ShapeType>([
   "path",
 ]);
 
+function strokeOnlyToolDefaults(
+  tool: "line" | "cubic",
+): Pick<DraftStyle, "stroke" | "strokeWidth"> {
+  const defaults =
+    tool === "line"
+      ? VECTOR_AI_DEFAULT_LINE_STYLE
+      : VECTOR_AI_DEFAULT_CUBIC_PATH_STYLE;
+  return {
+    stroke: defaults.stroke ?? "#000000",
+    strokeWidth:
+      defaults.strokeWidth ?? VECTOR_AI_INITIAL_DRAFT_STYLE.strokeWidth,
+  };
+}
+
+export function draftStyleForTool(tool: EditorTool, draft: DraftStyle): DraftStyle {
+  if (tool !== "line" && tool !== "cubic") return draft;
+  if (draft.stroke !== "none") return draft;
+  return { ...draft, ...strokeOnlyToolDefaults(tool) };
+}
+
 function strokeStyleFromDraft(
   draft: DraftStyle,
 ): Pick<ShapeStyle, "stroke" | "strokeWidth"> {
@@ -48,20 +72,22 @@ export function shapeStyleToDraftStyle(style: ShapeStyle): DraftStyle {
 }
 
 export function styleForNewShape(tool: EditorTool, draft: DraftStyle): ShapeStyle {
+  const effectiveDraft = draftStyleForTool(tool, draft);
+
   if (tool === "text") {
-    return { fill: draft.fill };
+    return { fill: effectiveDraft.fill };
   }
 
   if (tool === "line" || tool === "cubic") {
     return {
       fill: "none",
-      ...strokeStyleFromDraft(draft),
+      ...strokeStyleFromDraft(effectiveDraft),
     };
   }
 
   return {
-    fill: draft.fill,
-    ...strokeStyleFromDraft(draft),
+    fill: effectiveDraft.fill,
+    ...strokeStyleFromDraft(effectiveDraft),
   };
 }
 

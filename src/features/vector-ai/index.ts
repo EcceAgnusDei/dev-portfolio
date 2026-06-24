@@ -3,7 +3,7 @@ export * from "@/features/vector-ai/lib/document/types";
 export * from "@/features/vector-ai/lib/document/schema";
 export * from "@/features/vector-ai/lib/editor/core/state";
 export * from "@/features/vector-ai/lib/editor/core/reducer";
-export * from "@/features/vector-ai/lib/editor/core/selectors";
+export * from "@/features/vector-ai/lib/editor/core/editor-queries";
 export {
   applyShapePatch,
   hasShapePatch,

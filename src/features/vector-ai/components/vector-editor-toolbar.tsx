@@ -5,7 +5,7 @@ import { type ChangeEvent, type FocusEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { VectorStyleControls } from "@/features/vector-ai/components/vector-style-controls";
-import type { StyleControlState } from "@/features/vector-ai/lib/editor/core/selectors";
+import type { StyleControlState } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { StylePatch } from "@/features/vector-ai/lib/editor/dispatch/style-patch-actions";
 import type {
   ZOrderAvailability,

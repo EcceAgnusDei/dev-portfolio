@@ -4,7 +4,7 @@ import type {
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
 import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { clampShapeToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import type {
   MoveStartState,

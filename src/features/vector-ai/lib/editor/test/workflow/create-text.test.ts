@@ -15,6 +15,7 @@ import {
   expectShapeCount,
   expectShapeInDoc,
 } from "@/features/vector-ai/lib/editor/test/expect-editor-state";
+import { getStyleControlState } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import {
   applyStyleControlPatch,
   STYLE_TEST_DRAFT,
@@ -45,7 +46,7 @@ import {
   makePointerEvent,
   renderInteractiveCanvas,
 } from "@/features/vector-ai/lib/editor/test/pointer-harness";
-import { getShapeById } from "@/features/vector-ai/lib/editor/core/selectors";
+import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 
 const TEXT_TOOL = "text" as EditorTool;
 
@@ -107,6 +108,46 @@ describe("workflow: création texte", () => {
     expect(result.state.tool).toBe("select");
     expect(result.state.history.past).toHaveLength(0);
     expectShapeCount(result.state, initial.doc.shapes.length);
+  });
+
+  it("affiche la couleur pendant l'édition d'un nouveau texte", () => {
+    const initial = withTextTool(makeEditorWithRect());
+    const canvas = renderInteractiveCanvas(initial);
+
+    act(() => {
+      canvas.interaction.onSvgPointerDown(
+        makePointerEvent({
+          clientX: 40,
+          clientY: 50,
+          target: canvasBackgroundTarget(),
+        }) as never,
+      );
+    });
+    act(() => {
+      canvas.interaction.onSvgPointerUp(
+        makePointerEvent({ clientX: 40, clientY: 50 }) as never,
+      );
+    });
+
+    const styleControl = getStyleControlState(
+      canvas.getState(),
+      canvas.interaction.editingTextShape,
+    );
+    expect(styleControl.visibility).toEqual({
+      fill: true,
+      stroke: false,
+      strokeWidth: false,
+    });
+    expect(styleControl.values.fill).toBe("#000000");
+
+    act(() => {
+      canvas.interaction.applyStyleControlPatch({ fill: "#aabbcc" });
+    });
+
+    expect(canvas.getState().draftStyle.fill).toBe("#aabbcc");
+    expect(canvas.interaction.editingTextShape?.style.fill).toBe("#aabbcc");
+
+    canvas.unmount();
   });
 
   it("crée le texte au commit de l'éditeur avec un seul push undo", () => {

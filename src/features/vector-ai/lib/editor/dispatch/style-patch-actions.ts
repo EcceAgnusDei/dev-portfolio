@@ -5,8 +5,9 @@ import type {
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import {
   getSelectedShapes,
+  getShapeById,
   resolveStyleControlsMode,
-} from "@/features/vector-ai/lib/editor/core/selectors";
+} from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type {
   EditorAction,
   EditorState,
@@ -87,6 +88,30 @@ export function applyStyleToSelectedShape(
     });
   }
   return actions;
+}
+
+export function textEditStylePatchActions(
+  state: EditorState,
+  shapeId: string,
+  patch: StylePatch,
+): EditorAction[] {
+  const existing = getShapeById(state.doc, shapeId);
+  if (existing?.type === "text") {
+    return applyStyleToSelectedShape(
+      {
+        ...state,
+        tool: "select",
+        selection: { ids: [shapeId] },
+      },
+      patch,
+    );
+  }
+
+  if (patch.fill !== undefined) {
+    return [{ type: "DRAFT_STYLE_SET", draftStyle: { fill: patch.fill } }];
+  }
+
+  return [];
 }
 
 export function styleControlPatchActions(
