@@ -60,6 +60,12 @@ export type EditorAction =
     }
   | { type: "SHAPE_DELETE"; id: string; recordHistory?: boolean }
   | {
+      type: "SHAPES_REORDER";
+      ids: string[];
+      command: "forward" | "backward" | "front" | "back";
+      recordHistory?: boolean;
+    }
+  | {
       type: "VIEWBOX_SET";
       viewBox: VectorDoc["viewBox"];
       recordHistory?: boolean;

@@ -1,15 +1,30 @@
 "use client";
 
+import { Menu } from "@base-ui/react/menu";
 import { type ChangeEvent, type FocusEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { VectorStyleControls } from "@/features/vector-ai/components/vector-style-controls";
 import type { StyleControlState } from "@/features/vector-ai/lib/editor/core/selectors";
 import type { StylePatch } from "@/features/vector-ai/lib/editor/dispatch/style-patch-actions";
+import type {
+  ZOrderAvailability,
+  ZOrderCommand,
+} from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { VECTOR_AI_MAX_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
+
+const Z_ORDER_MENU_ITEMS: {
+  command: ZOrderCommand;
+  label: string;
+}[] = [
+  { command: "front", label: "Premier plan" },
+  { command: "forward", label: "Avancer" },
+  { command: "backward", label: "Reculer" },
+  { command: "back", label: "Arrière-plan" },
+];
 
 export const VECTOR_EDITOR_TOOLS: { id: EditorTool; label: string }[] = [
   { id: "select", label: "Sélection" },
@@ -38,6 +53,9 @@ export type VectorEditorToolbarProps = {
   ) => void;
   canDelete: boolean;
   onDelete: () => void;
+  canReorder: boolean;
+  zOrderAvailability: ZOrderAvailability;
+  onZOrderCommand: (command: ZOrderCommand) => void;
   styleControl: StyleControlState;
   styleControlsEnabled: boolean;
   onStylePatch: (patch: StylePatch) => void;
@@ -59,6 +77,9 @@ export function VectorEditorToolbar({
   onFontSizeBlur,
   canDelete,
   onDelete,
+  canReorder,
+  zOrderAvailability,
+  onZOrderCommand,
   styleControl,
   styleControlsEnabled,
   onStylePatch,
@@ -146,6 +167,41 @@ export function VectorEditorToolbar({
           >
             Supprimer
           </Button>
+          <Menu.Root modal={false}>
+            <Menu.Trigger
+              disabled={!canReorder}
+              render={<Button variant="outline" size="sm" />}
+            >
+              Ordre
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner sideOffset={4} align="start">
+                <Menu.Popup
+                  className={cn(
+                    "z-50 min-w-52 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none",
+                    "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+                    "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                  )}
+                >
+                  {Z_ORDER_MENU_ITEMS.map((item) => (
+                    <Menu.Item
+                      key={item.command}
+                      closeOnClick={false}
+                      disabled={!zOrderAvailability[item.command]}
+                      onClick={() => onZOrderCommand(item.command)}
+                      className={cn(
+                        "cursor-default rounded-md px-2 py-1.5 text-sm outline-none select-none",
+                        "data-highlighted:bg-muted data-highlighted:text-foreground",
+                        "data-disabled:pointer-events-none data-disabled:opacity-50",
+                      )}
+                    >
+                      {item.label}
+                    </Menu.Item>
+                  ))}
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
         </div>
       </fieldset>
 

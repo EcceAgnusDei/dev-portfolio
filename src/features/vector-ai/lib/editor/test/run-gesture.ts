@@ -31,6 +31,10 @@ import type {
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
 import { deleteShapeActions } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
+import {
+  reorderShapeActions,
+  type ZOrderCommand,
+} from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 
 export type GestureStep =
   | { type: "background-down"; world: WorldPoint; pointerId?: number }
@@ -76,7 +80,8 @@ export type GestureStep =
   | { type: "pointer-cancel"; pointerId?: number }
   | { type: "undo" }
   | { type: "redo" }
-  | { type: "delete-selected" };
+  | { type: "delete-selected" }
+  | { type: "reorder-selected"; command: ZOrderCommand };
 
 export type GestureStepSnapshot = {
   session: PointerSession;
@@ -107,7 +112,8 @@ function pointerIdFromStep(step: GestureStep): number {
     step.type === "redo" ||
     step.type === "tool-set" ||
     step.type === "cancel-session" ||
-    step.type === "delete-selected"
+    step.type === "delete-selected" ||
+    step.type === "reorder-selected"
   ) {
     return DEFAULT_POINTER_ID;
   }
@@ -247,6 +253,19 @@ export function runGesture(
           const actions = deleteShapeActions(
             editorState.doc,
             editorState.selection.ids,
+          );
+          if (actions.length > 0) {
+            session = IDLE_POINTER_SESSION;
+            stepActions = actions;
+          }
+        }
+        break;
+      case "reorder-selected":
+        if (editorState.tool === "select") {
+          const actions = reorderShapeActions(
+            editorState.doc,
+            editorState.selection.ids,
+            step.command,
           );
           if (actions.length > 0) {
             session = IDLE_POINTER_SESSION;

@@ -7,6 +7,7 @@ import type {
 import { clampShapeToViewBox } from "@/features/vector-ai/lib/editor/geometry/viewbox-clamp";
 import { VECTOR_AI_MAX_SHAPES } from "@/features/vector-ai/lib/vector-ai-config";
 import { isSameVectorDoc } from "@/features/vector-ai/lib/editor/core/doc-equality";
+import { reorderShapes } from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 import { applyShapePatch } from "@/features/vector-ai/lib/editor/core/shape-patch";
 import type {
   EditorAction,
@@ -110,6 +111,17 @@ export function editorReducer(
           ids: state.selection.ids.filter((id) => id !== action.id),
         },
       };
+    }
+
+    case "SHAPES_REORDER": {
+      if (action.ids.length === 0) return state;
+      const nextShapes = reorderShapes(
+        state.doc.shapes,
+        action.ids,
+        action.command,
+      );
+      const nextDoc: VectorDoc = { ...state.doc, shapes: nextShapes };
+      return replaceDoc(state, nextDoc, action.recordHistory);
     }
 
     case "VIEWBOX_SET": {

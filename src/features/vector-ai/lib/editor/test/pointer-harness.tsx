@@ -323,6 +323,9 @@ export function renderStyleToolbarHarness(
         onFontSizeDraftChange={() => {}}
         canDelete={false}
         onDelete={() => {}}
+        canReorder={interaction.canReorderSelectedShapes}
+        zOrderAvailability={interaction.zOrderAvailability}
+        onZOrderCommand={interaction.reorderSelectedShapes}
         styleControl={interaction.styleControl}
         styleControlsEnabled
         onStylePatch={interaction.applyStyleControlPatch}

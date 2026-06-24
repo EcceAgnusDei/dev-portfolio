@@ -5,7 +5,6 @@ import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 import { VectorAiPromptPanel } from "@/features/vector-ai/components/vector-ai-prompt-panel";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
-import { postVectorAiCommand } from "@/features/vector-ai/lib/editor/ai/post-vector-ai-command";
 import { runVectorAiSubmit } from "@/features/vector-ai/lib/editor/ai/run-vector-ai-submit";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import {
@@ -149,6 +148,9 @@ export function VectorAiDemoClient() {
         onFontSizeBlur={interaction.commitTextEditOnFontSizeBlur}
         canDelete={!aiPending && interaction.canDeleteSelectedShape}
         onDelete={interaction.deleteSelectedShape}
+        canReorder={!aiPending && interaction.canReorderSelectedShapes}
+        zOrderAvailability={interaction.zOrderAvailability}
+        onZOrderCommand={interaction.reorderSelectedShapes}
         styleControl={interaction.styleControl}
         styleControlsEnabled={!aiPending}
         onStylePatch={interaction.applyStyleControlPatch}

@@ -34,6 +34,13 @@ import {
   canDeleteSelectedShapes,
   deleteShapeActions,
 } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
+import {
+  canReorderSelectedShapes,
+  getZOrderAvailability,
+  reorderShapeActions,
+  type ZOrderAvailability,
+  type ZOrderCommand,
+} from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 import { clampTextPlacement } from "@/features/vector-ai/lib/editor/dispatch/create-text";
 import { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
@@ -132,6 +139,9 @@ export type UseVectorInteractionResult = {
   cancelTextEdit: () => void;
   canDeleteSelectedShape: boolean;
   deleteSelectedShape: () => void;
+  canReorderSelectedShapes: boolean;
+  zOrderAvailability: ZOrderAvailability;
+  reorderSelectedShapes: (command: ZOrderCommand) => void;
   styleControl: StyleControlState;
   applyStyleControlPatch: (patch: StylePatch) => void;
   shapePointerEvents: "auto" | "none";
@@ -367,6 +377,40 @@ export function useVectorInteraction({
     textEditSession,
     dispatchActions,
   ]);
+
+  const canReorderSelected = useMemo(() => {
+    if (state.tool !== "select") return false;
+    if (textEditSession !== null) return false;
+    return canReorderSelectedShapes(state.doc, state.selection.ids);
+  }, [state.tool, state.doc, state.selection.ids, textEditSession]);
+
+  const zOrderAvailability = useMemo(
+    () => getZOrderAvailability(state.doc, state.selection.ids),
+    [state.doc, state.selection.ids],
+  );
+
+  const reorderSelectedShapes = useCallback(
+    (command: ZOrderCommand) => {
+      if (state.tool !== "select") return;
+      if (textEditSession !== null) return;
+      if (isTextEditUiFocused()) return;
+
+      if (sessionRef.current.kind !== "idle") {
+        setSession(IDLE_POINTER_SESSION);
+      }
+
+      dispatchActions(
+        reorderShapeActions(state.doc, state.selection.ids, command),
+      );
+    },
+    [
+      state.tool,
+      state.doc,
+      state.selection.ids,
+      textEditSession,
+      dispatchActions,
+    ],
+  );
 
   const openTextEditor = useCallback(
     (shapeId: string) => {
@@ -668,6 +712,9 @@ export function useVectorInteraction({
     cancelTextEdit,
     canDeleteSelectedShape,
     deleteSelectedShape,
+    canReorderSelectedShapes: canReorderSelected,
+    zOrderAvailability,
+    reorderSelectedShapes,
     styleControl,
     applyStyleControlPatch,
     shapePointerEvents: shapePointerEventsForTool(state.tool),
