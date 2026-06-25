@@ -13,6 +13,7 @@ import type {
 } from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
+import type { VectorDrawingListItem } from "@/features/vector-ai/lib/vector-drawing-storage";
 import { VECTOR_AI_MAX_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,13 @@ export type VectorEditorToolbarProps = {
   onUndo: () => void;
   onRedo: () => void;
   onExportSvg: () => void;
+  savedDrawings: VectorDrawingListItem[];
+  activeDrawingId: string | null;
+  onActiveDrawingChange: (id: string | null) => void;
+  drawingName: string;
+  onDrawingNameChange: (value: string) => void;
+  onSaveDrawing: () => void;
+  saveDrawingDisabled?: boolean;
   fontSizeDraft: string;
   fontSizeFallback: number;
   fontSizeEnabled: boolean;
@@ -70,6 +78,13 @@ export function VectorEditorToolbar({
   onUndo,
   onRedo,
   onExportSvg,
+  savedDrawings,
+  activeDrawingId,
+  onActiveDrawingChange,
+  drawingName = "",
+  onDrawingNameChange,
+  onSaveDrawing,
+  saveDrawingDisabled = false,
   fontSizeDraft,
   fontSizeFallback,
   fontSizeEnabled,
@@ -148,7 +163,7 @@ export function VectorEditorToolbar({
             <input
               type="text"
               inputMode="decimal"
-              value={fontSizeDraft}
+              value={fontSizeDraft ?? ""}
               onChange={handleFontSizeChange}
               onBlur={handleFontSizeBlur}
               disabled={!fontSizeEnabled}
@@ -202,6 +217,55 @@ export function VectorEditorToolbar({
               </Menu.Positioner>
             </Menu.Portal>
           </Menu.Root>
+        </div>
+      </fieldset>
+
+      <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
+        <legend className="text-center text-sm font-medium">Vos dessins</legend>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-center">
+          <label className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
+            <span className="sr-only">Choisir un dessin</span>
+            <select
+              value={activeDrawingId ?? ""}
+              onChange={(e) =>
+                onActiveDrawingChange(e.target.value ? e.target.value : null)
+              }
+              disabled={saveDrawingDisabled}
+              aria-label="Choisir un dessin enregistré"
+              className="h-8 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Brouillon (non enregistré)</option>
+              {savedDrawings.map((drawing) => (
+                <option key={drawing.id} value={drawing.id}>
+                  {drawing.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
+            <span className="text-xs text-muted-foreground">Nom</span>
+            <input
+              type="text"
+              value={drawingName ?? ""}
+              onChange={(e) => onDrawingNameChange(e.target.value)}
+              placeholder="Nom du dessin"
+              maxLength={100}
+              disabled={saveDrawingDisabled}
+              aria-label="Nom du dessin"
+              className="h-8 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onSaveDrawing}
+              disabled={saveDrawingDisabled}
+            >
+              Enregistrer
+            </Button>
+          </div>
         </div>
       </fieldset>
 

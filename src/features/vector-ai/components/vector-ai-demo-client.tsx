@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 
 import { VectorAiPromptPanel } from "@/features/vector-ai/components/vector-ai-prompt-panel";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
 import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
+import {
+  planDrawingLoad,
+  saveDrawingFromDoc,
+} from "@/features/vector-ai/lib/drawing-persistence";
 import { runVectorAiSubmit } from "@/features/vector-ai/lib/editor/ai/run-vector-ai-submit";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import {
@@ -15,6 +19,11 @@ import {
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
+import {
+  getVectorDrawingsStoreServerSnapshot,
+  getVectorDrawingsStoreSnapshot,
+  subscribeVectorDrawingsStore,
+} from "@/features/vector-ai/lib/vector-drawing-storage";
 import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
@@ -32,10 +41,19 @@ export function VectorAiDemoClient() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPending, setAiPending] = useState(false);
+  const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
+  const [drawingName, setDrawingName] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const aiRequestIdRef = useRef(0);
   const interaction = useVectorInteraction({ state, dispatch, svgRef });
+  const savedDrawings = useSyncExternalStore(
+    subscribeVectorDrawingsStore,
+    getVectorDrawingsStoreSnapshot,
+    getVectorDrawingsStoreServerSnapshot,
+  );
+
+  const { clearTextEditSession } = interaction;
 
   const selectedId = state.selection.ids[0] ?? null;
 
@@ -51,7 +69,8 @@ export function VectorAiDemoClient() {
     VECTOR_AI_DEFAULT_FONT_SIZE;
 
   const fontSizeDraft =
-    interaction.textEditFontSizeDraft ?? String(fontSizeFallback);
+    interaction.textEditFontSizeDraft ??
+    String(fontSizeFallback ?? VECTOR_AI_DEFAULT_FONT_SIZE);
 
   const clearNotice = useCallback(() => {
     setNotice(null);
@@ -74,6 +93,41 @@ export function VectorAiDemoClient() {
       showAlert("Impossible de copier le SVG.");
     }
   }, [showAlert, showInfo, state.doc]);
+
+  const handleSaveDrawing = useCallback(() => {
+    const result = saveDrawingFromDoc({
+      doc: state.doc,
+      activeDrawingId,
+      drawingName,
+    });
+    if (!result.ok) {
+      showAlert(result.error);
+      return;
+    }
+
+    setActiveDrawingId(result.id);
+    setDrawingName(result.name);
+    showInfo("Dessin enregistré.");
+  }, [activeDrawingId, drawingName, showAlert, showInfo, state.doc]);
+
+  const handleActiveDrawingChange = useCallback(
+    (id: string | null) => {
+      const plan = planDrawingLoad(id);
+      if (!plan.ok) {
+        showAlert(plan.error);
+        setActiveDrawingId(null);
+        setDrawingName("");
+        return;
+      }
+
+      clearTextEditSession();
+      dispatch({ type: "EDITOR_LOAD", doc: plan.doc });
+      setActiveDrawingId(plan.activeDrawingId);
+      setDrawingName(plan.drawingName);
+      clearNotice();
+    },
+    [clearNotice, clearTextEditSession, showAlert],
+  );
 
   const handleCancelAi = useCallback(() => {
     aiAbortRef.current?.abort();
@@ -139,6 +193,13 @@ export function VectorAiDemoClient() {
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onExportSvg={() => void handleExportSvg()}
+        savedDrawings={savedDrawings}
+        activeDrawingId={activeDrawingId}
+        onActiveDrawingChange={handleActiveDrawingChange}
+        drawingName={drawingName}
+        onDrawingNameChange={setDrawingName}
+        onSaveDrawing={handleSaveDrawing}
+        saveDrawingDisabled={aiPending}
         fontSizeDraft={fontSizeDraft}
         fontSizeFallback={fontSizeFallback}
         fontSizeEnabled={

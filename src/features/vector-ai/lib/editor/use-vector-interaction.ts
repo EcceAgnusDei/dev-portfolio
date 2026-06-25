@@ -138,6 +138,7 @@ export type UseVectorInteractionResult = {
   ) => void;
   commitTextEdit: (input: TextEditCommit) => void;
   cancelTextEdit: () => void;
+  clearTextEditSession: () => void;
   canDeleteSelectedShape: boolean;
   deleteSelectedShape: () => void;
   canReorderSelectedShapes: boolean;
@@ -353,6 +354,13 @@ export function useVectorInteraction({
     }
     setTextEditSession(null);
   }, [dispatchActions, textEditSession, state.doc]);
+
+  const clearTextEditSession = useCallback(() => {
+    setTextEditSession(null);
+    setSession(IDLE_POINTER_SESSION);
+    pendingTextEditShapeIdRef.current = null;
+    lastTextPointerDownRef.current = null;
+  }, []);
 
   const canDeleteSelectedShape = useMemo(() => {
     if (state.tool !== "select") return false;
@@ -720,6 +728,7 @@ export function useVectorInteraction({
     commitTextEditOnFontSizeBlur,
     commitTextEdit,
     cancelTextEdit,
+    clearTextEditSession,
     canDeleteSelectedShape,
     deleteSelectedShape,
     canReorderSelectedShapes: canReorderSelected,

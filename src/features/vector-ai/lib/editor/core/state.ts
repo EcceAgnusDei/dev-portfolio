@@ -73,6 +73,7 @@ export type EditorAction =
   | { type: "SELECTION_SET"; ids: string[] }
   | { type: "TOOL_SET"; tool: EditorTool }
   | { type: "DRAFT_STYLE_SET"; draftStyle: Partial<DraftStyle> }
+  | { type: "EDITOR_LOAD"; doc: VectorDoc }
   | { type: "UNDO" }
   | { type: "REDO" };
 

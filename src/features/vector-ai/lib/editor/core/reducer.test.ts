@@ -139,6 +139,34 @@ describe("editorReducer", () => {
     expect(next).toBe(state);
   });
 
+  it("EDITOR_LOAD ignore un document invalide", () => {
+    const state = makeEditorWithRect();
+    const invalidDoc = {
+      version: 99,
+      viewBox: { x: 0, y: 0, w: 1, h: 1 },
+      shapes: [],
+    } as unknown as VectorDoc;
+    const next = editorReducer(state, { type: "EDITOR_LOAD", doc: invalidDoc });
+    expect(next).toBe(state);
+  });
+
+  it("EDITOR_LOAD remplace le doc et réinitialise sélection + historique", () => {
+    const state = makeEditorWithRect("old");
+    state.selection.ids = ["old"];
+    state.history.past = [createEmptyDoc()];
+    state.tool = "rect";
+
+    const next = editorReducer(state, {
+      type: "EDITOR_LOAD",
+      doc: makeDocWithRect("new"),
+    });
+
+    expect(next.doc.shapes[0]?.id).toBe("new");
+    expect(next.selection.ids).toEqual([]);
+    expect(next.history).toEqual({ past: [], future: [] });
+    expect(next.tool).toBe("select");
+  });
+
   it("refuse SHAPE_ADD au-delà de VECTOR_AI_MAX_SHAPES", () => {
     const shapes = Array.from({ length: VECTOR_AI_MAX_SHAPES }, (_, i) =>
       makeRectShape({ id: `s-${i}`, transform: { x: i, y: 0 } }),

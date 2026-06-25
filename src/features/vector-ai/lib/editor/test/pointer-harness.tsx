@@ -317,6 +317,12 @@ export function renderStyleToolbarHarness(
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onExportSvg={() => {}}
+        savedDrawings={[]}
+        activeDrawingId={null}
+        onActiveDrawingChange={() => {}}
+        drawingName=""
+        onDrawingNameChange={() => {}}
+        onSaveDrawing={() => {}}
         fontSizeDraft="16"
         fontSizeFallback={16}
         fontSizeEnabled={false}

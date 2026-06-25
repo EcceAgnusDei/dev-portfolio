@@ -14,6 +14,7 @@ import type {
   EditorAction,
   EditorState,
 } from "@/features/vector-ai/lib/editor/core/state";
+import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
 
 function shouldRecordHistory(recordHistory: boolean | undefined): boolean {
   return recordHistory !== false;
@@ -149,6 +150,12 @@ export function editorReducer(
         ...state,
         draftStyle: { ...state.draftStyle, ...action.draftStyle },
       };
+
+    case "EDITOR_LOAD": {
+      const parsed = parseVectorDoc(action.doc);
+      if (!parsed.ok) return state;
+      return createInitialEditorState(parsed.doc);
+    }
 
     case "UNDO": {
       const { past, future } = state.history;
