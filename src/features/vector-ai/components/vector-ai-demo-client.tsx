@@ -29,6 +29,10 @@ import {
   parseViewBoxDimensionInput,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-viewbox";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
+import {
+  buildSvgDownloadFilename,
+  downloadSvgFile,
+} from "@/features/vector-ai/lib/view/download-svg-file";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import {
   getVectorDrawingsStoreServerSnapshot,
@@ -148,6 +152,16 @@ export function VectorAiDemoClient() {
     }
   }, [showAlert, showInfo, state.doc]);
 
+  const handleDownloadSvg = useCallback(() => {
+    const { viewBox } = state.doc;
+    const svg = serializeToSvg(state.doc, {
+      width: viewBox.w,
+      height: viewBox.h,
+    });
+    downloadSvgFile(svg, buildSvgDownloadFilename(drawingName));
+    showInfo("SVG téléchargé.");
+  }, [drawingName, showInfo, state.doc]);
+
   const handleSaveDrawing = useCallback(() => {
     const result = saveDrawingFromDoc({
       doc: state.doc,
@@ -257,6 +271,7 @@ export function VectorAiDemoClient() {
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onExportSvg={() => void handleExportSvg()}
+        onDownloadSvg={handleDownloadSvg}
         savedDrawings={savedDrawings}
         activeDrawingId={activeDrawingId}
         onActiveDrawingChange={handleActiveDrawingChange}

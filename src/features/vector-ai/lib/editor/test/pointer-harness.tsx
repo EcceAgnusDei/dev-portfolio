@@ -325,6 +325,7 @@ export function renderStyleToolbarHarness(
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onExportSvg={() => {}}
+        onDownloadSvg={() => {}}
         savedDrawings={[]}
         activeDrawingId={null}
         onActiveDrawingChange={() => {}}

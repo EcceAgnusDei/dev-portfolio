@@ -318,6 +318,7 @@ export function renderViewBoxWorkflow(
           onUndo={() => dispatch({ type: "UNDO" })}
           onRedo={() => dispatch({ type: "REDO" })}
           onExportSvg={() => {}}
+          onDownloadSvg={() => {}}
           savedDrawings={savedDrawings}
           activeDrawingId={activeDrawingId}
           onActiveDrawingChange={handleActiveDrawingChange}

@@ -173,6 +173,7 @@ export type VectorEditorToolbarProps = {
   onUndo: () => void;
   onRedo: () => void;
   onExportSvg: () => void;
+  onDownloadSvg: () => void;
   savedDrawings: VectorDrawingListItem[];
   activeDrawingId: string | null;
   onActiveDrawingChange: (id: string | null) => void;
@@ -214,6 +215,7 @@ export function VectorEditorToolbar({
   onUndo,
   onRedo,
   onExportSvg,
+  onDownloadSvg,
   savedDrawings,
   activeDrawingId,
   onActiveDrawingChange,
@@ -449,6 +451,14 @@ export function VectorEditorToolbar({
             onClick={onExportSvg}
           >
             Copier SVG
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onDownloadSvg}
+          >
+            Télécharger SVG
           </Button>
         </div>
       </fieldset>
