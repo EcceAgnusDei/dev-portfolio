@@ -70,6 +70,7 @@ import {
   handleLineEndPointerDown,
   handleRectHandlePointerDown,
   handleShapePointerDown,
+  handleViewBoxHandlePointerDown,
   shapePointerEventsForTool,
   shouldCapturePointerForSession,
   shouldCommitSessionOnPointerUp,
@@ -84,6 +85,7 @@ import type {
   CircleResizeHandle,
   LineEnd,
   RectResizeHandle,
+  ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import {
   IDLE_POINTER_SESSION,
@@ -116,6 +118,8 @@ export type UseVectorInteractionParams = {
   state: EditorState;
   dispatch: React.Dispatch<EditorAction>;
   svgRef: RefObject<SVGSVGElement | null>;
+  viewBoxHandlesVisible?: boolean;
+  aiPending?: boolean;
 };
 
 export type UseVectorInteractionResult = {
@@ -173,12 +177,18 @@ export type UseVectorInteractionResult = {
     handle: CircleResizeHandle,
     event: ReactPointerEvent,
   ) => void;
+  onViewBoxHandlePointerDown?: (
+    handle: ViewBoxResizeHandle,
+    event: ReactPointerEvent,
+  ) => void;
 };
 
 export function useVectorInteraction({
   state,
   dispatch,
   svgRef,
+  viewBoxHandlesVisible = false,
+  aiPending = false,
 }: UseVectorInteractionParams): UseVectorInteractionResult {
   const [session, setSession] = useState<PointerSession>(IDLE_POINTER_SESSION);
   const [textEditSession, setTextEditSession] =
@@ -578,6 +588,28 @@ export function useVectorInteraction({
     [interactionState, dispatchActions, svgRef],
   );
 
+  const onViewBoxHandlePointerDown = useCallback(
+    (handle: ViewBoxResizeHandle, event: ReactPointerEvent) => {
+      if (textEditSessionRef.current) return;
+
+      const world = worldFromEvent(svgRef.current, event);
+      if (!world) return;
+
+      const result = handleViewBoxHandlePointerDown(
+        interactionState,
+        handle,
+        world,
+        event.pointerId,
+      );
+
+      event.stopPropagation();
+      captureSvgPointer(svgRef.current, event.pointerId);
+      dispatchActions(result.actions);
+      setSession(result.session);
+    },
+    [interactionState, dispatchActions, svgRef],
+  );
+
   const onSvgPointerDown = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
       const ignoreShapeHits =
@@ -736,7 +768,12 @@ export function useVectorInteraction({
     reorderSelectedShapes,
     styleControl,
     applyStyleControlPatch,
-    shapePointerEvents: shapePointerEventsForTool(state.tool),
+    shapePointerEvents:
+      viewBoxHandlesVisible ||
+      session.kind === "resize-viewbox" ||
+      shapePointerEventsForTool(state.tool) === "none"
+        ? "none"
+        : "auto",
     onSvgPointerDown,
     onSvgPointerMove,
     onSvgPointerUp,
@@ -747,5 +784,9 @@ export function useVectorInteraction({
     onCubicHandlePointerDown,
     onRectHandlePointerDown,
     onCircleHandlePointerDown,
+    onViewBoxHandlePointerDown:
+      (viewBoxHandlesVisible || session.kind === "resize-viewbox") && !aiPending
+        ? onViewBoxHandlePointerDown
+        : undefined,
   };
 }

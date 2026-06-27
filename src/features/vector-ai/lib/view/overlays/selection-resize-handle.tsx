@@ -29,6 +29,7 @@ export function SelectionResizeHandle({
       stroke="var(--primary)"
       strokeWidth={VECTOR_AI_SELECTION_HANDLE_STROKE_WIDTH}
       vectorEffect="non-scaling-stroke"
+      pointerEvents="all"
       style={{ cursor }}
       onPointerDown={(event) => {
         event.stopPropagation();

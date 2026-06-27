@@ -4,12 +4,11 @@ import type {
   PathShape,
   RectShape,
   VectorDoc,
+  ViewBox,
 } from "@/features/vector-ai/lib/document/types";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
-import {
-  cubicWorldPointsFromPathShape,
-} from "@/features/vector-ai/lib/editor/geometry/path-segments";
+import { cubicWorldPointsFromPathShape } from "@/features/vector-ai/lib/editor/geometry/path-segments";
 import type {
   CircleResizeHandle,
   CubicHandle,
@@ -17,6 +16,7 @@ import type {
   MoveStartState,
   PointerSession,
   RectResizeHandle,
+  ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 
 function moveStartStateFromShape(
@@ -108,6 +108,22 @@ export function beginCircleResizeSession(
     currentWorld: world,
     startCenter: { x: shape.transform.x, y: shape.transform.y },
     startR: shape.r,
+  };
+}
+
+export function beginViewBoxResizeSession(
+  viewBox: ViewBox,
+  handle: ViewBoxResizeHandle,
+  world: WorldPoint,
+  pointerId: number,
+): PointerSession {
+  return {
+    kind: "resize-viewbox",
+    pointerId,
+    handle,
+    startWorld: world,
+    currentWorld: world,
+    startViewBox: { ...viewBox },
   };
 }
 

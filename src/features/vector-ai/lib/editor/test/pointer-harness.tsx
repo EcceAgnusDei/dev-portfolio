@@ -100,6 +100,14 @@ export function changeNumberInput(input: HTMLInputElement, value: string) {
   });
 }
 
+export function changeTextInput(input: HTMLInputElement, value: string) {
+  act(() => {
+    setNativeInputValue(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 export function clickButton(button: HTMLButtonElement) {
   act(() => {
     button.click();
@@ -335,6 +343,11 @@ export function renderStyleToolbarHarness(
         styleControl={interaction.styleControl}
         styleControlsEnabled
         onStylePatch={interaction.applyStyleControlPatch}
+        viewBoxWidthDraft={String(currentState.doc.viewBox.w)}
+        viewBoxHeightDraft={String(currentState.doc.viewBox.h)}
+        onViewBoxWidthDraftChange={() => {}}
+        onViewBoxHeightDraftChange={() => {}}
+        onViewBoxOk={() => {}}
       />
     );
   }

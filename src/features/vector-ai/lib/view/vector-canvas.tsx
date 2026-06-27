@@ -1,12 +1,16 @@
 import { forwardRef, type MouseEvent, type PointerEvent } from "react";
 
-import type { TextShape, VectorDoc } from "@/features/vector-ai/lib/document/types";
+import type {
+  TextShape,
+  VectorDoc,
+} from "@/features/vector-ai/lib/document/types";
 import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
 import type { CubicPathPreview } from "@/features/vector-ai/lib/editor/preview/cubic";
 import type { LinePreview } from "@/features/vector-ai/lib/editor/preview/line";
 import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
+import { ArtboardHandles } from "@/features/vector-ai/lib/view/overlays/artboard-handles";
 import { SelectionCircleHandles } from "@/features/vector-ai/lib/view/overlays/selection-circle-handles";
 import { SelectionCubicHandles } from "@/features/vector-ai/lib/view/overlays/selection-cubic-handles";
 import { SelectionLineHandles } from "@/features/vector-ai/lib/view/overlays/selection-line-handles";
@@ -15,6 +19,7 @@ import { SelectionRectHandles } from "@/features/vector-ai/lib/view/overlays/sel
 import type {
   CircleResizeHandle,
   RectResizeHandle,
+  ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import { TextEditForeignObject } from "@/features/vector-ai/components/text-edit-foreign-object";
 import type { TextEditCommit } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
@@ -68,6 +73,11 @@ export type VectorCanvasProps = {
   cubicPreview?: CubicPathPreview | null;
   editingTextId?: string | null;
   textEdit?: VectorCanvasTextEdit | null;
+  viewBoxHandlesVisible?: boolean;
+  onViewBoxHandlePointerDown?: (
+    handle: ViewBoxResizeHandle,
+    event: PointerEvent,
+  ) => void;
 };
 
 export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
@@ -94,6 +104,8 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       cubicPreview,
       editingTextId = null,
       textEdit = null,
+      viewBoxHandlesVisible = false,
+      onViewBoxHandlePointerDown,
     },
     ref,
   ) {
@@ -253,6 +265,12 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               onCommit={textEdit.onCommit}
               onCancel={textEdit.onCancel}
               onRegisterDraftGetter={textEdit.onRegisterDraftGetter}
+            />
+          ) : null}
+          {viewBoxHandlesVisible ? (
+            <ArtboardHandles
+              viewBox={viewBox}
+              onViewBoxHandlePointerDown={onViewBoxHandlePointerDown}
             />
           ) : null}
         </g>

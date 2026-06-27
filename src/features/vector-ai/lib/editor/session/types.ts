@@ -4,6 +4,7 @@ import type {
   CubicWorldPoints,
   LineShape,
   Transform,
+  ViewBox,
 } from "@/features/vector-ai/lib/document/types";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 
@@ -24,6 +25,8 @@ export type RectResizeHandle =
   | "w";
 
 export type CircleResizeHandle = "n" | "e" | "s" | "w";
+
+export type ViewBoxResizeHandle = "n" | "e" | "s" | "w";
 
 export function lineEndWorldPoint(shape: LineShape, end: LineEnd): WorldPoint {
   if (end === "start") {
@@ -86,6 +89,14 @@ export type PointerSession =
       currentWorld: WorldPoint;
       startCenter: WorldPoint;
       startR: number;
+    }
+  | {
+      kind: "resize-viewbox";
+      pointerId: number;
+      handle: ViewBoxResizeHandle;
+      startWorld: WorldPoint;
+      currentWorld: WorldPoint;
+      startViewBox: ViewBox;
     }
   | {
       kind: "create-rect";

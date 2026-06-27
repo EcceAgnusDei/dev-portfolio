@@ -12,6 +12,7 @@ export type VectorCanvasInteractiveProps = {
   interaction: UseVectorInteractionResult;
   doc: VectorDoc;
   selectedIds: readonly string[];
+  viewBoxHandlesVisible?: boolean;
   className?: string;
 };
 
@@ -19,6 +20,7 @@ export function VectorCanvasInteractive({
   svgRef,
   interaction,
   selectedIds,
+  viewBoxHandlesVisible = false,
   className,
 }: VectorCanvasInteractiveProps) {
   return (
@@ -55,6 +57,10 @@ export function VectorCanvasInteractive({
         onCubicHandlePointerDown={interaction.onCubicHandlePointerDown}
         onRectHandlePointerDown={interaction.onRectHandlePointerDown}
         onCircleHandlePointerDown={interaction.onCircleHandlePointerDown}
+        onViewBoxHandlePointerDown={interaction.onViewBoxHandlePointerDown}
+        viewBoxHandlesVisible={
+          viewBoxHandlesVisible || interaction.session.kind === "resize-viewbox"
+        }
       />
     </div>
   );

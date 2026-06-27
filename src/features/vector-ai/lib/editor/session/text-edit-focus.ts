@@ -11,5 +11,8 @@ export function isTextEditLayerFocused(): boolean {
 }
 
 export function isTextEditLayerElement(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest('[data-layer="text-edit"]') !== null;
+  return (
+    target instanceof Element &&
+    target.closest('[data-layer="text-edit"]') !== null
+  );
 }

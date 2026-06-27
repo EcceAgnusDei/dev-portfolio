@@ -18,6 +18,7 @@ import {
   handleLineEndPointerDown,
   handleRectHandlePointerDown,
   handleShapePointerDown,
+  handleViewBoxHandlePointerDown,
   shouldCommitSessionOnPointerUp,
   updateSessionPointerWorld,
 } from "@/features/vector-ai/lib/editor/pointer/handlers";
@@ -27,6 +28,7 @@ import type {
   LineEnd,
   PointerSession,
   RectResizeHandle,
+  ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
 import { cancelCubicSessionForToolChange } from "@/features/vector-ai/lib/editor/session/session-mutations";
@@ -70,6 +72,12 @@ export type GestureStep =
       type: "circle-handle-down";
       shapeId: string;
       handle: CircleResizeHandle;
+      world: WorldPoint;
+      pointerId?: number;
+    }
+  | {
+      type: "viewbox-handle-down";
+      handle: ViewBoxResizeHandle;
       world: WorldPoint;
       pointerId?: number;
     }
@@ -214,6 +222,17 @@ export function runGesture(
           session = result.session;
           stepActions = result.actions;
         }
+        break;
+      }
+      case "viewbox-handle-down": {
+        const result = handleViewBoxHandlePointerDown(
+          interaction,
+          step.handle,
+          step.world,
+          pointerId,
+        );
+        session = result.session;
+        stepActions = result.actions;
         break;
       }
       case "move":

@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { type ChangeEvent, type FocusEvent } from "react";
+import { type ChangeEvent, type FocusEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { VectorStyleControls } from "@/features/vector-ai/components/vector-style-controls";
@@ -14,7 +14,10 @@ import type {
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import type { VectorDrawingListItem } from "@/features/vector-ai/lib/vector-drawing-storage";
-import { VECTOR_AI_MAX_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_MAX_FONT_SIZE,
+  VECTOR_AI_MAX_VIEWBOX_DIMENSION,
+} from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
 const Z_ORDER_MENU_ITEMS: {
@@ -26,6 +29,132 @@ const Z_ORDER_MENU_ITEMS: {
   { command: "backward", label: "Reculer" },
   { command: "back", label: "Arrière-plan" },
 ];
+
+type VectorViewBoxDimensionsMenuProps = {
+  widthDraft: string;
+  heightDraft: string;
+  disabled?: boolean;
+  onWidthDraftChange: (value: string) => void;
+  onHeightDraftChange: (value: string) => void;
+  onOk: () => void;
+  onOpenChange?: (open: boolean, opening?: boolean) => void;
+};
+
+type MenuOpenChangeDetails = {
+  reason: string;
+  event: Event;
+  cancel: () => void;
+  allowPropagation: () => void;
+};
+
+function isViewBoxHandlePointerTarget(event: Event): boolean {
+  if (!(event.target instanceof Element)) return false;
+  return event.target.closest("[data-viewbox-handle]") !== null;
+}
+
+function VectorViewBoxDimensionsMenu({
+  widthDraft,
+  heightDraft,
+  disabled = false,
+  onWidthDraftChange,
+  onHeightDraftChange,
+  onOk,
+  onOpenChange,
+}: VectorViewBoxDimensionsMenuProps) {
+  const [open, setOpen] = useState(false);
+
+  function handleOpenChange(
+    nextOpen: boolean,
+    eventDetails: MenuOpenChangeDetails,
+  ) {
+    if (
+      !nextOpen &&
+      eventDetails.reason === "outside-press" &&
+      isViewBoxHandlePointerTarget(eventDetails.event)
+    ) {
+      eventDetails.cancel();
+      eventDetails.allowPropagation();
+      return;
+    }
+
+    const opening = nextOpen && !open;
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen, opening);
+  }
+
+  function handleOk() {
+    onOk();
+  }
+
+  return (
+    <Menu.Root open={open} onOpenChange={handleOpenChange} modal={false}>
+      <Menu.Trigger
+        disabled={disabled}
+        render={<Button variant={open ? "default" : "outline"} size="sm" />}
+      >
+        Dimensions
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner sideOffset={4} align="start">
+          <Menu.Popup
+            className={cn(
+              "z-50 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none",
+              "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+              "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            )}
+          >
+            <div
+              className="flex flex-wrap items-end gap-2"
+              onKeyDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <label className="flex min-w-[5.5rem] flex-col gap-1 text-sm">
+                <span className="text-muted-foreground text-xs">Largeur</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={widthDraft}
+                  onChange={(event) => onWidthDraftChange(event.target.value)}
+                  disabled={disabled}
+                  min={1}
+                  max={VECTOR_AI_MAX_VIEWBOX_DIMENSION}
+                  aria-label="Largeur du plan"
+                  className="h-8 rounded-md border border-border bg-background px-2 text-center text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </label>
+              <span className="pb-2 text-sm text-muted-foreground" aria-hidden>
+                ×
+              </span>
+              <label className="flex min-w-[5.5rem] flex-col gap-1 text-sm">
+                <span className="text-muted-foreground text-xs">Hauteur</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={heightDraft}
+                  onChange={(event) => onHeightDraftChange(event.target.value)}
+                  disabled={disabled}
+                  min={1}
+                  max={VECTOR_AI_MAX_VIEWBOX_DIMENSION}
+                  aria-label="Hauteur du plan"
+                  className="h-8 rounded-md border border-border bg-background px-2 text-center text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </label>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={disabled}
+                onClick={handleOk}
+              >
+                OK
+              </Button>
+            </div>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
 
 export const VECTOR_EDITOR_TOOLS: { id: EditorTool; label: string }[] = [
   { id: "select", label: "Sélection" },
@@ -67,6 +196,13 @@ export type VectorEditorToolbarProps = {
   styleControl: StyleControlState;
   styleControlsEnabled: boolean;
   onStylePatch: (patch: StylePatch) => void;
+  viewBoxWidthDraft: string;
+  viewBoxHeightDraft: string;
+  onViewBoxWidthDraftChange: (value: string) => void;
+  onViewBoxHeightDraftChange: (value: string) => void;
+  onViewBoxOk: () => void;
+  onViewBoxDimensionsOpenChange?: (open: boolean, opening?: boolean) => void;
+  viewBoxControlsDisabled?: boolean;
   className?: string;
 };
 
@@ -98,6 +234,13 @@ export function VectorEditorToolbar({
   styleControl,
   styleControlsEnabled,
   onStylePatch,
+  viewBoxWidthDraft,
+  viewBoxHeightDraft,
+  onViewBoxWidthDraftChange,
+  onViewBoxHeightDraftChange,
+  onViewBoxOk,
+  onViewBoxDimensionsOpenChange,
+  viewBoxControlsDisabled = false,
   className,
 }: VectorEditorToolbarProps) {
   function handleFontSizeChange(event: ChangeEvent<HTMLInputElement>) {
@@ -272,6 +415,15 @@ export function VectorEditorToolbar({
       <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
         <legend className="text-center text-sm font-medium">Document</legend>
         <div className="flex flex-wrap items-center justify-center gap-2">
+          <VectorViewBoxDimensionsMenu
+            widthDraft={viewBoxWidthDraft}
+            heightDraft={viewBoxHeightDraft}
+            disabled={viewBoxControlsDisabled}
+            onWidthDraftChange={onViewBoxWidthDraftChange}
+            onHeightDraftChange={onViewBoxHeightDraftChange}
+            onOk={onViewBoxOk}
+            onOpenChange={onViewBoxDimensionsOpenChange}
+          />
           <Button
             type="button"
             variant="outline"

@@ -91,4 +91,27 @@ describe("VectorCanvas", () => {
     expect(markup).toContain('x2="320"');
     expect(markup).toContain('y2="320"');
   });
+
+  it("affiche les poignées du plan quand viewBoxHandlesVisible est actif", () => {
+    const markup = renderToStaticMarkup(
+      <VectorCanvas
+        doc={makeSampleDoc()}
+        viewBoxHandlesVisible
+        onViewBoxHandlePointerDown={() => {}}
+      />,
+    );
+
+    expect(markup).toContain('data-artboard-handles="true"');
+    expect(markup).toContain('data-artboard-outline="true"');
+    expect(markup).toContain('data-viewbox-handle="n"');
+    expect(markup).toContain('data-viewbox-handle="e"');
+    expect(markup).toContain('data-viewbox-handle="s"');
+    expect(markup).toContain('data-viewbox-handle="w"');
+  });
+
+  it("masque les poignées du plan par défaut", () => {
+    const markup = renderToStaticMarkup(<VectorCanvas doc={makeSampleDoc()} />);
+
+    expect(markup).not.toContain("data-artboard-handles");
+  });
 });

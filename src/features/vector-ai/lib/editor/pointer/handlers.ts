@@ -1,6 +1,9 @@
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
-import { resolveShapeClickSelection, movableSelectedIds } from "@/features/vector-ai/lib/editor/core/selection";
+import {
+  resolveShapeClickSelection,
+  movableSelectedIds,
+} from "@/features/vector-ai/lib/editor/core/selection";
 import { getShapeById } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import type {
   EditorAction,
@@ -23,6 +26,7 @@ import {
   beginLineEndMoveSession,
   beginMoveSession,
   beginRectResizeSession,
+  beginViewBoxResizeSession,
 } from "@/features/vector-ai/lib/editor/session/begin-mutate";
 import type {
   CircleResizeHandle,
@@ -30,6 +34,7 @@ import type {
   LineEnd,
   PointerSession,
   RectResizeHandle,
+  ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
 import { updateSessionPointerWorld } from "@/features/vector-ai/lib/editor/session/session-mutations";
@@ -57,7 +62,8 @@ export function shouldCapturePointerForSession(
     session.kind === "move-line-end" ||
     session.kind === "move-cubic-handle" ||
     session.kind === "resize-rect" ||
-    session.kind === "resize-circle"
+    session.kind === "resize-circle" ||
+    session.kind === "resize-viewbox"
   );
 }
 
@@ -248,6 +254,23 @@ export function handleCircleHandlePointerDown(
   return {
     session: beginCircleResizeSession(shape, handle, world, pointerId),
     actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
+  };
+}
+
+export function handleViewBoxHandlePointerDown(
+  state: EditorInteractionState,
+  handle: ViewBoxResizeHandle,
+  world: WorldPoint,
+  pointerId: number,
+): { session: PointerSession; actions: EditorAction[] } {
+  return {
+    session: beginViewBoxResizeSession(
+      state.doc.viewBox,
+      handle,
+      world,
+      pointerId,
+    ),
+    actions: [],
   };
 }
 

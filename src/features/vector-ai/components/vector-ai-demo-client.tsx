@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { VectorAiPromptPanel } from "@/features/vector-ai/components/vector-ai-prompt-panel";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
@@ -17,6 +24,10 @@ import {
   getShapeById,
 } from "@/features/vector-ai/lib/editor/core/editor-queries";
 import { createInitialEditorState } from "@/features/vector-ai/lib/editor/core/state";
+import {
+  commitViewBoxSizeActions,
+  parseViewBoxDimensionInput,
+} from "@/features/vector-ai/lib/editor/dispatch/commit-viewbox";
 import { useVectorInteraction } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import {
@@ -24,7 +35,11 @@ import {
   getVectorDrawingsStoreSnapshot,
   subscribeVectorDrawingsStore,
 } from "@/features/vector-ai/lib/vector-drawing-storage";
-import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_DEFAULT_FONT_SIZE,
+  VECTOR_AI_DEFAULT_VIEWBOX,
+  VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO,
+} from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
 type Notice = {
@@ -43,10 +58,23 @@ export function VectorAiDemoClient() {
   const [aiPending, setAiPending] = useState(false);
   const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
   const [drawingName, setDrawingName] = useState("");
+  const [viewBoxWidthDraft, setViewBoxWidthDraft] = useState(() =>
+    String(VECTOR_AI_DEFAULT_VIEWBOX.w),
+  );
+  const [viewBoxHeightDraft, setViewBoxHeightDraft] = useState(() =>
+    String(VECTOR_AI_DEFAULT_VIEWBOX.h),
+  );
+  const [viewBoxHandlesVisible, setViewBoxHandlesVisible] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const aiRequestIdRef = useRef(0);
-  const interaction = useVectorInteraction({ state, dispatch, svgRef });
+  const interaction = useVectorInteraction({
+    state,
+    dispatch,
+    svgRef,
+    viewBoxHandlesVisible,
+    aiPending,
+  });
   const savedDrawings = useSyncExternalStore(
     subscribeVectorDrawingsStore,
     getVectorDrawingsStoreSnapshot,
@@ -71,6 +99,32 @@ export function VectorAiDemoClient() {
   const fontSizeDraft =
     interaction.textEditFontSizeDraft ??
     String(fontSizeFallback ?? VECTOR_AI_DEFAULT_FONT_SIZE);
+
+  const handleViewBoxDimensionsOpenChange = useCallback(
+    (open: boolean, opening = false) => {
+      setViewBoxHandlesVisible(open);
+      if (opening) {
+        setViewBoxWidthDraft(String(state.doc.viewBox.w));
+        setViewBoxHeightDraft(String(state.doc.viewBox.h));
+      }
+    },
+    [state.doc.viewBox.h, state.doc.viewBox.w],
+  );
+
+  const handleViewBoxOk = useCallback(() => {
+    const { w: currentW, h: currentH } = state.doc.viewBox;
+    const w = parseViewBoxDimensionInput(viewBoxWidthDraft, currentW);
+    const h = parseViewBoxDimensionInput(viewBoxHeightDraft, currentH);
+    const actions = commitViewBoxSizeActions(state.doc.viewBox, {
+      widthDraft: viewBoxWidthDraft,
+      heightDraft: viewBoxHeightDraft,
+    });
+    for (const action of actions) {
+      dispatch(action);
+    }
+    setViewBoxWidthDraft(String(w));
+    setViewBoxHeightDraft(String(h));
+  }, [state.doc.viewBox, viewBoxHeightDraft, viewBoxWidthDraft]);
 
   const clearNotice = useCallback(() => {
     setNotice(null);
@@ -183,6 +237,16 @@ export function VectorAiDemoClient() {
         ? `Sélection : ${state.selection.ids.join(", ")}`
         : "Aucune sélection");
 
+  const { w: viewBoxW, h: viewBoxH } = interaction.displayDoc.viewBox;
+  const canvasDisplaySize = useMemo(() => {
+    const w = viewBoxW > 0 ? viewBoxW : VECTOR_AI_DEFAULT_VIEWBOX.w;
+    const h = viewBoxH > 0 ? viewBoxH : VECTOR_AI_DEFAULT_VIEWBOX.h;
+    return {
+      width: `${w * VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO}rem`,
+      height: `${h * VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO}rem`,
+    };
+  }, [viewBoxH, viewBoxW]);
+
   return (
     <div className="flex flex-col gap-4">
       <VectorEditorToolbar
@@ -215,6 +279,13 @@ export function VectorAiDemoClient() {
         styleControl={interaction.styleControl}
         styleControlsEnabled={!aiPending}
         onStylePatch={interaction.applyStyleControlPatch}
+        viewBoxWidthDraft={viewBoxWidthDraft}
+        viewBoxHeightDraft={viewBoxHeightDraft}
+        onViewBoxWidthDraftChange={setViewBoxWidthDraft}
+        onViewBoxHeightDraftChange={setViewBoxHeightDraft}
+        onViewBoxOk={handleViewBoxOk}
+        onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
+        viewBoxControlsDisabled={aiPending}
       />
       <VectorAiPromptPanel
         aiPrompt={aiPrompt}
@@ -242,18 +313,22 @@ export function VectorAiDemoClient() {
       >
         {statusText}
       </p>
-      <div
-        className={cn(
-          "mx-auto aspect-[4/3] w-full max-w-3xl",
-          aiPending && "pointer-events-none opacity-60",
-        )}
-      >
-        <VectorCanvasInteractive
-          svgRef={svgRef}
-          interaction={interaction}
-          doc={state.doc}
-          selectedIds={state.selection.ids}
-        />
+      <div className="mx-auto max-w-full overflow-auto">
+        <div
+          className={cn(
+            "mx-auto",
+            aiPending && "pointer-events-none opacity-60",
+          )}
+          style={canvasDisplaySize}
+        >
+          <VectorCanvasInteractive
+            svgRef={svgRef}
+            interaction={interaction}
+            doc={state.doc}
+            selectedIds={state.selection.ids}
+            viewBoxHandlesVisible={viewBoxHandlesVisible}
+          />
+        </div>
       </div>
     </div>
   );

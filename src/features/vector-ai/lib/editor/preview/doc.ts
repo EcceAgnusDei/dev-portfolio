@@ -12,6 +12,7 @@ import {
   resizeCircleFromHandle,
   resizeRectFromHandle,
 } from "@/features/vector-ai/lib/editor/geometry/resize";
+import { resizeViewBoxFromHandle } from "@/features/vector-ai/lib/editor/geometry/resize-viewbox";
 import {
   clampPointToViewBox,
   clampRectPreviewToViewBox,
@@ -184,6 +185,17 @@ export function docWithPointerPreview(
   doc: VectorDoc,
   session: PointerSession,
 ): VectorDoc {
+  if (session.kind === "resize-viewbox") {
+    return {
+      ...doc,
+      viewBox: resizeViewBoxFromHandle(
+        session.startViewBox,
+        session.handle,
+        session.currentWorld,
+      ),
+    };
+  }
+
   if (
     session.kind === "idle" ||
     session.kind === "create-rect" ||
