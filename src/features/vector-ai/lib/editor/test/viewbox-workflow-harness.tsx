@@ -9,7 +9,10 @@ import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
-import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
+import {
+  VectorEditorBottomToolbar,
+  VectorEditorPrimaryToolbar,
+} from "@/features/vector-ai/components/vector-editor-toolbar";
 import type { ViewBox } from "@/features/vector-ai/lib/document/types";
 import {
   planDrawingLoad,
@@ -310,22 +313,13 @@ export function renderViewBoxWorkflow(
 
     return (
       <>
-        <VectorEditorToolbar
+        <VectorEditorPrimaryToolbar
           activeTool={state.tool}
           onToolChange={interaction.setTool}
           canUndo={canUndo(state)}
           canRedo={canRedo(state)}
           onUndo={() => dispatch({ type: "UNDO" })}
           onRedo={() => dispatch({ type: "REDO" })}
-          onExportSvg={() => {}}
-          onDownloadSvg={() => {}}
-          savedDrawings={savedDrawings}
-          activeDrawingId={activeDrawingId}
-          onActiveDrawingChange={handleActiveDrawingChange}
-          drawingName={drawingName}
-          onDrawingNameChange={setDrawingName}
-          onSaveDrawing={handleSaveDrawing}
-          saveDrawingDisabled={aiPending}
           fontSizeDraft={String(VECTOR_AI_DEFAULT_FONT_SIZE)}
           fontSizeFallback={VECTOR_AI_DEFAULT_FONT_SIZE}
           fontSizeEnabled={false}
@@ -343,6 +337,24 @@ export function renderViewBoxWorkflow(
           styleControl={interaction.styleControl}
           styleControlsEnabled={!aiPending}
           onStylePatch={interaction.applyStyleControlPatch}
+        />
+        <VectorCanvasInteractive
+          svgRef={svgRef}
+          interaction={interaction}
+          doc={state.doc}
+          selectedIds={state.selection.ids}
+          viewBoxHandlesVisible={viewBoxHandlesVisible}
+        />
+        <VectorEditorBottomToolbar
+          onExportSvg={() => {}}
+          onDownloadSvg={() => {}}
+          savedDrawings={savedDrawings}
+          activeDrawingId={activeDrawingId}
+          onActiveDrawingChange={handleActiveDrawingChange}
+          drawingName={drawingName}
+          onDrawingNameChange={setDrawingName}
+          onSaveDrawing={handleSaveDrawing}
+          saveDrawingDisabled={aiPending}
           viewBoxWidthDraft={viewBoxWidthDraft}
           viewBoxHeightDraft={viewBoxHeightDraft}
           onViewBoxWidthDraftChange={setViewBoxWidthDraft}
@@ -356,13 +368,7 @@ export function renderViewBoxWorkflow(
           onZoomIn={() => {}}
           onZoomOut={() => {}}
           onZoomReset={() => {}}
-        />
-        <VectorCanvasInteractive
-          svgRef={svgRef}
-          interaction={interaction}
-          doc={state.doc}
-          selectedIds={state.selection.ids}
-          viewBoxHandlesVisible={viewBoxHandlesVisible}
+          statusText=""
         />
       </>
     );

@@ -7,7 +7,7 @@ import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
-import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
+import { VectorEditorPrimaryToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
 import { editorReducer } from "@/features/vector-ai/lib/editor/core/reducer";
 import type {
   EditorAction,
@@ -317,21 +317,13 @@ export function renderStyleToolbarHarness(
     });
 
     return (
-      <VectorEditorToolbar
+      <VectorEditorPrimaryToolbar
         activeTool={currentState.tool}
         onToolChange={interaction.setTool}
         canUndo={false}
         canRedo={false}
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
-        onExportSvg={() => {}}
-        onDownloadSvg={() => {}}
-        savedDrawings={[]}
-        activeDrawingId={null}
-        onActiveDrawingChange={() => {}}
-        drawingName=""
-        onDrawingNameChange={() => {}}
-        onSaveDrawing={() => {}}
         fontSizeDraft="16"
         fontSizeFallback={16}
         fontSizeEnabled={false}
@@ -344,17 +336,6 @@ export function renderStyleToolbarHarness(
         styleControl={interaction.styleControl}
         styleControlsEnabled
         onStylePatch={interaction.applyStyleControlPatch}
-        viewBoxWidthDraft={String(currentState.doc.viewBox.w)}
-        viewBoxHeightDraft={String(currentState.doc.viewBox.h)}
-        onViewBoxWidthDraftChange={() => {}}
-        onViewBoxHeightDraftChange={() => {}}
-        onViewBoxOk={() => {}}
-        displayZoom={1}
-        canZoomIn={false}
-        canZoomOut={false}
-        onZoomIn={() => {}}
-        onZoomOut={() => {}}
-        onZoomReset={() => {}}
       />
     );
   }

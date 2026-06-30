@@ -11,7 +11,10 @@ import {
 
 import { VectorAiPromptPanel } from "@/features/vector-ai/components/vector-ai-prompt-panel";
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
-import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
+import {
+  VectorEditorBottomToolbar,
+  VectorEditorPrimaryToolbar,
+} from "@/features/vector-ai/components/vector-editor-toolbar";
 import {
   planDrawingLoad,
   saveDrawingFromDoc,
@@ -263,12 +266,7 @@ export function VectorAiDemoClient() {
   }, [aiPending, aiPrompt, clearNotice, showAlert, showInfo, state.doc]);
 
   const statusText =
-    notice?.text ??
-    (aiPending
-      ? "Modification en cours…"
-      : state.selection.ids.length > 0
-        ? `Sélection : ${state.selection.ids.join(", ")}`
-        : "Aucune sélection");
+    notice?.text ?? (aiPending ? "Modification en cours…" : "");
 
   const { w: viewBoxW, h: viewBoxH } = interaction.displayDoc.viewBox;
   const canvasDisplaySize = useMemo(() => {
@@ -283,22 +281,13 @@ export function VectorAiDemoClient() {
 
   return (
     <div className="flex flex-col gap-4">
-      <VectorEditorToolbar
+      <VectorEditorPrimaryToolbar
         activeTool={state.tool}
         onToolChange={interaction.setTool}
         canUndo={canUndo(state)}
         canRedo={canRedo(state)}
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
-        onExportSvg={() => void handleExportSvg()}
-        onDownloadSvg={handleDownloadSvg}
-        savedDrawings={savedDrawings}
-        activeDrawingId={activeDrawingId}
-        onActiveDrawingChange={handleActiveDrawingChange}
-        drawingName={drawingName}
-        onDrawingNameChange={setDrawingName}
-        onSaveDrawing={handleSaveDrawing}
-        saveDrawingDisabled={aiPending}
         fontSizeDraft={fontSizeDraft}
         fontSizeFallback={fontSizeFallback}
         fontSizeEnabled={
@@ -314,20 +303,6 @@ export function VectorAiDemoClient() {
         styleControl={interaction.styleControl}
         styleControlsEnabled={!aiPending}
         onStylePatch={interaction.applyStyleControlPatch}
-        viewBoxWidthDraft={viewBoxWidthDraft}
-        viewBoxHeightDraft={viewBoxHeightDraft}
-        onViewBoxWidthDraftChange={setViewBoxWidthDraft}
-        onViewBoxHeightDraftChange={setViewBoxHeightDraft}
-        onViewBoxOk={handleViewBoxOk}
-        onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
-        viewBoxControlsDisabled={aiPending}
-        displayZoom={displayZoom}
-        canZoomIn={canStepDisplayZoomIn(displayZoom)}
-        canZoomOut={canStepDisplayZoomOut(displayZoom)}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onZoomReset={handleZoomReset}
-        displayZoomControlsDisabled={aiPending}
       />
       <VectorAiPromptPanel
         aiPrompt={aiPrompt}
@@ -339,22 +314,6 @@ export function VectorAiDemoClient() {
         onCancelAi={handleCancelAi}
         aiPending={aiPending}
       />
-      <p
-        className={cn(
-          "text-sm",
-          notice?.variant === "alert"
-            ? "text-destructive"
-            : "text-muted-foreground",
-          !notice &&
-            state.selection.ids.length === 0 &&
-            !aiPending &&
-            "opacity-80",
-        )}
-        role={notice?.variant === "alert" ? "alert" : "status"}
-        aria-live="polite"
-      >
-        {statusText}
-      </p>
       <div className="mx-auto max-w-full overflow-auto">
         <div
           className={cn(
@@ -372,6 +331,33 @@ export function VectorAiDemoClient() {
           />
         </div>
       </div>
+      <VectorEditorBottomToolbar
+        onExportSvg={() => void handleExportSvg()}
+        onDownloadSvg={handleDownloadSvg}
+        savedDrawings={savedDrawings}
+        activeDrawingId={activeDrawingId}
+        onActiveDrawingChange={handleActiveDrawingChange}
+        drawingName={drawingName}
+        onDrawingNameChange={setDrawingName}
+        onSaveDrawing={handleSaveDrawing}
+        saveDrawingDisabled={aiPending}
+        viewBoxWidthDraft={viewBoxWidthDraft}
+        viewBoxHeightDraft={viewBoxHeightDraft}
+        onViewBoxWidthDraftChange={setViewBoxWidthDraft}
+        onViewBoxHeightDraftChange={setViewBoxHeightDraft}
+        onViewBoxOk={handleViewBoxOk}
+        onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
+        viewBoxControlsDisabled={aiPending}
+        displayZoom={displayZoom}
+        canZoomIn={canStepDisplayZoomIn(displayZoom)}
+        canZoomOut={canStepDisplayZoomOut(displayZoom)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onZoomReset={handleZoomReset}
+        displayZoomControlsDisabled={aiPending}
+        statusText={statusText}
+        statusAlert={notice?.variant === "alert"}
+      />
     </div>
   );
 }

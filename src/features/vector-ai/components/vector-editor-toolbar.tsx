@@ -21,6 +21,8 @@ import {
 } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
+const TOOLBAR_SHELL_CLASS = "mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3";
+
 const Z_ORDER_MENU_ITEMS: {
   command: ZOrderCommand;
   label: string;
@@ -166,22 +168,13 @@ export const VECTOR_EDITOR_TOOLS: { id: EditorTool; label: string }[] = [
   { id: "text", label: "Texte" },
 ];
 
-export type VectorEditorToolbarProps = {
+export type VectorEditorPrimaryToolbarProps = {
   activeTool: EditorTool;
   onToolChange: (tool: EditorTool) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  onExportSvg: () => void;
-  onDownloadSvg: () => void;
-  savedDrawings: VectorDrawingListItem[];
-  activeDrawingId: string | null;
-  onActiveDrawingChange: (id: string | null) => void;
-  drawingName: string;
-  onDrawingNameChange: (value: string) => void;
-  onSaveDrawing: () => void;
-  saveDrawingDisabled?: boolean;
   fontSizeDraft: string;
   fontSizeFallback: number;
   fontSizeEnabled: boolean;
@@ -198,6 +191,19 @@ export type VectorEditorToolbarProps = {
   styleControl: StyleControlState;
   styleControlsEnabled: boolean;
   onStylePatch: (patch: StylePatch) => void;
+  className?: string;
+};
+
+export type VectorEditorBottomToolbarProps = {
+  onExportSvg: () => void;
+  onDownloadSvg: () => void;
+  savedDrawings: VectorDrawingListItem[];
+  activeDrawingId: string | null;
+  onActiveDrawingChange: (id: string | null) => void;
+  drawingName: string;
+  onDrawingNameChange: (value: string) => void;
+  onSaveDrawing: () => void;
+  saveDrawingDisabled?: boolean;
   viewBoxWidthDraft: string;
   viewBoxHeightDraft: string;
   onViewBoxWidthDraftChange: (value: string) => void;
@@ -212,25 +218,21 @@ export type VectorEditorToolbarProps = {
   onZoomOut: () => void;
   onZoomReset: () => void;
   displayZoomControlsDisabled?: boolean;
+  statusText: string;
+  statusAlert?: boolean;
   className?: string;
 };
 
-export function VectorEditorToolbar({
+export type VectorEditorToolbarProps = VectorEditorPrimaryToolbarProps &
+  VectorEditorBottomToolbarProps;
+
+export function VectorEditorPrimaryToolbar({
   activeTool,
   onToolChange,
   canUndo,
   canRedo,
   onUndo,
   onRedo,
-  onExportSvg,
-  onDownloadSvg,
-  savedDrawings,
-  activeDrawingId,
-  onActiveDrawingChange,
-  drawingName = "",
-  onDrawingNameChange,
-  onSaveDrawing,
-  saveDrawingDisabled = false,
   fontSizeDraft,
   fontSizeFallback,
   fontSizeEnabled,
@@ -244,22 +246,8 @@ export function VectorEditorToolbar({
   styleControl,
   styleControlsEnabled,
   onStylePatch,
-  viewBoxWidthDraft,
-  viewBoxHeightDraft,
-  onViewBoxWidthDraftChange,
-  onViewBoxHeightDraftChange,
-  onViewBoxOk,
-  onViewBoxDimensionsOpenChange,
-  viewBoxControlsDisabled = false,
-  displayZoom,
-  canZoomIn,
-  canZoomOut,
-  onZoomIn,
-  onZoomOut,
-  onZoomReset,
-  displayZoomControlsDisabled = false,
   className,
-}: VectorEditorToolbarProps) {
+}: VectorEditorPrimaryToolbarProps) {
   function handleFontSizeChange(event: ChangeEvent<HTMLInputElement>) {
     if (!fontSizeEnabled) return;
     onFontSizeDraftChange(event.target.value);
@@ -273,12 +261,7 @@ export function VectorEditorToolbar({
   }
 
   return (
-    <div
-      className={cn(
-        "mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3",
-        className,
-      )}
-    >
+    <div className={cn(TOOLBAR_SHELL_CLASS, className)}>
       <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
         <legend className="text-center text-sm font-medium">Outils</legend>
         <div className="-mx-1 flex min-w-0 w-full justify-center overflow-x-auto px-1 pb-1">
@@ -295,6 +278,26 @@ export function VectorEditorToolbar({
                 {tool.label}
               </Button>
             ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={!canUndo}
+              onClick={onUndo}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={!canRedo}
+              onClick={onRedo}
+            >
+              Rétablir
+            </Button>
           </div>
         </div>
       </fieldset>
@@ -379,6 +382,118 @@ export function VectorEditorToolbar({
           </Menu.Root>
         </div>
       </fieldset>
+    </div>
+  );
+}
+
+export function VectorEditorBottomToolbar({
+  onExportSvg,
+  onDownloadSvg,
+  savedDrawings,
+  activeDrawingId,
+  onActiveDrawingChange,
+  drawingName = "",
+  onDrawingNameChange,
+  onSaveDrawing,
+  saveDrawingDisabled = false,
+  viewBoxWidthDraft,
+  viewBoxHeightDraft,
+  onViewBoxWidthDraftChange,
+  onViewBoxHeightDraftChange,
+  onViewBoxOk,
+  onViewBoxDimensionsOpenChange,
+  viewBoxControlsDisabled = false,
+  displayZoom,
+  canZoomIn,
+  canZoomOut,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  displayZoomControlsDisabled = false,
+  statusText,
+  statusAlert = false,
+  className,
+}: VectorEditorBottomToolbarProps) {
+  return (
+    <div className={cn(TOOLBAR_SHELL_CLASS, className)}>
+      <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
+        <legend className="text-center text-sm font-medium">Document</legend>
+        <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
+          <div
+            className="flex items-center gap-1"
+            role="group"
+            aria-label="Zoom d'affichage"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={displayZoomControlsDisabled || !canZoomOut}
+              onClick={onZoomOut}
+              aria-label="Zoom arrière"
+            >
+              −
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={displayZoomControlsDisabled || displayZoom === 1}
+              onClick={onZoomReset}
+              aria-label="Zoom à 100 %"
+            >
+              {formatDisplayZoomPercent(displayZoom)}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={displayZoomControlsDisabled || !canZoomIn}
+              onClick={onZoomIn}
+              aria-label="Zoom avant"
+            >
+              +
+            </Button>
+          </div>
+          <VectorViewBoxDimensionsMenu
+            widthDraft={viewBoxWidthDraft}
+            heightDraft={viewBoxHeightDraft}
+            disabled={viewBoxControlsDisabled}
+            onWidthDraftChange={onViewBoxWidthDraftChange}
+            onHeightDraftChange={onViewBoxHeightDraftChange}
+            onOk={onViewBoxOk}
+            onOpenChange={onViewBoxDimensionsOpenChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onExportSvg}
+          >
+            Copier SVG
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onDownloadSvg}
+          >
+            Télécharger SVG
+          </Button>
+          {statusText ? (
+            <p
+              className={cn(
+                "min-w-0 flex-1 basis-full text-center text-sm sm:basis-auto sm:text-left",
+                statusAlert ? "text-destructive" : "text-muted-foreground",
+              )}
+              role={statusAlert ? "alert" : "status"}
+              aria-live="polite"
+            >
+              {statusText}
+            </p>
+          ) : null}
+        </div>
+      </fieldset>
 
       <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
         <legend className="text-center text-sm font-medium">Vos dessins</legend>
@@ -428,91 +543,110 @@ export function VectorEditorToolbar({
           </div>
         </div>
       </fieldset>
-
-      <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
-        <legend className="text-center text-sm font-medium">Document</legend>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <VectorViewBoxDimensionsMenu
-            widthDraft={viewBoxWidthDraft}
-            heightDraft={viewBoxHeightDraft}
-            disabled={viewBoxControlsDisabled}
-            onWidthDraftChange={onViewBoxWidthDraftChange}
-            onHeightDraftChange={onViewBoxHeightDraftChange}
-            onOk={onViewBoxOk}
-            onOpenChange={onViewBoxDimensionsOpenChange}
-          />
-          <div
-            className="flex items-center gap-1"
-            role="group"
-            aria-label="Zoom d'affichage"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={displayZoomControlsDisabled || !canZoomOut}
-              onClick={onZoomOut}
-              aria-label="Zoom arrière"
-            >
-              −
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={displayZoomControlsDisabled || displayZoom === 1}
-              onClick={onZoomReset}
-              aria-label="Zoom à 100 %"
-            >
-              {formatDisplayZoomPercent(displayZoom)}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={displayZoomControlsDisabled || !canZoomIn}
-              onClick={onZoomIn}
-              aria-label="Zoom avant"
-            >
-              +
-            </Button>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canUndo}
-            onClick={onUndo}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canRedo}
-            onClick={onRedo}
-          >
-            Rétablir
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onExportSvg}
-          >
-            Copier SVG
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDownloadSvg}
-          >
-            Télécharger SVG
-          </Button>
-        </div>
-      </fieldset>
     </div>
+  );
+}
+
+export function VectorEditorToolbar(props: VectorEditorToolbarProps) {
+  const {
+    activeTool,
+    onToolChange,
+    canUndo,
+    canRedo,
+    onUndo,
+    onRedo,
+    fontSizeDraft,
+    fontSizeFallback,
+    fontSizeEnabled,
+    onFontSizeDraftChange,
+    onFontSizeBlur,
+    canDelete,
+    onDelete,
+    canReorder,
+    zOrderAvailability,
+    onZOrderCommand,
+    styleControl,
+    styleControlsEnabled,
+    onStylePatch,
+    onExportSvg,
+    onDownloadSvg,
+    savedDrawings,
+    activeDrawingId,
+    onActiveDrawingChange,
+    drawingName,
+    onDrawingNameChange,
+    onSaveDrawing,
+    saveDrawingDisabled,
+    viewBoxWidthDraft,
+    viewBoxHeightDraft,
+    onViewBoxWidthDraftChange,
+    onViewBoxHeightDraftChange,
+    onViewBoxOk,
+    onViewBoxDimensionsOpenChange,
+    viewBoxControlsDisabled,
+    displayZoom,
+    canZoomIn,
+    canZoomOut,
+    onZoomIn,
+    onZoomOut,
+    onZoomReset,
+    displayZoomControlsDisabled,
+    statusText,
+    statusAlert,
+    className,
+  } = props;
+
+  return (
+    <>
+      <VectorEditorPrimaryToolbar
+        activeTool={activeTool}
+        onToolChange={onToolChange}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        fontSizeDraft={fontSizeDraft}
+        fontSizeFallback={fontSizeFallback}
+        fontSizeEnabled={fontSizeEnabled}
+        onFontSizeDraftChange={onFontSizeDraftChange}
+        onFontSizeBlur={onFontSizeBlur}
+        canDelete={canDelete}
+        onDelete={onDelete}
+        canReorder={canReorder}
+        zOrderAvailability={zOrderAvailability}
+        onZOrderCommand={onZOrderCommand}
+        styleControl={styleControl}
+        styleControlsEnabled={styleControlsEnabled}
+        onStylePatch={onStylePatch}
+      />
+      <VectorEditorBottomToolbar
+        onExportSvg={onExportSvg}
+        onDownloadSvg={onDownloadSvg}
+        savedDrawings={savedDrawings}
+        activeDrawingId={activeDrawingId}
+        onActiveDrawingChange={onActiveDrawingChange}
+        drawingName={drawingName}
+        onDrawingNameChange={onDrawingNameChange}
+        onSaveDrawing={onSaveDrawing}
+        saveDrawingDisabled={saveDrawingDisabled}
+        viewBoxWidthDraft={viewBoxWidthDraft}
+        viewBoxHeightDraft={viewBoxHeightDraft}
+        onViewBoxWidthDraftChange={onViewBoxWidthDraftChange}
+        onViewBoxHeightDraftChange={onViewBoxHeightDraftChange}
+        onViewBoxOk={onViewBoxOk}
+        onViewBoxDimensionsOpenChange={onViewBoxDimensionsOpenChange}
+        viewBoxControlsDisabled={viewBoxControlsDisabled}
+        displayZoom={displayZoom}
+        canZoomIn={canZoomIn}
+        canZoomOut={canZoomOut}
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+        onZoomReset={onZoomReset}
+        displayZoomControlsDisabled={displayZoomControlsDisabled}
+        statusText={statusText}
+        statusAlert={statusAlert}
+        className={className}
+      />
+    </>
   );
 }

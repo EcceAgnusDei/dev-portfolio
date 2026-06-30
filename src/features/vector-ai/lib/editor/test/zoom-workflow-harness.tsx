@@ -10,7 +10,10 @@ import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 
 import { VectorCanvasInteractive } from "@/features/vector-ai/components/vector-canvas-interactive";
-import { VectorEditorToolbar } from "@/features/vector-ai/components/vector-editor-toolbar";
+import {
+  VectorEditorBottomToolbar,
+  VectorEditorPrimaryToolbar,
+} from "@/features/vector-ai/components/vector-editor-toolbar";
 import type { ViewBox } from "@/features/vector-ai/lib/document/types";
 import {
   planDrawingLoad,
@@ -334,22 +337,13 @@ export function renderZoomWorkflow(
 
     return (
       <>
-        <VectorEditorToolbar
+        <VectorEditorPrimaryToolbar
           activeTool={state.tool}
           onToolChange={interaction.setTool}
           canUndo={canUndo(state)}
           canRedo={canRedo(state)}
           onUndo={() => dispatch({ type: "UNDO" })}
           onRedo={() => dispatch({ type: "REDO" })}
-          onExportSvg={() => {}}
-          onDownloadSvg={() => {}}
-          savedDrawings={savedDrawings}
-          activeDrawingId={activeDrawingId}
-          onActiveDrawingChange={handleActiveDrawingChange}
-          drawingName={drawingName}
-          onDrawingNameChange={setDrawingName}
-          onSaveDrawing={handleSaveDrawing}
-          saveDrawingDisabled={aiPending}
           fontSizeDraft={String(VECTOR_AI_DEFAULT_FONT_SIZE)}
           fontSizeFallback={VECTOR_AI_DEFAULT_FONT_SIZE}
           fontSizeEnabled={false}
@@ -367,20 +361,6 @@ export function renderZoomWorkflow(
           styleControl={interaction.styleControl}
           styleControlsEnabled={!aiPending}
           onStylePatch={interaction.applyStyleControlPatch}
-          viewBoxWidthDraft={viewBoxWidthDraft}
-          viewBoxHeightDraft={viewBoxHeightDraft}
-          onViewBoxWidthDraftChange={setViewBoxWidthDraft}
-          onViewBoxHeightDraftChange={setViewBoxHeightDraft}
-          onViewBoxOk={handleViewBoxOk}
-          onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
-          viewBoxControlsDisabled={aiPending}
-          displayZoom={displayZoom}
-          canZoomIn={canStepDisplayZoomIn(displayZoom)}
-          canZoomOut={canStepDisplayZoomOut(displayZoom)}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onZoomReset={handleZoomReset}
-          displayZoomControlsDisabled={aiPending}
         />
         <div data-zoom-canvas-scroll className="overflow-auto">
           <div
@@ -397,6 +377,32 @@ export function renderZoomWorkflow(
             />
           </div>
         </div>
+        <VectorEditorBottomToolbar
+          onExportSvg={() => {}}
+          onDownloadSvg={() => {}}
+          savedDrawings={savedDrawings}
+          activeDrawingId={activeDrawingId}
+          onActiveDrawingChange={handleActiveDrawingChange}
+          drawingName={drawingName}
+          onDrawingNameChange={setDrawingName}
+          onSaveDrawing={handleSaveDrawing}
+          saveDrawingDisabled={aiPending}
+          viewBoxWidthDraft={viewBoxWidthDraft}
+          viewBoxHeightDraft={viewBoxHeightDraft}
+          onViewBoxWidthDraftChange={setViewBoxWidthDraft}
+          onViewBoxHeightDraftChange={setViewBoxHeightDraft}
+          onViewBoxOk={handleViewBoxOk}
+          onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
+          viewBoxControlsDisabled={aiPending}
+          displayZoom={displayZoom}
+          canZoomIn={canStepDisplayZoomIn(displayZoom)}
+          canZoomOut={canStepDisplayZoomOut(displayZoom)}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          displayZoomControlsDisabled={aiPending}
+          statusText=""
+        />
       </>
     );
   }
