@@ -33,6 +33,11 @@ import {
   buildSvgDownloadFilename,
   downloadSvgFile,
 } from "@/features/vector-ai/lib/view/download-svg-file";
+import {
+  canStepDisplayZoomIn,
+  canStepDisplayZoomOut,
+  stepDisplayZoom,
+} from "@/features/vector-ai/lib/view/display-zoom";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import {
   getVectorDrawingsStoreServerSnapshot,
@@ -69,6 +74,7 @@ export function VectorAiDemoClient() {
     String(VECTOR_AI_DEFAULT_VIEWBOX.h),
   );
   const [viewBoxHandlesVisible, setViewBoxHandlesVisible] = useState(false);
+  const [displayZoom, setDisplayZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const aiRequestIdRef = useRef(0);
@@ -129,6 +135,18 @@ export function VectorAiDemoClient() {
     setViewBoxWidthDraft(String(w));
     setViewBoxHeightDraft(String(h));
   }, [state.doc.viewBox, viewBoxHeightDraft, viewBoxWidthDraft]);
+
+  const handleZoomIn = useCallback(() => {
+    setDisplayZoom((current) => stepDisplayZoom(current, "in"));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setDisplayZoom((current) => stepDisplayZoom(current, "out"));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setDisplayZoom(1);
+  }, []);
 
   const clearNotice = useCallback(() => {
     setNotice(null);
@@ -192,6 +210,7 @@ export function VectorAiDemoClient() {
       dispatch({ type: "EDITOR_LOAD", doc: plan.doc });
       setActiveDrawingId(plan.activeDrawingId);
       setDrawingName(plan.drawingName);
+      setDisplayZoom(1);
       clearNotice();
     },
     [clearNotice, clearTextEditSession, showAlert],
@@ -255,11 +274,12 @@ export function VectorAiDemoClient() {
   const canvasDisplaySize = useMemo(() => {
     const w = viewBoxW > 0 ? viewBoxW : VECTOR_AI_DEFAULT_VIEWBOX.w;
     const h = viewBoxH > 0 ? viewBoxH : VECTOR_AI_DEFAULT_VIEWBOX.h;
+    const ratio = VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO * displayZoom;
     return {
-      width: `${w * VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO}rem`,
-      height: `${h * VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO}rem`,
+      width: `${w * ratio}rem`,
+      height: `${h * ratio}rem`,
     };
-  }, [viewBoxH, viewBoxW]);
+  }, [displayZoom, viewBoxH, viewBoxW]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -301,6 +321,13 @@ export function VectorAiDemoClient() {
         onViewBoxOk={handleViewBoxOk}
         onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
         viewBoxControlsDisabled={aiPending}
+        displayZoom={displayZoom}
+        canZoomIn={canStepDisplayZoomIn(displayZoom)}
+        canZoomOut={canStepDisplayZoomOut(displayZoom)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onZoomReset={handleZoomReset}
+        displayZoomControlsDisabled={aiPending}
       />
       <VectorAiPromptPanel
         aiPrompt={aiPrompt}

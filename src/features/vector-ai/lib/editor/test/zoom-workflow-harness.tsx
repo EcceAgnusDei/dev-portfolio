@@ -1,6 +1,7 @@
 import {
   act,
   useCallback,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -28,76 +29,85 @@ import {
   commitViewBoxSizeActions,
   parseViewBoxDimensionInput,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-viewbox";
-import { viewBoxHandleWorldPoint } from "@/features/vector-ai/lib/editor/geometry/resize-viewbox";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import {
   changeNumberInput,
   changeTextInput,
   clickButton,
+  makePointerEvent,
 } from "@/features/vector-ai/lib/editor/test/pointer-harness";
-import type { ViewBoxResizeHandle } from "@/features/vector-ai/lib/editor/session/types";
 import {
   useVectorInteraction,
   type UseVectorInteractionResult,
 } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import {
+  canStepDisplayZoomIn,
+  canStepDisplayZoomOut,
+  stepDisplayZoom,
+} from "@/features/vector-ai/lib/view/display-zoom";
+import {
   getVectorDrawingsStoreServerSnapshot,
   getVectorDrawingsStoreSnapshot,
   subscribeVectorDrawingsStore,
 } from "@/features/vector-ai/lib/vector-drawing-storage";
-import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_DEFAULT_FONT_SIZE,
+  VECTOR_AI_DEFAULT_VIEWBOX,
+  VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO,
+} from "@/features/vector-ai/lib/vector-ai-config";
 
-export type RenderViewBoxWorkflowOptions = {
+export type RenderZoomWorkflowOptions = {
   aiPending?: boolean;
   saveIdFactory?: () => string;
 };
 
-export type RenderedViewBoxWorkflow = {
+export type RenderedZoomWorkflow = {
   container: HTMLDivElement;
   getState: () => EditorState;
   get interaction(): UseVectorInteractionResult;
-  getInitialShapes: () => EditorState["doc"]["shapes"];
+  getInitialState: () => EditorState;
+  clickZoomIn: () => void;
+  clickZoomOut: () => void;
+  clickZoomReset: () => void;
+  clickUndo: () => void;
   openDimensions: () => Promise<void>;
   setPlanWidth: (value: string) => void;
   setPlanHeight: (value: string) => void;
   confirmDimensions: () => void;
-  clickUndo: () => void;
-  clickRedo: () => void;
   setDrawingName: (name: string) => void;
   saveDrawing: () => void;
   selectDrawing: (id: string | null) => void;
-  dragHandle: (handle: ViewBoxResizeHandle, to: WorldPoint) => void;
-  moveHandle: (handle: ViewBoxResizeHandle, to: WorldPoint) => void;
-  cancelHandleDrag: () => void;
-  queryHandle: (handle: ViewBoxResizeHandle) => Element | null;
+  selectShape: (shapeId: string, world: WorldPoint) => void;
+  getZoomPercentLabel: () => string;
+  isZoomInDisabled: () => boolean;
+  isZoomOutDisabled: () => boolean;
+  isZoomResetDisabled: () => boolean;
+  getCanvasWrapperStyle: () => { width: string; height: string };
   getCanvasViewBoxAttr: () => string | null;
-  isDimensionsDisabled: () => boolean;
   unmount: () => Promise<void>;
 };
 
-function findToolbarButton(
+function queryZoomButton(
   container: ParentNode,
   label: string,
 ): HTMLButtonElement {
-  const button = Array.from(container.querySelectorAll("button")).find(
-    (node) => node.textContent === label,
-  );
+  const button = container.querySelector(`button[aria-label="${label}"]`);
   if (!(button instanceof HTMLButtonElement)) {
-    throw new Error(`Bouton introuvable : ${label}`);
+    throw new Error(`Bouton zoom introuvable : ${label}`);
   }
   return button;
 }
 
-function queryPlanWidthInput(root: ParentNode = document): HTMLInputElement {
-  const input = root.querySelector('input[aria-label="Largeur du plan"]');
+function queryPlanWidthInput(): HTMLInputElement {
+  const input = document.querySelector('input[aria-label="Largeur du plan"]');
   if (!(input instanceof HTMLInputElement)) {
     throw new Error("Champ largeur du plan introuvable.");
   }
   return input;
 }
 
-function queryPlanHeightInput(root: ParentNode = document): HTMLInputElement {
-  const input = root.querySelector('input[aria-label="Hauteur du plan"]');
+function queryPlanHeightInput(): HTMLInputElement {
+  const input = document.querySelector('input[aria-label="Hauteur du plan"]');
   if (!(input instanceof HTMLInputElement)) {
     throw new Error("Champ hauteur du plan introuvable.");
   }
@@ -114,21 +124,17 @@ function findDimensionsOkButton(): HTMLButtonElement {
   return button;
 }
 
-async function flushUi() {
-  await act(async () => {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
-  });
-}
-
-async function waitForDimensionsMenu() {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const input = document.querySelector('input[aria-label="Largeur du plan"]');
-    if (input instanceof HTMLInputElement) return;
-    await flushUi();
+function findToolbarButton(
+  container: ParentNode,
+  label: string,
+): HTMLButtonElement {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (node) => node.textContent === label,
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Bouton introuvable : ${label}`);
   }
-  throw new Error("Menu Dimensions non ouvert.");
+  return button;
 }
 
 function queryDrawingNameInput(container: ParentNode): HTMLInputElement {
@@ -147,6 +153,14 @@ function queryDrawingSelect(container: ParentNode): HTMLSelectElement {
     throw new Error("Liste des dessins introuvable.");
   }
   return select;
+}
+
+function queryCanvasWrapper(container: ParentNode): HTMLDivElement {
+  const wrapper = container.querySelector("[data-zoom-canvas-wrapper]");
+  if (!(wrapper instanceof HTMLDivElement)) {
+    throw new Error("Conteneur du canvas introuvable.");
+  }
+  return wrapper;
 }
 
 function querySvg(container: ParentNode): SVGSVGElement {
@@ -170,53 +184,41 @@ function ensureSvgPointerCapture(svg: SVGSVGElement) {
   }
 }
 
-function dispatchPointerEvent(
-  target: Element,
-  type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
-  options: { clientX: number; clientY: number; pointerId?: number },
-) {
-  act(() => {
-    target.dispatchEvent(
-      new PointerEvent(type, {
-        bubbles: true,
-        cancelable: true,
-        pointerId: options.pointerId ?? 1,
-        clientX: options.clientX,
-        clientY: options.clientY,
-        pointerType: "mouse",
-        isPrimary: true,
-      }),
-    );
+async function flushUi() {
+  await act(async () => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
   });
 }
 
-function pointerDownOnHandle(
-  workflow: RenderedViewBoxWorkflow,
-  handle: ViewBoxResizeHandle,
-): { svg: SVGSVGElement; pointerId: number; down: WorldPoint } {
-  const down = viewBoxHandleWorldPoint(workflow.getState().doc.viewBox, handle);
-  const handleEl = workflow.queryHandle(handle);
-  if (!handleEl) {
-    throw new Error(`Poignée ${handle} introuvable.`);
+async function waitForDimensionsMenu() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const input = document.querySelector('input[aria-label="Largeur du plan"]');
+    if (input instanceof HTMLInputElement) return;
+    await flushUi();
   }
-  const svg = querySvg(workflow.container);
-  const pointerId = 1;
-  dispatchPointerEvent(handleEl, "pointerdown", {
-    clientX: down.x,
-    clientY: down.y,
-    pointerId,
-  });
-  return { svg, pointerId, down };
+  throw new Error("Menu Dimensions non ouvert.");
 }
 
-export function renderViewBoxWorkflow(
+export function expectedCanvasRemSize(viewBox: ViewBox, displayZoom: number) {
+  const w = viewBox.w > 0 ? viewBox.w : VECTOR_AI_DEFAULT_VIEWBOX.w;
+  const h = viewBox.h > 0 ? viewBox.h : VECTOR_AI_DEFAULT_VIEWBOX.h;
+  const ratio = VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO * displayZoom;
+  return {
+    width: `${w * ratio}rem`,
+    height: `${h * ratio}rem`,
+  };
+}
+
+export function renderZoomWorkflow(
   initialState: EditorState,
-  options: RenderViewBoxWorkflowOptions = {},
-): RenderedViewBoxWorkflow {
+  options: RenderZoomWorkflowOptions = {},
+): RenderedZoomWorkflow {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
-  const initialShapes = initialState.doc.shapes;
+  const initialSnapshot = initialState;
   const aiPending = options.aiPending ?? false;
   const saveIdFactory = options.saveIdFactory;
 
@@ -230,11 +232,11 @@ export function renderViewBoxWorkflow(
 
   const rerender = () => {
     act(() => {
-      root.render(<ViewBoxWorkflowHost />);
+      root.render(<ZoomWorkflowHost />);
     });
   };
 
-  function ViewBoxWorkflowHost() {
+  function ZoomWorkflowHost() {
     const [viewBoxWidthDraft, setViewBoxWidthDraft] = useState(() =>
       String(currentState.doc.viewBox.w),
     );
@@ -242,6 +244,7 @@ export function renderViewBoxWorkflow(
       String(currentState.doc.viewBox.h),
     );
     const [viewBoxHandlesVisible, setViewBoxHandlesVisible] = useState(false);
+    const [displayZoom, setDisplayZoom] = useState(1);
     const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
     const [drawingName, setDrawingName] = useState("");
     const svgRef = useRef<SVGSVGElement>(null);
@@ -287,6 +290,18 @@ export function renderViewBoxWorkflow(
       setViewBoxHeightDraft(String(h));
     }, [state.doc.viewBox, viewBoxHeightDraft, viewBoxWidthDraft]);
 
+    const handleZoomIn = useCallback(() => {
+      setDisplayZoom((current) => stepDisplayZoom(current, "in"));
+    }, []);
+
+    const handleZoomOut = useCallback(() => {
+      setDisplayZoom((current) => stepDisplayZoom(current, "out"));
+    }, []);
+
+    const handleZoomReset = useCallback(() => {
+      setDisplayZoom(1);
+    }, []);
+
     const handleSaveDrawing = useCallback(() => {
       const result = saveDrawingFromDoc({
         doc: state.doc,
@@ -306,7 +321,16 @@ export function renderViewBoxWorkflow(
       dispatch({ type: "EDITOR_LOAD", doc: plan.doc });
       setActiveDrawingId(plan.activeDrawingId);
       setDrawingName(plan.drawingName);
+      setDisplayZoom(1);
     }, []);
+
+    const { w: viewBoxW, h: viewBoxH } = interaction.displayDoc.viewBox;
+    const canvasDisplaySize = useMemo(() => {
+      return expectedCanvasRemSize(
+        { x: 0, y: 0, w: viewBoxW, h: viewBoxH },
+        displayZoom,
+      );
+    }, [displayZoom, viewBoxH, viewBoxW]);
 
     return (
       <>
@@ -350,20 +374,29 @@ export function renderViewBoxWorkflow(
           onViewBoxOk={handleViewBoxOk}
           onViewBoxDimensionsOpenChange={handleViewBoxDimensionsOpenChange}
           viewBoxControlsDisabled={aiPending}
-          displayZoom={1}
-          canZoomIn={false}
-          canZoomOut={false}
-          onZoomIn={() => {}}
-          onZoomOut={() => {}}
-          onZoomReset={() => {}}
+          displayZoom={displayZoom}
+          canZoomIn={canStepDisplayZoomIn(displayZoom)}
+          canZoomOut={canStepDisplayZoomOut(displayZoom)}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          displayZoomControlsDisabled={aiPending}
         />
-        <VectorCanvasInteractive
-          svgRef={svgRef}
-          interaction={interaction}
-          doc={state.doc}
-          selectedIds={state.selection.ids}
-          viewBoxHandlesVisible={viewBoxHandlesVisible}
-        />
+        <div data-zoom-canvas-scroll className="overflow-auto">
+          <div
+            data-zoom-canvas-wrapper
+            className="mx-auto"
+            style={canvasDisplaySize}
+          >
+            <VectorCanvasInteractive
+              svgRef={svgRef}
+              interaction={interaction}
+              doc={state.doc}
+              selectedIds={state.selection.ids}
+              viewBoxHandlesVisible={viewBoxHandlesVisible}
+            />
+          </div>
+        </div>
       </>
     );
   }
@@ -371,19 +404,35 @@ export function renderViewBoxWorkflow(
   rerender();
 
   if (interaction === null) {
-    throw new Error("Harness viewBox non initialisé.");
+    throw new Error("Harness zoom non initialisé.");
   }
 
-  const workflow: RenderedViewBoxWorkflow = {
+  const workflow: RenderedZoomWorkflow = {
     container,
     getState: () => currentState,
     get interaction(): UseVectorInteractionResult {
       if (interaction === null) {
-        throw new Error("Harness viewBox non initialisé.");
+        throw new Error("Harness zoom non initialisé.");
       }
       return interaction;
     },
-    getInitialShapes: () => initialShapes,
+    getInitialState: () => initialSnapshot,
+    clickZoomIn() {
+      clickButton(queryZoomButton(container, "Zoom avant"));
+      rerender();
+    },
+    clickZoomOut() {
+      clickButton(queryZoomButton(container, "Zoom arrière"));
+      rerender();
+    },
+    clickZoomReset() {
+      clickButton(queryZoomButton(container, "Zoom à 100 %"));
+      rerender();
+    },
+    clickUndo() {
+      clickButton(findToolbarButton(container, "Annuler"));
+      rerender();
+    },
     async openDimensions() {
       clickButton(findToolbarButton(container, "Dimensions"));
       await waitForDimensionsMenu();
@@ -396,18 +445,14 @@ export function renderViewBoxWorkflow(
     },
     confirmDimensions() {
       clickButton(findDimensionsOkButton());
-    },
-    clickUndo() {
-      clickButton(findToolbarButton(container, "Annuler"));
-    },
-    clickRedo() {
-      clickButton(findToolbarButton(container, "Rétablir"));
+      rerender();
     },
     setDrawingName(name: string) {
       changeTextInput(queryDrawingNameInput(container), name);
     },
     saveDrawing() {
       clickButton(findToolbarButton(container, "Enregistrer"));
+      rerender();
     },
     selectDrawing(id: string | null) {
       const select = queryDrawingSelect(container);
@@ -424,46 +469,40 @@ export function renderViewBoxWorkflow(
       });
       rerender();
     },
-    dragHandle(handle: ViewBoxResizeHandle, to: WorldPoint) {
-      const { svg, pointerId } = pointerDownOnHandle(workflow, handle);
-      dispatchPointerEvent(svg, "pointermove", {
-        clientX: to.x,
-        clientY: to.y,
-        pointerId,
+    selectShape(shapeId: string, world: WorldPoint) {
+      if (interaction === null) {
+        throw new Error("Harness zoom non initialisé.");
+      }
+      const event = makePointerEvent({
+        clientX: world.x,
+        clientY: world.y,
       });
-      dispatchPointerEvent(svg, "pointerup", {
-        clientX: to.x,
-        clientY: to.y,
-        pointerId,
-      });
-      rerender();
-    },
-    moveHandle(handle: ViewBoxResizeHandle, to: WorldPoint) {
-      const { svg, pointerId } = pointerDownOnHandle(workflow, handle);
-      dispatchPointerEvent(svg, "pointermove", {
-        clientX: to.x,
-        clientY: to.y,
-        pointerId,
+      act(() => {
+        interaction!.onShapePointerDown(shapeId, event);
       });
       rerender();
     },
-    cancelHandleDrag() {
-      const svg = querySvg(container);
-      dispatchPointerEvent(svg, "pointercancel", {
-        clientX: 0,
-        clientY: 0,
-        pointerId: 1,
-      });
-      rerender();
+    getZoomPercentLabel() {
+      return queryZoomButton(container, "Zoom à 100 %").textContent ?? "";
     },
-    queryHandle(handle: ViewBoxResizeHandle) {
-      return container.querySelector(`[data-viewbox-handle="${handle}"]`);
+    isZoomInDisabled() {
+      return queryZoomButton(container, "Zoom avant").disabled;
+    },
+    isZoomOutDisabled() {
+      return queryZoomButton(container, "Zoom arrière").disabled;
+    },
+    isZoomResetDisabled() {
+      return queryZoomButton(container, "Zoom à 100 %").disabled;
+    },
+    getCanvasWrapperStyle() {
+      const wrapper = queryCanvasWrapper(container);
+      return {
+        width: wrapper.style.width,
+        height: wrapper.style.height,
+      };
     },
     getCanvasViewBoxAttr() {
       return querySvg(container).getAttribute("viewBox");
-    },
-    isDimensionsDisabled() {
-      return findToolbarButton(container, "Dimensions").disabled;
     },
     async unmount() {
       await flushUi();
@@ -475,8 +514,4 @@ export function renderViewBoxWorkflow(
   };
 
   return workflow;
-}
-
-export function viewBoxToAttr(viewBox: ViewBox): string {
-  return `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`;
 }

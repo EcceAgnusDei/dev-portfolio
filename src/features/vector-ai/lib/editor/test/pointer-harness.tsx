@@ -349,6 +349,12 @@ export function renderStyleToolbarHarness(
         onViewBoxWidthDraftChange={() => {}}
         onViewBoxHeightDraftChange={() => {}}
         onViewBoxOk={() => {}}
+        displayZoom={1}
+        canZoomIn={false}
+        canZoomOut={false}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+        onZoomReset={() => {}}
       />
     );
   }

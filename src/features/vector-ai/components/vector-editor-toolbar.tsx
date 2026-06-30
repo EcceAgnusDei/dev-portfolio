@@ -14,6 +14,7 @@ import type {
 import type { EditorTool } from "@/features/vector-ai/lib/editor/core/state";
 import { parseTextFontSizeInput } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import type { VectorDrawingListItem } from "@/features/vector-ai/lib/vector-drawing-storage";
+import { formatDisplayZoomPercent } from "@/features/vector-ai/lib/view/display-zoom";
 import {
   VECTOR_AI_MAX_FONT_SIZE,
   VECTOR_AI_MAX_VIEWBOX_DIMENSION,
@@ -204,6 +205,13 @@ export type VectorEditorToolbarProps = {
   onViewBoxOk: () => void;
   onViewBoxDimensionsOpenChange?: (open: boolean, opening?: boolean) => void;
   viewBoxControlsDisabled?: boolean;
+  displayZoom: number;
+  canZoomIn: boolean;
+  canZoomOut: boolean;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
+  displayZoomControlsDisabled?: boolean;
   className?: string;
 };
 
@@ -243,6 +251,13 @@ export function VectorEditorToolbar({
   onViewBoxOk,
   onViewBoxDimensionsOpenChange,
   viewBoxControlsDisabled = false,
+  displayZoom,
+  canZoomIn,
+  canZoomOut,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  displayZoomControlsDisabled = false,
   className,
 }: VectorEditorToolbarProps) {
   function handleFontSizeChange(event: ChangeEvent<HTMLInputElement>) {
@@ -426,6 +441,42 @@ export function VectorEditorToolbar({
             onOk={onViewBoxOk}
             onOpenChange={onViewBoxDimensionsOpenChange}
           />
+          <div
+            className="flex items-center gap-1"
+            role="group"
+            aria-label="Zoom d'affichage"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={displayZoomControlsDisabled || !canZoomOut}
+              onClick={onZoomOut}
+              aria-label="Zoom arrière"
+            >
+              −
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={displayZoomControlsDisabled || displayZoom === 1}
+              onClick={onZoomReset}
+              aria-label="Zoom à 100 %"
+            >
+              {formatDisplayZoomPercent(displayZoom)}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={displayZoomControlsDisabled || !canZoomIn}
+              onClick={onZoomIn}
+              aria-label="Zoom avant"
+            >
+              +
+            </Button>
+          </div>
           <Button
             type="button"
             variant="outline"
