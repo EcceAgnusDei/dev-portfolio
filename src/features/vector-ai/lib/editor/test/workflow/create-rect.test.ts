@@ -54,7 +54,7 @@ function rectHandleWorldPoint(
 }
 
 describe("workflow: création rectangle", () => {
-  it("crée un rectangle au drag et conserve l'outil rect", () => {
+  it("crée un rectangle au drag et repasse en outil sélection", () => {
     const initial = makeEditorWithRect();
     initial.tool = "rect";
 
@@ -80,7 +80,7 @@ describe("workflow: création rectangle", () => {
         w: 40,
         h: 40,
       },
-      "rect",
+      "select",
     );
     expectShapeCount(result.state, initial.doc.shapes.length + 1);
     expect(lastSnapshot(result).session.kind).toBe("idle");
@@ -137,7 +137,7 @@ describe("workflow: création rectangle", () => {
           strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
         },
       },
-      "rect",
+      "select",
     );
   });
 });

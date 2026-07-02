@@ -72,7 +72,7 @@ describe("workflow: création cercle", () => {
         transform: { x: 30, y: 20 },
         r: 20,
       },
-      "circle",
+      "select",
     );
     expectShapeCount(result.state, initial.doc.shapes.length + 1);
   });
@@ -155,7 +155,7 @@ describe("workflow: création cercle", () => {
           strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
         },
       },
-      "circle",
+      "select",
     );
   });
 });
@@ -181,7 +181,10 @@ describe("workflow: style cercle", () => {
       style: { fill: "#aabbcc", stroke: "none", strokeWidth: 2 },
     });
 
-    state = applyStyleControlPatch(state, { stroke: "#ddeeff", strokeWidth: 3 });
+    state = applyStyleControlPatch(state, {
+      stroke: "#ddeeff",
+      strokeWidth: 3,
+    });
     expectShapeInDoc(state, "circle-1", {
       style: { fill: "#aabbcc", stroke: "#ddeeff", strokeWidth: 3 },
     });

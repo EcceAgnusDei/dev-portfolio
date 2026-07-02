@@ -42,6 +42,5 @@ export function commitCreateLine(
         style: styleForNewShape("line", draftStyle),
       },
     },
-    { type: "SELECTION_SET", ids: [id] },
   ];
 }

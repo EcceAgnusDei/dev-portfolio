@@ -39,5 +39,6 @@ export function commitCreateRect(
       },
     },
     { type: "SELECTION_SET", ids: [id] },
+    { type: "TOOL_SET", tool: "select" },
   ];
 }

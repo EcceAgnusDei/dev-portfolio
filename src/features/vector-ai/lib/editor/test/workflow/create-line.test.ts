@@ -3,7 +3,6 @@ import "@/features/vector-ai/lib/editor/test/mock-create-shape-id";
 import { describe, expect, it } from "vitest";
 
 import {
-  expectAfterCreate,
   expectDocUnchanged,
   expectShapeCount,
   expectShapeInDoc,
@@ -42,22 +41,21 @@ describe("workflow: création ligne", () => {
       y2: 60,
     });
 
-    expectAfterCreate(
-      result,
-      "new-shape-id",
-      {
-        type: "line",
-        transform: { x: 10, y: 20 },
-        x2: 50,
-        y2: 60,
-        style: {
-          fill: "none",
-          stroke: VECTOR_AI_DEFAULT_LINE_STYLE.stroke,
-          strokeWidth: VECTOR_AI_DEFAULT_LINE_STYLE.strokeWidth,
-        },
+    expect(result.state.tool).toBe("line");
+    expect(result.state.selection.ids).toEqual([]);
+    expect(result.state.history.past.length).toBeGreaterThan(0);
+    expect(result.state.history.future).toEqual([]);
+    expectShapeInDoc(result.state, "new-shape-id", {
+      type: "line",
+      transform: { x: 10, y: 20 },
+      x2: 50,
+      y2: 60,
+      style: {
+        fill: "none",
+        stroke: VECTOR_AI_DEFAULT_LINE_STYLE.stroke,
+        strokeWidth: VECTOR_AI_DEFAULT_LINE_STYLE.strokeWidth,
       },
-      "line",
-    );
+    });
     expectShapeCount(result.state, initial.doc.shapes.length + 1);
   });
 
@@ -101,19 +99,17 @@ describe("workflow: création ligne", () => {
       { type: "up" },
     ]);
 
-    expectAfterCreate(
-      result,
-      "new-shape-id",
-      {
-        type: "line",
-        style: {
-          fill: "none",
-          stroke: STYLE_TEST_DRAFT.stroke,
-          strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
-        },
+    expect(result.state.tool).toBe("line");
+    expect(result.state.selection.ids).toEqual([]);
+    expect(result.state.history.past.length).toBeGreaterThan(0);
+    expectShapeInDoc(result.state, "new-shape-id", {
+      type: "line",
+      style: {
+        fill: "none",
+        stroke: STYLE_TEST_DRAFT.stroke,
+        strokeWidth: STYLE_TEST_DRAFT.strokeWidth,
       },
-      "line",
-    );
+    });
   });
 });
 
