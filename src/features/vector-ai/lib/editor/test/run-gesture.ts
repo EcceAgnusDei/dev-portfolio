@@ -236,7 +236,12 @@ export function runGesture(
         break;
       }
       case "move":
-        session = updateSessionPointerWorld(session, pointerId, step.world);
+        session = updateSessionPointerWorld(
+          session,
+          pointerId,
+          step.world,
+          interaction,
+        );
         break;
       case "up":
         if (session.kind === "create-text") {

@@ -213,6 +213,13 @@ export function useVectorInteraction({
     [state],
   );
 
+  const interactionStateAtPointer = useCallback(() => {
+    return editorInteractionStateFromEditor(
+      state,
+      svgRef.current?.clientWidth ?? undefined,
+    );
+  }, [state, svgRef]);
+
   const setTool = useCallback(
     (tool: EditorTool) => {
       if (tool === state.tool) return;
@@ -612,8 +619,9 @@ export function useVectorInteraction({
 
   const onSvgPointerDown = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
+      const interaction = interactionStateAtPointer();
       const ignoreShapeHits =
-        shapePointerEventsForTool(interactionState.tool) === "none";
+        shapePointerEventsForTool(interaction.tool) === "none";
       if (
         !isCanvasBackgroundTarget(event.target, svgRef.current, {
           ignoreShapeHits,
@@ -626,7 +634,7 @@ export function useVectorInteraction({
       if (!world) return;
 
       const result = handleBackgroundPointerDown(
-        interactionState,
+        interaction,
         world,
         event.pointerId,
         sessionRef.current,
@@ -639,7 +647,7 @@ export function useVectorInteraction({
       dispatchActions(result.actions);
       setSession(result.session);
     },
-    [interactionState, dispatchActions, svgRef],
+    [interactionStateAtPointer, dispatchActions, svgRef],
   );
 
   const onSvgPointerMove = useCallback(
@@ -647,11 +655,12 @@ export function useVectorInteraction({
       const world = worldFromEvent(svgRef.current, event);
       if (!world) return;
 
+      const interaction = interactionStateAtPointer();
       setSession((prev) =>
-        updateSessionPointerWorld(prev, event.pointerId, world),
+        updateSessionPointerWorld(prev, event.pointerId, world, interaction),
       );
     },
-    [svgRef],
+    [interactionStateAtPointer, svgRef],
   );
 
   const onSvgPointerUp = useCallback(

@@ -6,7 +6,7 @@ import {
   type LineEnd,
 } from "@/features/vector-ai/lib/editor/session/types";
 import { selectedShapeOfType } from "@/features/vector-ai/lib/view/overlays/selected-shape";
-import { SelectionResizeHandle } from "@/features/vector-ai/lib/view/overlays/selection-resize-handle";
+import { VECTOR_AI_SELECTION_HANDLE_RADIUS } from "@/features/vector-ai/lib/vector-ai-config";
 
 export type SelectionLineHandlesProps = {
   doc: VectorDoc;
@@ -35,16 +35,19 @@ export function SelectionLineHandles({
       {ends.map((end) => {
         const point = lineEndWorldPoint(line, end);
         return (
-          <SelectionResizeHandle
+          <circle
             key={`${line.id}-${end}`}
             cx={point.x}
             cy={point.y}
-            cursor={end === "start" ? "nwse-resize" : "nesw-resize"}
-            dataAttrs={{
-              "data-line-handle": end,
-              "data-shape-id": line.id,
-            }}
+            r={VECTOR_AI_SELECTION_HANDLE_RADIUS}
+            fill="transparent"
+            stroke="none"
+            pointerEvents="all"
+            style={{ cursor: end === "start" ? "nwse-resize" : "nesw-resize" }}
+            data-line-handle={end}
+            data-shape-id={line.id}
             onPointerDown={(event) => {
+              event.stopPropagation();
               onLineEndPointerDown(line.id, end, event);
             }}
           />

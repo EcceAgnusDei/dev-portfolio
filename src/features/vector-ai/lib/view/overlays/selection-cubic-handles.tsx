@@ -11,6 +11,7 @@ import {
 } from "@/features/vector-ai/lib/editor/geometry/path-segments";
 import { selectedShapeOfType } from "@/features/vector-ai/lib/view/overlays/selected-shape";
 import { SelectionResizeHandle } from "@/features/vector-ai/lib/view/overlays/selection-resize-handle";
+import { VECTOR_AI_SELECTION_HANDLE_RADIUS } from "@/features/vector-ai/lib/vector-ai-config";
 
 export type SelectionCubicHandlesProps = {
   doc: VectorDoc;
@@ -30,6 +31,10 @@ const HANDLE_CURSOR: Record<CubicHandle, string> = {
   c2: "crosshair",
   p3: "nesw-resize",
 };
+
+function isCubicEndpointHandle(handle: CubicHandle): boolean {
+  return handle === "p0" || handle === "p3";
+}
 
 function guideLines(points: CubicWorldPoints) {
   return (
@@ -78,6 +83,28 @@ export function SelectionCubicHandles({
       <g pointerEvents="none">{guideLines(points)}</g>
       {CUBIC_HANDLES.map((handle) => {
         const point = cubicHandleWorldPoint(points, handle);
+
+        if (isCubicEndpointHandle(handle)) {
+          return (
+            <circle
+              key={`${path.id}-${handle}`}
+              cx={point.x}
+              cy={point.y}
+              r={VECTOR_AI_SELECTION_HANDLE_RADIUS}
+              fill="transparent"
+              stroke="none"
+              pointerEvents="all"
+              style={{ cursor: HANDLE_CURSOR[handle] }}
+              data-cubic-handle={handle}
+              data-shape-id={path.id}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                onCubicHandlePointerDown(path.id, handle, event);
+              }}
+            />
+          );
+        }
+
         return (
           <SelectionResizeHandle
             key={`${path.id}-${handle}`}

@@ -1,3 +1,7 @@
+import {
+  resolveLineEndpointSnap,
+  snapToleranceWorldForViewBox,
+} from "@/features/vector-ai/lib/editor/geometry/snap";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { DraftStyle } from "@/features/vector-ai/lib/editor/core/draft-style";
 import {
@@ -44,6 +48,7 @@ export type EditorInteractionState = {
   tool: EditorTool;
   draftStyle: DraftStyle;
   selectionIds: string[];
+  snapToleranceWorld: number; // pour l'aimantation à la création des lignes
 };
 
 export function shapePointerEventsForTool(tool: EditorTool): "auto" | "none" {
@@ -126,8 +131,12 @@ export function handleBackgroundPointerDown(
     state.tool === "circle" ||
     state.tool === "line"
   ) {
+    const startWorld =
+      state.tool === "line"
+        ? resolveLineEndpointSnap(world, state.doc, state.snapToleranceWorld)
+        : world;
     return {
-      session: beginCreateSession(state.tool, world, pointerId),
+      session: beginCreateSession(state.tool, startWorld, pointerId),
       actions: [],
     };
   }
@@ -276,11 +285,17 @@ export function handleViewBoxHandlePointerDown(
 
 export function editorInteractionStateFromEditor(
   state: EditorState,
+  viewportWidthPx?: number,
 ): EditorInteractionState {
+  const width =
+    viewportWidthPx != null && viewportWidthPx > 0
+      ? viewportWidthPx
+      : state.doc.viewBox.w;
   return {
     doc: state.doc,
     tool: state.tool,
     draftStyle: state.draftStyle,
     selectionIds: state.selection.ids,
+    snapToleranceWorld: snapToleranceWorldForViewBox(state.doc.viewBox, width),
   };
 }
