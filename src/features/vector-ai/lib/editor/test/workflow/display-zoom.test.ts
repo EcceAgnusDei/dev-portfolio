@@ -12,6 +12,8 @@ import { makeEditorWithRect } from "@/features/vector-ai/lib/editor/test/fixture
 import { viewBoxToAttr } from "@/features/vector-ai/lib/editor/test/viewbox-workflow-harness";
 import {
   expectedCanvasRemSize,
+  expectedCanvasScrollRemSize,
+  expectedCanvasZoomTransform,
   renderZoomWorkflow,
   type RenderedZoomWorkflow,
 } from "@/features/vector-ai/lib/editor/test/zoom-workflow-harness";
@@ -33,8 +35,17 @@ function assertZoomUi(
   },
 ) {
   expect(workflow.getZoomPercentLabel()).toBe(expected.percentLabel);
+  expect(workflow.getCanvasViewportStyle()).toEqual(
+    expectedCanvasRemSize(expected.viewBox),
+  );
+  expect(workflow.getCanvasScrollStyle()).toEqual(
+    expectedCanvasScrollRemSize(expected.viewBox, expected.displayZoom),
+  );
   expect(workflow.getCanvasWrapperStyle()).toEqual(
-    expectedCanvasRemSize(expected.viewBox, expected.displayZoom),
+    expectedCanvasRemSize(expected.viewBox),
+  );
+  expect(workflow.getCanvasZoomTransform()).toBe(
+    expectedCanvasZoomTransform(expected.displayZoom),
   );
   expect(workflow.getCanvasViewBoxAttr()).toBe(viewBoxToAttr(expected.viewBox));
 
@@ -307,7 +318,7 @@ describe("workflow: zoom d'affichage", () => {
     await workflow.unmount();
   });
 
-  it("recalcule la taille du canvas après un changement de dimensions tout en conservant le zoom", async () => {
+  it("recalcule la surface de défilement après un changement de dimensions tout en conservant le zoom", async () => {
     const initial = makeEditorWithRect("rect-1");
     const workflow = renderZoomWorkflow(initial);
 

@@ -39,6 +39,7 @@ import {
 import {
   canStepDisplayZoomIn,
   canStepDisplayZoomOut,
+  getCanvasDisplayZoomLayout,
   stepDisplayZoom,
 } from "@/features/vector-ai/lib/view/display-zoom";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
@@ -50,7 +51,6 @@ import {
 import {
   VECTOR_AI_DEFAULT_FONT_SIZE,
   VECTOR_AI_DEFAULT_VIEWBOX,
-  VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO,
 } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
@@ -268,16 +268,11 @@ export function VectorAiDemoClient() {
   const statusText =
     notice?.text ?? (aiPending ? "Modification en cours…" : "");
 
-  const { w: viewBoxW, h: viewBoxH } = interaction.displayDoc.viewBox;
-  const canvasDisplaySize = useMemo(() => {
-    const w = viewBoxW > 0 ? viewBoxW : VECTOR_AI_DEFAULT_VIEWBOX.w;
-    const h = viewBoxH > 0 ? viewBoxH : VECTOR_AI_DEFAULT_VIEWBOX.h;
-    const ratio = VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO * displayZoom;
-    return {
-      width: `${w * ratio}rem`,
-      height: `${h * ratio}rem`,
-    };
-  }, [displayZoom, viewBoxH, viewBoxW]);
+  const canvasZoomLayout = useMemo(
+    () =>
+      getCanvasDisplayZoomLayout(interaction.displayDoc.viewBox, displayZoom),
+    [displayZoom, interaction.displayDoc.viewBox],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -314,21 +309,27 @@ export function VectorAiDemoClient() {
         onCancelAi={handleCancelAi}
         aiPending={aiPending}
       />
-      <div className="mx-auto max-w-full overflow-auto">
-        <div
-          className={cn(
-            "mx-auto",
-            aiPending && "pointer-events-none opacity-60",
-          )}
-          style={canvasDisplaySize}
-        >
-          <VectorCanvasInteractive
-            svgRef={svgRef}
-            interaction={interaction}
-            doc={state.doc}
-            selectedIds={state.selection.ids}
-            viewBoxHandlesVisible={viewBoxHandlesVisible}
-          />
+      <div
+        data-zoom-canvas-viewport
+        className="mx-auto max-w-full overflow-auto"
+        style={canvasZoomLayout.viewport}
+      >
+        <div data-zoom-canvas-scroll style={canvasZoomLayout.scroll}>
+          <div
+            data-zoom-canvas-wrapper
+            className={cn(
+              aiPending && "pointer-events-none opacity-60",
+            )}
+            style={canvasZoomLayout.canvas}
+          >
+            <VectorCanvasInteractive
+              svgRef={svgRef}
+              interaction={interaction}
+              doc={state.doc}
+              selectedIds={state.selection.ids}
+              viewBoxHandlesVisible={viewBoxHandlesVisible}
+            />
+          </div>
         </div>
       </div>
       <VectorEditorBottomToolbar
