@@ -218,8 +218,6 @@ export type VectorEditorBottomToolbarProps = {
   onZoomOut: () => void;
   onZoomReset: () => void;
   displayZoomControlsDisabled?: boolean;
-  statusText: string;
-  statusAlert?: boolean;
   className?: string;
 };
 
@@ -410,8 +408,6 @@ export function VectorEditorBottomToolbar({
   onZoomOut,
   onZoomReset,
   displayZoomControlsDisabled = false,
-  statusText,
-  statusAlert = false,
   className,
 }: VectorEditorBottomToolbarProps) {
   return (
@@ -480,18 +476,6 @@ export function VectorEditorBottomToolbar({
           >
             Télécharger SVG
           </Button>
-          {statusText ? (
-            <p
-              className={cn(
-                "min-w-0 flex-1 basis-full text-center text-sm sm:basis-auto sm:text-left",
-                statusAlert ? "text-destructive" : "text-muted-foreground",
-              )}
-              role={statusAlert ? "alert" : "status"}
-              aria-live="polite"
-            >
-              {statusText}
-            </p>
-          ) : null}
         </div>
       </fieldset>
 
@@ -591,8 +575,6 @@ export function VectorEditorToolbar(props: VectorEditorToolbarProps) {
     onZoomOut,
     onZoomReset,
     displayZoomControlsDisabled,
-    statusText,
-    statusAlert,
     className,
   } = props;
 
@@ -643,8 +625,6 @@ export function VectorEditorToolbar(props: VectorEditorToolbarProps) {
         onZoomOut={onZoomOut}
         onZoomReset={onZoomReset}
         displayZoomControlsDisabled={displayZoomControlsDisabled}
-        statusText={statusText}
-        statusAlert={statusAlert}
         className={className}
       />
     </>

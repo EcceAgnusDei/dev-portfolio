@@ -368,7 +368,6 @@ export function renderViewBoxWorkflow(
           onZoomIn={() => {}}
           onZoomOut={() => {}}
           onZoomReset={() => {}}
-          statusText=""
         />
       </>
     );

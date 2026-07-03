@@ -390,7 +390,6 @@ export function renderZoomWorkflow(
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
           displayZoomControlsDisabled={aiPending}
-          statusText=""
         />
       </>
     );

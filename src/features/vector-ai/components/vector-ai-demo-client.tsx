@@ -275,59 +275,6 @@ export function VectorAiDemoClient() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-      <VectorEditorPrimaryToolbar
-        activeTool={state.tool}
-        onToolChange={interaction.setTool}
-        canUndo={canUndo(state)}
-        canRedo={canRedo(state)}
-        onUndo={() => dispatch({ type: "UNDO" })}
-        onRedo={() => dispatch({ type: "REDO" })}
-        fontSizeDraft={fontSizeDraft}
-        fontSizeFallback={fontSizeFallback}
-        fontSizeEnabled={
-          !aiPending && interaction.editingTextShape !== undefined
-        }
-        onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
-        onFontSizeBlur={interaction.commitTextEditOnFontSizeBlur}
-        canDelete={!aiPending && interaction.canDeleteSelectedShape}
-        onDelete={interaction.deleteSelectedShape}
-        canReorder={!aiPending && interaction.canReorderSelectedShapes}
-        zOrderAvailability={interaction.zOrderAvailability}
-        onZOrderCommand={interaction.reorderSelectedShapes}
-        styleControl={interaction.styleControl}
-        styleControlsEnabled={!aiPending}
-        onStylePatch={interaction.applyStyleControlPatch}
-      />
-      <VectorAiPromptPanel
-        aiPrompt={aiPrompt}
-        onAiPromptChange={(value) => {
-          clearNotice();
-          setAiPrompt(value);
-        }}
-        onSubmitAi={() => void handleSubmitAi()}
-        onCancelAi={handleCancelAi}
-        aiPending={aiPending}
-      />
-      <section
-        id="vector-ai-canvas"
-        className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 bg-muted/20"
-      >
-        <div className="flex min-h-0 justify-center overflow-auto px-2 py-2">
-          <div
-            data-zoom-canvas
-            className={cn(aiPending && "pointer-events-none opacity-60")}
-            style={canvasZoomStyle}
-          >
-            <VectorCanvasInteractive
-              svgRef={svgRef}
-              interaction={interaction}
-              doc={state.doc}
-              selectedIds={state.selection.ids}
-              viewBoxHandlesVisible={viewBoxHandlesVisible}
-            />
-          </div>
-        </div>
-      </section>
       <VectorEditorBottomToolbar
         onExportSvg={() => void handleExportSvg()}
         onDownloadSvg={handleDownloadSvg}
@@ -352,9 +299,76 @@ export function VectorAiDemoClient() {
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
         displayZoomControlsDisabled={aiPending}
-        statusText={statusText}
-        statusAlert={notice?.variant === "alert"}
       />
+      <div className="flex flex-col gap-1">
+        <section
+          id="vector-ai-canvas"
+          className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 bg-muted/20"
+        >
+          <div className="flex min-h-0 justify-center overflow-auto px-2 pt-2 pb-0">
+            <div
+              data-zoom-canvas
+              className={cn(aiPending && "pointer-events-none opacity-60")}
+              style={canvasZoomStyle}
+            >
+              <VectorCanvasInteractive
+                svgRef={svgRef}
+                interaction={interaction}
+                doc={state.doc}
+                selectedIds={state.selection.ids}
+                viewBoxHandlesVisible={viewBoxHandlesVisible}
+              />
+            </div>
+          </div>
+        </section>
+        {statusText ? (
+          <p
+            className={cn(
+              "text-center text-sm",
+              notice?.variant === "alert"
+                ? "text-destructive"
+                : "text-muted-foreground",
+            )}
+            role={notice?.variant === "alert" ? "alert" : "status"}
+            aria-live="polite"
+          >
+            {statusText}
+          </p>
+        ) : null}
+        <VectorEditorPrimaryToolbar
+          activeTool={state.tool}
+          onToolChange={interaction.setTool}
+          canUndo={canUndo(state)}
+          canRedo={canRedo(state)}
+          onUndo={() => dispatch({ type: "UNDO" })}
+          onRedo={() => dispatch({ type: "REDO" })}
+          fontSizeDraft={fontSizeDraft}
+          fontSizeFallback={fontSizeFallback}
+          fontSizeEnabled={
+            !aiPending && interaction.editingTextShape !== undefined
+          }
+          onFontSizeDraftChange={interaction.setTextEditFontSizeDraft}
+          onFontSizeBlur={interaction.commitTextEditOnFontSizeBlur}
+          canDelete={!aiPending && interaction.canDeleteSelectedShape}
+          onDelete={interaction.deleteSelectedShape}
+          canReorder={!aiPending && interaction.canReorderSelectedShapes}
+          zOrderAvailability={interaction.zOrderAvailability}
+          onZOrderCommand={interaction.reorderSelectedShapes}
+          styleControl={interaction.styleControl}
+          styleControlsEnabled={!aiPending}
+          onStylePatch={interaction.applyStyleControlPatch}
+        />
+        <VectorAiPromptPanel
+          aiPrompt={aiPrompt}
+          onAiPromptChange={(value) => {
+            clearNotice();
+            setAiPrompt(value);
+          }}
+          onSubmitAi={() => void handleSubmitAi()}
+          onCancelAi={handleCancelAi}
+          aiPending={aiPending}
+        />
+      </div>
     </div>
   );
 }
