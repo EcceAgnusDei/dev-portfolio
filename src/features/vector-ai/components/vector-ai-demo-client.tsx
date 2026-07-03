@@ -39,7 +39,7 @@ import {
 import {
   canStepDisplayZoomIn,
   canStepDisplayZoomOut,
-  getCanvasDisplayZoomLayout,
+  getCanvasZoomedRemSize,
   stepDisplayZoom,
 } from "@/features/vector-ai/lib/view/display-zoom";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
@@ -268,14 +268,13 @@ export function VectorAiDemoClient() {
   const statusText =
     notice?.text ?? (aiPending ? "Modification en cours…" : "");
 
-  const canvasZoomLayout = useMemo(
-    () =>
-      getCanvasDisplayZoomLayout(interaction.displayDoc.viewBox, displayZoom),
+  const canvasZoomStyle = useMemo(
+    () => getCanvasZoomedRemSize(interaction.displayDoc.viewBox, displayZoom),
     [displayZoom, interaction.displayDoc.viewBox],
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <VectorEditorPrimaryToolbar
         activeTool={state.tool}
         onToolChange={interaction.setTool}
@@ -309,18 +308,15 @@ export function VectorAiDemoClient() {
         onCancelAi={handleCancelAi}
         aiPending={aiPending}
       />
-      <div
-        data-zoom-canvas-viewport
-        className="mx-auto max-w-full overflow-auto"
-        style={canvasZoomLayout.viewport}
+      <section
+        id="vector-ai-canvas"
+        className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 bg-muted/20"
       >
-        <div data-zoom-canvas-scroll style={canvasZoomLayout.scroll}>
+        <div className="flex min-h-0 justify-center overflow-auto px-2 py-2">
           <div
-            data-zoom-canvas-wrapper
-            className={cn(
-              aiPending && "pointer-events-none opacity-60",
-            )}
-            style={canvasZoomLayout.canvas}
+            data-zoom-canvas
+            className={cn(aiPending && "pointer-events-none opacity-60")}
+            style={canvasZoomStyle}
           >
             <VectorCanvasInteractive
               svgRef={svgRef}
@@ -331,7 +327,7 @@ export function VectorAiDemoClient() {
             />
           </div>
         </div>
-      </div>
+      </section>
       <VectorEditorBottomToolbar
         onExportSvg={() => void handleExportSvg()}
         onDownloadSvg={handleDownloadSvg}

@@ -46,8 +46,7 @@ import {
 import {
   canStepDisplayZoomIn,
   canStepDisplayZoomOut,
-  getCanvasBaseRemSize,
-  getCanvasDisplayZoomLayout,
+  getCanvasZoomedRemSize,
   stepDisplayZoom,
 } from "@/features/vector-ai/lib/view/display-zoom";
 import {
@@ -55,9 +54,7 @@ import {
   getVectorDrawingsStoreSnapshot,
   subscribeVectorDrawingsStore,
 } from "@/features/vector-ai/lib/vector-drawing-storage";
-import {
-  VECTOR_AI_DEFAULT_FONT_SIZE,
-} from "@/features/vector-ai/lib/vector-ai-config";
+import { VECTOR_AI_DEFAULT_FONT_SIZE } from "@/features/vector-ai/lib/vector-ai-config";
 
 export type RenderZoomWorkflowOptions = {
   aiPending?: boolean;
@@ -85,10 +82,7 @@ export type RenderedZoomWorkflow = {
   isZoomInDisabled: () => boolean;
   isZoomOutDisabled: () => boolean;
   isZoomResetDisabled: () => boolean;
-  getCanvasViewportStyle: () => { width: string; height: string };
-  getCanvasScrollStyle: () => { width: string; height: string };
-  getCanvasWrapperStyle: () => { width: string; height: string };
-  getCanvasZoomTransform: () => string;
+  getCanvasStyle: () => { width: string; height: string };
   getCanvasViewBoxAttr: () => string | null;
   unmount: () => Promise<void>;
 };
@@ -161,28 +155,12 @@ function queryDrawingSelect(container: ParentNode): HTMLSelectElement {
   return select;
 }
 
-function queryCanvasScroll(container: ParentNode): HTMLDivElement {
-  const scroll = container.querySelector("[data-zoom-canvas-scroll]");
-  if (!(scroll instanceof HTMLDivElement)) {
-    throw new Error("Surface de défilement du canvas introuvable.");
-  }
-  return scroll;
-}
-
-function queryCanvasViewport(container: ParentNode): HTMLDivElement {
-  const viewport = container.querySelector("[data-zoom-canvas-viewport]");
-  if (!(viewport instanceof HTMLDivElement)) {
+function queryCanvas(container: ParentNode): HTMLDivElement {
+  const canvas = container.querySelector("[data-zoom-canvas]");
+  if (!(canvas instanceof HTMLDivElement)) {
     throw new Error("Conteneur du canvas introuvable.");
   }
-  return viewport;
-}
-
-function queryCanvasWrapper(container: ParentNode): HTMLDivElement {
-  const wrapper = container.querySelector("[data-zoom-canvas-wrapper]");
-  if (!(wrapper instanceof HTMLDivElement)) {
-    throw new Error("Conteneur du canvas introuvable.");
-  }
-  return wrapper;
+  return canvas;
 }
 
 function querySvg(container: ParentNode): SVGSVGElement {
@@ -223,23 +201,12 @@ async function waitForDimensionsMenu() {
   throw new Error("Menu Dimensions non ouvert.");
 }
 
-export function expectedCanvasRemSize(viewBox: ViewBox) {
-  return getCanvasBaseRemSize(viewBox);
-}
-
-export function expectedCanvasScrollRemSize(
-  viewBox: ViewBox,
-  displayZoom: number,
-) {
-  const scroll = getCanvasDisplayZoomLayout(viewBox, displayZoom).scroll;
+export function expectedCanvasRemSize(viewBox: ViewBox, displayZoom: number) {
+  const size = getCanvasZoomedRemSize(viewBox, displayZoom);
   return {
-    width: scroll.width as string,
-    height: scroll.height as string,
+    width: size.width as string,
+    height: size.height as string,
   };
-}
-
-export function expectedCanvasZoomTransform(displayZoom: number) {
-  return displayZoom === 1 ? "" : `scale(${displayZoom})`;
 }
 
 export function renderZoomWorkflow(
@@ -358,8 +325,8 @@ export function renderZoomWorkflow(
       setDisplayZoom(1);
     }, []);
 
-    const canvasZoomLayout = useMemo(
-      () => getCanvasDisplayZoomLayout({ w: viewBoxW, h: viewBoxH }, displayZoom),
+    const canvasZoomStyle = useMemo(
+      () => getCanvasZoomedRemSize({ w: viewBoxW, h: viewBoxH }, displayZoom),
       [displayZoom, viewBoxH, viewBoxW],
     );
 
@@ -390,28 +357,14 @@ export function renderZoomWorkflow(
           styleControlsEnabled={!aiPending}
           onStylePatch={activeInteraction.applyStyleControlPatch}
         />
-        <div
-          data-zoom-canvas-viewport
-          className="overflow-auto"
-          style={canvasZoomLayout.viewport}
-        >
-          <div
-            data-zoom-canvas-scroll
-            style={canvasZoomLayout.scroll}
-          >
-            <div
-              data-zoom-canvas-wrapper
-              style={canvasZoomLayout.canvas}
-            >
-              <VectorCanvasInteractive
-                svgRef={svgRef}
-                interaction={activeInteraction}
-                doc={state.doc}
-                selectedIds={state.selection.ids}
-                viewBoxHandlesVisible={viewBoxHandlesVisible}
-              />
-            </div>
-          </div>
+        <div data-zoom-canvas style={canvasZoomStyle}>
+          <VectorCanvasInteractive
+            svgRef={svgRef}
+            interaction={activeInteraction}
+            doc={state.doc}
+            selectedIds={state.selection.ids}
+            viewBoxHandlesVisible={viewBoxHandlesVisible}
+          />
         </div>
         <VectorEditorBottomToolbar
           onExportSvg={() => {}}
@@ -536,29 +489,12 @@ export function renderZoomWorkflow(
     isZoomResetDisabled() {
       return queryZoomButton(container, "Zoom à 100 %").disabled;
     },
-    getCanvasViewportStyle() {
-      const viewport = queryCanvasViewport(container);
+    getCanvasStyle() {
+      const canvas = queryCanvas(container);
       return {
-        width: viewport.style.width,
-        height: viewport.style.height,
+        width: canvas.style.width,
+        height: canvas.style.height,
       };
-    },
-    getCanvasScrollStyle() {
-      const scroll = queryCanvasScroll(container);
-      return {
-        width: scroll.style.width,
-        height: scroll.style.height,
-      };
-    },
-    getCanvasWrapperStyle() {
-      const wrapper = queryCanvasWrapper(container);
-      return {
-        width: wrapper.style.width,
-        height: wrapper.style.height,
-      };
-    },
-    getCanvasZoomTransform() {
-      return queryCanvasWrapper(container).style.transform;
     },
     getCanvasViewBoxAttr() {
       return querySvg(container).getAttribute("viewBox");

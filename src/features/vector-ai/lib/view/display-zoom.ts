@@ -16,38 +16,21 @@ function resolveViewBoxDimensions(viewBox: Pick<ViewBox, "w" | "h">) {
   };
 }
 
-export function getCanvasBaseRemSize(viewBox: Pick<ViewBox, "w" | "h">) {
+export function getCanvasZoomedRemSize(
+  viewBox: Pick<ViewBox, "w" | "h">,
+  displayZoom: number,
+): CSSProperties {
   const { w, h } = resolveViewBoxDimensions(viewBox);
   const ratio = VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO;
   return {
-    width: `${w * ratio}rem`,
-    height: `${h * ratio}rem`,
+    width: `${w * ratio * displayZoom}rem`,
+    height: `${h * ratio * displayZoom}rem`,
+    flexShrink: 0,
   };
 }
 
-export function getCanvasDisplayZoomLayout(
-  viewBox: Pick<ViewBox, "w" | "h">,
-  displayZoom: number,
-): {
-  viewport: CSSProperties;
-  scroll: CSSProperties;
-  canvas: CSSProperties;
-} {
-  const { w, h } = resolveViewBoxDimensions(viewBox);
-  const ratio = VECTOR_AI_VIEWBOX_DISPLAY_REM_RATIO;
-  const base = getCanvasBaseRemSize(viewBox);
-  return {
-    viewport: base,
-    scroll: {
-      width: `${w * ratio * displayZoom}rem`,
-      height: `${h * ratio * displayZoom}rem`,
-    },
-    canvas: {
-      ...base,
-      transform: displayZoom === 1 ? undefined : `scale(${displayZoom})`,
-      transformOrigin: "top left",
-    },
-  };
+export function getCanvasBaseRemSize(viewBox: Pick<ViewBox, "w" | "h">) {
+  return getCanvasZoomedRemSize(viewBox, 1);
 }
 
 export function clampDisplayZoom(zoom: number): number {
