@@ -5,11 +5,7 @@ import { VECTOR_AI_LLM_MESSAGE_MAX_LENGTH } from "@/features/vector-ai/lib/vecto
 
 function isCompactShapeKind(kind: unknown): boolean {
   return (
-    kind === "r" ||
-    kind === "c" ||
-    kind === "l" ||
-    kind === "t" ||
-    kind === "p"
+    kind === "r" || kind === "c" || kind === "l" || kind === "t" || kind === "p"
   );
 }
 
@@ -28,20 +24,16 @@ const compactAddShapeSchema = z
 const compactUpdateShapeSchema = z
   .array(z.unknown())
   .min(3)
-  .refine((tuple) => isCompactShapeKind(tuple[0]), "Type de forme compacte invalide.");
+  .refine(
+    (tuple) => isCompactShapeKind(tuple[0]),
+    "Type de forme compacte invalide.",
+  );
 
 const addOpSchema = z.tuple([z.literal("add"), compactAddShapeSchema]);
 const updateOpSchema = z.tuple([z.literal("update"), compactUpdateShapeSchema]);
-const deleteOpSchema = z.tuple([
-  z.literal("delete"),
-  z.string().min(1),
-]);
+const deleteOpSchema = z.tuple([z.literal("delete"), z.string().min(1)]);
 
-const opSchema = z.union([
-  addOpSchema,
-  updateOpSchema,
-  deleteOpSchema,
-]);
+const opSchema = z.union([addOpSchema, updateOpSchema, deleteOpSchema]);
 
 const opsResponseSchema = z.object({
   ops: z.array(opSchema),

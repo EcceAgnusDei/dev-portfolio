@@ -6,10 +6,12 @@ import { parseVectorAiOpsJson } from "@/features/vector-ai/lib/editor/ai/codec/p
 import { geminiVectorAiOps } from "@/features/vector-ai/lib/editor/ai/gemini-vector-ai-llm";
 import { resolveAiServerMessage } from "@/features/vector-ai/lib/editor/ai/resolve-ai-user-message";
 import {
+  VECTOR_AI_LLM_MODELS,
   VECTOR_AI_PREVIEW_PNG_MAX_BASE64_LENGTH,
   VECTOR_AI_PROMPT_MAX_LENGTH,
   VECTOR_AI_RATE_LIMIT_MAX,
   VECTOR_AI_RATE_LIMIT_WINDOW_MS,
+  type VectorAiLlmModelId,
 } from "@/features/vector-ai/lib/vector-ai-config";
 import { vectorDocSchema } from "@/features/vector-ai/lib/document/schema";
 import {
@@ -40,6 +42,10 @@ const previewPngSchema = z.object({
   mimeType: z.literal("image/png"),
 });
 
+const vectorAiLlmModelIds = VECTOR_AI_LLM_MODELS.map(
+  (entry) => entry.id,
+) as [VectorAiLlmModelId, ...VectorAiLlmModelId[]];
+
 const postBodySchema = z.object({
   prompt: z
     .string()
@@ -50,6 +56,7 @@ const postBodySchema = z.object({
     ),
   doc: vectorDocSchema,
   previewPng: previewPngSchema.optional(),
+  model: z.enum(vectorAiLlmModelIds).optional(),
 });
 
 function parseRateLimitMax(): number {
@@ -111,7 +118,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { prompt, doc, previewPng } = parsed.data;
+  const { prompt, doc, previewPng, model } = parsed.data;
 
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiKey) {
@@ -125,7 +132,13 @@ export async function POST(request: Request) {
 
   let opsJson: string;
   try {
-    opsJson = await geminiVectorAiOps(geminiKey, prompt, doc, previewPng);
+    opsJson = await geminiVectorAiOps(
+      geminiKey,
+      prompt,
+      doc,
+      previewPng,
+      model,
+    );
   } catch (err) {
     const message =
       err instanceof Error && err.message.trim()

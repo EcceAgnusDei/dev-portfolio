@@ -122,3 +122,29 @@ export type VectorAiPreviewPng = {
   base64: string;
   mimeType: "image/png";
 };
+
+export const VECTOR_AI_LLM_MODELS = [
+  { id: "gemini-3.1-flash-lite", label: "3.1 Flash Lite" },
+  { id: "gemini-3.5-flash", label: "3.5 Flash" },
+] as const;
+
+export type VectorAiLlmModelId = (typeof VECTOR_AI_LLM_MODELS)[number]["id"];
+
+export const VECTOR_AI_DEFAULT_LLM_MODEL: VectorAiLlmModelId =
+  "gemini-3.1-flash-lite";
+
+const VECTOR_AI_LLM_MODEL_ID_SET = new Set<string>(
+  VECTOR_AI_LLM_MODELS.map((entry) => entry.id),
+);
+
+export function isVectorAiLlmModelId(
+  value: string,
+): value is VectorAiLlmModelId {
+  return VECTOR_AI_LLM_MODEL_ID_SET.has(value);
+}
+
+export function resolveVectorAiDefaultLlmModel(): VectorAiLlmModelId {
+  const fromEnv = process.env.GEMINI_MODEL?.trim();
+  if (fromEnv && isVectorAiLlmModelId(fromEnv)) return fromEnv;
+  return VECTOR_AI_DEFAULT_LLM_MODEL;
+}

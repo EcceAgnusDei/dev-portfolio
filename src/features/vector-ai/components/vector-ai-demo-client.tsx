@@ -49,8 +49,13 @@ import {
   subscribeVectorDrawingsStore,
 } from "@/features/vector-ai/lib/vector-drawing-storage";
 import {
+  readStoredVectorAiLlmModel,
+  writeStoredVectorAiLlmModel,
+} from "@/features/vector-ai/lib/vector-ai-llm-model-storage";
+import {
   VECTOR_AI_DEFAULT_FONT_SIZE,
   VECTOR_AI_DEFAULT_VIEWBOX,
+  type VectorAiLlmModelId,
 } from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +72,9 @@ export function VectorAiDemoClient() {
   );
   const [notice, setNotice] = useState<Notice | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiModel, setAiModel] = useState<VectorAiLlmModelId>(() =>
+    readStoredVectorAiLlmModel(),
+  );
   const [aiPending, setAiPending] = useState(false);
   const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
   const [drawingName, setDrawingName] = useState("");
@@ -236,6 +244,7 @@ export function VectorAiDemoClient() {
       const result = await runVectorAiSubmit({
         doc: state.doc,
         prompt: aiPrompt,
+        model: aiModel,
         signal: controller.signal,
         shouldCancel: () =>
           controller.signal.aborted || requestId !== aiRequestIdRef.current,
@@ -263,7 +272,7 @@ export function VectorAiDemoClient() {
         aiAbortRef.current = null;
       }
     }
-  }, [aiPending, aiPrompt, clearNotice, showAlert, showInfo, state.doc]);
+  }, [aiModel, aiPending, aiPrompt, clearNotice, showAlert, showInfo, state.doc]);
 
   const statusText =
     notice?.text ?? (aiPending ? "Modification en cours…" : "");
@@ -363,6 +372,11 @@ export function VectorAiDemoClient() {
           onAiPromptChange={(value) => {
             clearNotice();
             setAiPrompt(value);
+          }}
+          aiModel={aiModel}
+          onAiModelChange={(value) => {
+            setAiModel(value);
+            writeStoredVectorAiLlmModel(value);
           }}
           onSubmitAi={() => void handleSubmitAi()}
           onCancelAi={handleCancelAi}

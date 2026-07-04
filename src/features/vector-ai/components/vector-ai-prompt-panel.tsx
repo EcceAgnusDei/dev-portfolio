@@ -3,12 +3,18 @@
 import { type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { VECTOR_AI_PROMPT_MAX_LENGTH } from "@/features/vector-ai/lib/vector-ai-config";
+import {
+  VECTOR_AI_LLM_MODELS,
+  VECTOR_AI_PROMPT_MAX_LENGTH,
+  type VectorAiLlmModelId,
+} from "@/features/vector-ai/lib/vector-ai-config";
 import { cn } from "@/lib/utils";
 
 export type VectorAiPromptPanelProps = {
   aiPrompt: string;
   onAiPromptChange: (value: string) => void;
+  aiModel: VectorAiLlmModelId;
+  onAiModelChange: (value: VectorAiLlmModelId) => void;
   onSubmitAi: () => void;
   onCancelAi: () => void;
   aiPending: boolean;
@@ -18,6 +24,8 @@ export type VectorAiPromptPanelProps = {
 export function VectorAiPromptPanel({
   aiPrompt,
   onAiPromptChange,
+  aiModel,
+  onAiModelChange,
   onSubmitAi,
   onCancelAi,
   aiPending,
@@ -51,6 +59,24 @@ export function VectorAiPromptPanel({
           disabled={aiPending}
           className="min-h-16 w-full min-w-0 flex-1 resize-y rounded-md border border-border bg-background px-2 py-1.5 text-sm sm:max-w-xl"
         />
+        <label className="flex shrink-0 flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Modèle</span>
+          <select
+            value={aiModel}
+            onChange={(event) =>
+              onAiModelChange(event.target.value as VectorAiLlmModelId)
+            }
+            disabled={aiPending}
+            aria-label="Modèle d'IA"
+            className="h-8 min-w-36 rounded-md border border-border bg-background px-2 text-sm"
+          >
+            {VECTOR_AI_LLM_MODELS.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.label}
+              </option>
+            ))}
+          </select>
+        </label>
         {aiPending ? (
           <Button
             type="button"

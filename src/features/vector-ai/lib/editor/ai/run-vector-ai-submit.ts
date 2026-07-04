@@ -2,7 +2,10 @@ import { postVectorAiCommand } from "@/features/vector-ai/lib/editor/ai/post-vec
 import { resolveAiUserMessage } from "@/features/vector-ai/lib/editor/ai/resolve-ai-user-message";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import { isSameVectorDoc } from "@/features/vector-ai/lib/editor/core/doc-equality";
-import type { VectorAiPreviewPng } from "@/features/vector-ai/lib/vector-ai-config";
+import type {
+  VectorAiLlmModelId,
+  VectorAiPreviewPng,
+} from "@/features/vector-ai/lib/vector-ai-config";
 import {
   rasterizeDocToPng,
   type RasterizeDocResult,
@@ -21,6 +24,7 @@ export type RunVectorAiSubmitResult =
 export type RunVectorAiSubmitParams = {
   doc: VectorDoc;
   prompt: string;
+  model?: VectorAiLlmModelId;
   signal?: AbortSignal;
   shouldCancel?: () => boolean;
   rasterizeDoc?: (doc: VectorDoc) => Promise<RasterizeDocResult>;
@@ -33,6 +37,7 @@ export async function runVectorAiSubmit(
   const {
     doc,
     prompt,
+    model,
     signal,
     shouldCancel,
     rasterizeDoc = rasterizeDocToPng,
@@ -58,6 +63,7 @@ export async function runVectorAiSubmit(
     prompt,
     doc,
     previewPng,
+    model,
     signal,
   });
 

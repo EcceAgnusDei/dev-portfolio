@@ -130,6 +130,7 @@ describe("workflow: commande IA", () => {
           base64: MINIMAL_VALID_PNG_BASE64,
           mimeType: "image/png",
         },
+        undefined,
       );
     });
 
@@ -144,6 +145,7 @@ describe("workflow: commande IA", () => {
         "test-key",
         "ajoute un rectangle",
         expect.any(Object),
+        undefined,
         undefined,
       );
     });
@@ -160,6 +162,7 @@ describe("workflow: commande IA", () => {
         "test-key",
         "ajoute un cercle",
         expect.any(Object),
+        undefined,
         undefined,
       );
     });

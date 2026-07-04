@@ -4,6 +4,7 @@ import type { GenerationConfig, Part } from "@google/generative-ai";
 import { encodeDocForLlm } from "@/features/vector-ai/lib/editor/ai/codec/encode-doc";
 import type { VectorDoc } from "@/features/vector-ai/lib/document/types";
 import {
+  resolveVectorAiDefaultLlmModel,
   VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES,
   VECTOR_AI_LLM_MESSAGE_MAX_LENGTH,
   VECTOR_AI_MAX_FONT_SIZE,
@@ -13,10 +14,9 @@ import {
   VECTOR_AI_MAX_STROKE_WIDTH,
   VECTOR_AI_MAX_TEXT_LENGTH,
   VECTOR_AI_PREVIEW_MEDIA_RESOLUTION,
+  type VectorAiLlmModelId,
   type VectorAiPreviewPng,
 } from "@/features/vector-ai/lib/vector-ai-config";
-
-const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 const ALLOWED_SHAPE_TYPES = VECTOR_AI_LLM_ALLOWED_SHAPE_TYPES.join(", ");
 
@@ -41,6 +41,7 @@ Ops autorisées :
 - ["add", tuple] : ajoute une forme (ids nouveaux : n1, n2, … ; jamais de path)
 - ["update", tuple] : modifie une forme existante (réutilise l'id de ctx.s : s1, s2, …)
 - ["delete", "s1"] : supprime une forme existante par son id ctx.s
+- vérifie bien que chaque ops ne se compose que de deux éléments
 
 Règles :
 - ViewBox (bornes incluses) : x entre vb[0] et vb[0]+vb[2], y entre vb[1] et vb[1]+vb[3].
@@ -62,9 +63,8 @@ Règles :
 - message : phrase courte en français, max ${VECTOR_AI_LLM_MESSAGE_MAX_LENGTH} caractères, orientée action.
 - Vider le dessin : plusieurs ["delete", "s1"], ["delete", "s2"], … pour chaque id de ctx.s.`;
 
-function resolveModelName(): string {
-  const fromEnv = process.env.GEMINI_MODEL?.trim();
-  return fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_MODEL;
+function resolveModelName(model?: VectorAiLlmModelId): VectorAiLlmModelId {
+  return model ?? resolveVectorAiDefaultLlmModel();
 }
 
 function devLog(...args: unknown[]) {
@@ -167,9 +167,9 @@ function userFacingGeminiError(err: unknown): string {
   ) {
     const retrySec = parseRetryDelaySeconds(err);
     if (retrySec) {
-      return `Limite d'utilisation IA atteinte. Réessayez dans ${retrySec} s.`;
+      return `Limite d'utilisation IA atteinte pour ce modèle. Réessayez dans ${retrySec} s ou sélectionnez un autre modèle.`;
     }
-    return "Limite d'utilisation IA atteinte. Réessayez plus tard.";
+    return "Limite d'utilisation IA atteinte pour ce modèle. Réessayez plus tard ou sélectionnez un autre modèle.";
   }
 
   if (status === 500 || raw.includes("internal") || raw.includes("500")) {
@@ -265,10 +265,11 @@ export async function geminiVectorAiOps(
   userPrompt: string,
   doc: VectorDoc,
   previewPng?: VectorAiPreviewPng,
+  modelId?: VectorAiLlmModelId,
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: resolveModelName(),
+    model: resolveModelName(modelId),
     systemInstruction: SYSTEM_INSTRUCTION,
     generationConfig: {
       temperature: 0.1,
