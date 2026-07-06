@@ -1,6 +1,10 @@
 import { vi } from "vitest";
 
 import { POST } from "@/app/api/demos/vector-ai/ai-command/route";
+import type {
+  PostVectorAiCommandBody,
+  PostVectorAiCommandResult,
+} from "@/features/vector-ai/lib/editor/ai/post-vector-ai-command";
 import { runVectorAiSubmit } from "@/features/vector-ai/lib/editor/ai/run-vector-ai-submit";
 import {
   checkRateLimitMock,
@@ -13,7 +17,11 @@ import {
   MINIMAL_VALID_PNG_BASE64,
   makeDocWithRect,
 } from "@/features/vector-ai/lib/editor/test/fixtures";
-import type { VectorAiPreviewPng } from "@/features/vector-ai/lib/vector-ai-config";
+import type {
+  VectorAiLlmModelId,
+  VectorAiPreviewPng,
+} from "@/features/vector-ai/lib/vector-ai-config";
+import { VECTOR_AI_PROMPT_MAX_LENGTH } from "@/features/vector-ai/lib/vector-ai-config";
 import type { RasterizeDocResult } from "@/features/vector-ai/lib/view/rasterize-doc-to-png";
 
 export const llmResponses = {
@@ -117,7 +125,70 @@ export type CallAiRouteBody = {
   prompt: string;
   doc: VectorDoc;
   previewPng?: VectorAiPreviewPng;
+  model?: VectorAiLlmModelId;
 };
+
+export async function postVectorAiCommandViaRoute(
+  body: PostVectorAiCommandBody,
+): Promise<PostVectorAiCommandResult> {
+  const trimmed = body.prompt.trim();
+  if (!trimmed) {
+    return { ok: false, error: "Le prompt est vide." };
+  }
+
+  if (trimmed.length > VECTOR_AI_PROMPT_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `Le prompt est trop long (max. ${VECTOR_AI_PROMPT_MAX_LENGTH.toLocaleString("fr-FR")} caractères).`,
+    };
+  }
+
+  if (body.signal?.aborted) {
+    return { ok: false, aborted: true };
+  }
+
+  const res = await callAiRoute({
+    prompt: trimmed,
+    doc: body.doc,
+    previewPng: body.previewPng,
+    model: body.model,
+  });
+
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    if (body.signal?.aborted) {
+      return { ok: false, aborted: true };
+    }
+    return { ok: false, error: "Réponse serveur illisible." };
+  }
+
+  const obj = data as { error?: unknown; doc?: VectorDoc; message?: unknown };
+
+  if (!res.ok) {
+    const msg =
+      typeof obj.error === "string" && obj.error.length > 0
+        ? obj.error
+        : `Erreur ${res.status}`;
+    return { ok: false, error: msg };
+  }
+
+  if (!obj.doc || typeof obj.doc !== "object") {
+    return { ok: false, error: "Réponse serveur invalide." };
+  }
+
+  const message =
+    typeof obj.message === "string" && obj.message.trim().length > 0
+      ? obj.message.trim()
+      : undefined;
+
+  return {
+    ok: true,
+    doc: obj.doc,
+    ...(message ? { message } : {}),
+  };
+}
 
 export async function callAiRoute(
   body: CallAiRouteBody,
