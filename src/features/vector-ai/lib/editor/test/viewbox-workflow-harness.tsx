@@ -368,6 +368,8 @@ export function renderViewBoxWorkflow(
           onZoomIn={() => {}}
           onZoomOut={() => {}}
           onZoomReset={() => {}}
+          canClear={interaction.canClearAllShapes}
+          onClear={interaction.clearAllShapes}
         />
       </>
     );

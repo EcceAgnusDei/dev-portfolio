@@ -390,6 +390,9 @@ export function renderZoomWorkflow(
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
           displayZoomControlsDisabled={aiPending}
+          canClear={activeInteraction.canClearAllShapes}
+          onClear={activeInteraction.clearAllShapes}
+          clearDisabled={aiPending}
         />
       </>
     );

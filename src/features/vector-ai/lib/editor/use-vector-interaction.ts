@@ -32,7 +32,9 @@ import {
   type TextEditCommit,
 } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import {
+  canClearAllShapes,
   canDeleteSelectedShapes,
+  clearAllShapesActions,
   deleteShapeActions,
 } from "@/features/vector-ai/lib/editor/dispatch/delete-shape";
 import {
@@ -145,6 +147,8 @@ export type UseVectorInteractionResult = {
   clearTextEditSession: () => void;
   canDeleteSelectedShape: boolean;
   deleteSelectedShape: () => void;
+  canClearAllShapes: boolean;
+  clearAllShapes: () => void;
   canReorderSelectedShapes: boolean;
   zOrderAvailability: ZOrderAvailability;
   reorderSelectedShapes: (command: ZOrderCommand) => void;
@@ -403,6 +407,25 @@ export function useVectorInteraction({
     textEditSession,
     dispatchActions,
   ]);
+
+  const canClearCanvas = useMemo(
+    () => canClearAllShapes(state.doc),
+    [state.doc],
+  );
+
+  const clearAllShapes = useCallback(() => {
+    if (!canClearAllShapes(state.doc)) return;
+
+    if (textEditSession !== null) {
+      setTextEditSession(null);
+    }
+
+    if (sessionRef.current.kind !== "idle") {
+      setSession(IDLE_POINTER_SESSION);
+    }
+
+    dispatchActions(clearAllShapesActions(state.doc));
+  }, [state.doc, textEditSession, dispatchActions]);
 
   const canReorderSelected = useMemo(() => {
     if (state.tool !== "select") return false;
@@ -772,6 +795,8 @@ export function useVectorInteraction({
     clearTextEditSession,
     canDeleteSelectedShape,
     deleteSelectedShape,
+    canClearAllShapes: canClearCanvas,
+    clearAllShapes,
     canReorderSelectedShapes: canReorderSelected,
     zOrderAvailability,
     reorderSelectedShapes,

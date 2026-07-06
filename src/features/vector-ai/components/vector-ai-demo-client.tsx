@@ -308,6 +308,9 @@ export function VectorAiDemoClient() {
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
         displayZoomControlsDisabled={aiPending}
+        canClear={interaction.canClearAllShapes}
+        onClear={interaction.clearAllShapes}
+        clearDisabled={aiPending}
       />
       <div className="flex flex-col gap-1">
         <section

@@ -218,6 +218,9 @@ export type VectorEditorBottomToolbarProps = {
   onZoomOut: () => void;
   onZoomReset: () => void;
   displayZoomControlsDisabled?: boolean;
+  canClear?: boolean;
+  onClear?: () => void;
+  clearDisabled?: boolean;
   className?: string;
 };
 
@@ -408,6 +411,9 @@ export function VectorEditorBottomToolbar({
   onZoomOut,
   onZoomReset,
   displayZoomControlsDisabled = false,
+  canClear = false,
+  onClear,
+  clearDisabled = false,
   className,
 }: VectorEditorBottomToolbarProps) {
   return (
@@ -460,6 +466,17 @@ export function VectorEditorBottomToolbar({
             onOk={onViewBoxOk}
             onOpenChange={onViewBoxDimensionsOpenChange}
           />
+          {onClear ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={clearDisabled || !canClear}
+              onClick={onClear}
+            >
+              Effacer
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -575,6 +592,9 @@ export function VectorEditorToolbar(props: VectorEditorToolbarProps) {
     onZoomOut,
     onZoomReset,
     displayZoomControlsDisabled,
+    canClear,
+    onClear,
+    clearDisabled,
     className,
   } = props;
 
@@ -625,6 +645,9 @@ export function VectorEditorToolbar(props: VectorEditorToolbarProps) {
         onZoomOut={onZoomOut}
         onZoomReset={onZoomReset}
         displayZoomControlsDisabled={displayZoomControlsDisabled}
+        canClear={canClear}
+        onClear={onClear}
+        clearDisabled={clearDisabled}
         className={className}
       />
     </>

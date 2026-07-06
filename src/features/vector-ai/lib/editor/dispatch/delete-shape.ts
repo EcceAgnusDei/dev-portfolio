@@ -34,3 +34,14 @@ export function deleteShapeActions(
     recordHistory: index === 0 ? undefined : false,
   }));
 }
+
+export function canClearAllShapes(doc: VectorDoc): boolean {
+  return doc.shapes.some((shape) => !shape.locked);
+}
+
+export function clearAllShapesActions(doc: VectorDoc): EditorAction[] {
+  return deleteShapeActions(
+    doc,
+    doc.shapes.map((shape) => shape.id),
+  );
+}
