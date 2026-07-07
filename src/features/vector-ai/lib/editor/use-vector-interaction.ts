@@ -145,6 +145,7 @@ export type UseVectorInteractionResult = {
   commitTextEdit: (input: TextEditCommit) => void;
   cancelTextEdit: () => void;
   clearTextEditSession: () => void;
+  cancelPointerSession: () => void;
   canDeleteSelectedShape: boolean;
   deleteSelectedShape: () => void;
   canClearAllShapes: boolean;
@@ -241,6 +242,16 @@ export function useVectorInteraction({
     },
     [dispatch],
   );
+
+  const cancelPointerSession = useCallback(() => {
+    const current = sessionRef.current;
+    if (current.kind !== "idle") {
+      releaseSvgPointer(svgRef.current, current.pointerId);
+      setSession(IDLE_POINTER_SESSION);
+    }
+    lastTextPointerDownRef.current = null;
+    pendingTextEditShapeIdRef.current = null;
+  }, [svgRef]);
 
   const endSession = useCallback(
     (event: ReactPointerEvent) => {
@@ -793,6 +804,7 @@ export function useVectorInteraction({
     commitTextEdit,
     cancelTextEdit,
     clearTextEditSession,
+    cancelPointerSession,
     canDeleteSelectedShape,
     deleteSelectedShape,
     canClearAllShapes: canClearCanvas,

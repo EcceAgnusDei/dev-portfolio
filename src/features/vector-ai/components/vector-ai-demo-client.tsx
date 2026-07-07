@@ -42,6 +42,7 @@ import {
   getCanvasZoomedRemSize,
   stepDisplayZoom,
 } from "@/features/vector-ai/lib/view/display-zoom";
+import { useTwoFingerCanvasScroll } from "@/features/vector-ai/lib/view/use-two-finger-canvas-scroll";
 import { serializeToSvg } from "@/features/vector-ai/lib/view/serialize-to-svg";
 import {
   getVectorDrawingsStoreServerSnapshot,
@@ -87,6 +88,7 @@ export function VectorAiDemoClient() {
   const [viewBoxHandlesVisible, setViewBoxHandlesVisible] = useState(false);
   const [displayZoom, setDisplayZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
+  const canvasScrollContainerRef = useRef<HTMLDivElement>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const aiRequestIdRef = useRef(0);
   const interaction = useVectorInteraction({
@@ -95,6 +97,10 @@ export function VectorAiDemoClient() {
     svgRef,
     viewBoxHandlesVisible,
     aiPending,
+  });
+  const { isTwoFingerScrolling } = useTwoFingerCanvasScroll({
+    scrollContainerRef: canvasScrollContainerRef,
+    onTwoFingerStart: interaction.cancelPointerSession,
   });
   const savedDrawings = useSyncExternalStore(
     subscribeVectorDrawingsStore,
@@ -317,10 +323,16 @@ export function VectorAiDemoClient() {
           id="vector-ai-canvas"
           className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 bg-muted/20"
         >
-          <div className="flex min-h-0 justify-center overflow-auto px-2 pt-2 pb-0">
+          <div
+            ref={canvasScrollContainerRef}
+            className="flex min-h-0 w-full touch-pan-x touch-pan-y justify-center overflow-x-auto overflow-y-auto px-2 pt-2 pb-0 max-sm:justify-start"
+          >
             <div
               data-zoom-canvas
-              className={cn(aiPending && "pointer-events-none opacity-60")}
+              className={cn(
+                aiPending && "pointer-events-none opacity-60",
+                isTwoFingerScrolling && "pointer-events-none",
+              )}
               style={canvasZoomStyle}
             >
               <VectorCanvasInteractive

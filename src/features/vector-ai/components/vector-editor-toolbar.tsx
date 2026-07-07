@@ -265,41 +265,36 @@ export function VectorEditorPrimaryToolbar({
     <div className={cn(TOOLBAR_SHELL_CLASS, className)}>
       <fieldset className="flex min-w-0 w-full flex-col gap-2 border-0 p-0">
         <legend className="text-center text-sm font-medium">Outils</legend>
-        <div className="-mx-1 flex min-w-0 w-full justify-center overflow-x-auto px-1 pb-1">
-          <div className="flex min-w-min flex-nowrap items-center justify-center gap-2 sm:flex-wrap sm:overflow-visible">
-            {VECTOR_EDITOR_TOOLS.map((tool) => (
-              <Button
-                key={tool.id}
-                type="button"
-                variant={activeTool === tool.id ? "default" : "outline"}
-                size="sm"
-                className="shrink-0"
-                onClick={() => onToolChange(tool.id)}
-              >
-                {tool.label}
-              </Button>
-            ))}
+        <div className="flex min-w-0 w-full flex-wrap items-center justify-center gap-2">
+          {VECTOR_EDITOR_TOOLS.map((tool) => (
             <Button
+              key={tool.id}
               type="button"
-              variant="outline"
+              variant={activeTool === tool.id ? "default" : "outline"}
               size="sm"
-              className="shrink-0"
-              disabled={!canUndo}
-              onClick={onUndo}
+              onClick={() => onToolChange(tool.id)}
             >
-              Annuler
+              {tool.label}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              disabled={!canRedo}
-              onClick={onRedo}
-            >
-              Rétablir
-            </Button>
-          </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canUndo}
+            onClick={onUndo}
+          >
+            Annuler
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canRedo}
+            onClick={onRedo}
+          >
+            Rétablir
+          </Button>
         </div>
       </fieldset>
 
