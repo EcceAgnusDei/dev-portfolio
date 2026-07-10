@@ -129,7 +129,7 @@ describe("workflow: sélection", () => {
       const initial = makeEditorWithTwoRects(["rect-1"]);
 
       const { state, session } = runGesture(initial, [
-        clickShape("rect-1", { x: 10, y: 20 }),
+        clickShape("rect-1", { x: 60, y: 45 }),
       ]);
 
       expect(state.selection.ids).toEqual(["rect-1"]);
@@ -148,18 +148,15 @@ describe("workflow: sélection", () => {
       expect(markup).toContain('stroke-dasharray="4 2"');
     });
 
-    it("affiche les poignées de redimensionnement quand une seule forme est sélectionnée", () => {
+    it("n'affiche pas de disques de redimensionnement pour une forme sélectionnée", () => {
       const doc = docWithTwoRects();
 
       const markup = renderToStaticMarkup(
-        <VectorCanvas
-          doc={doc}
-          selectedIds={["rect-a"]}
-          onRectHandlePointerDown={() => {}}
-        />,
+        <VectorCanvas doc={doc} selectedIds={["rect-a"]} />,
       );
 
-      expect(markup).toContain("data-rect-handle");
+      expect(markup).not.toContain("data-rect-handle");
+      expect(markup).not.toContain("data-circle-handle");
     });
 
     it("trace le contour extérieur du trait pour une ligne sélectionnée", () => {
@@ -271,16 +268,16 @@ describe("workflow: sélection", () => {
       expect(markup).toContain('stroke-dasharray="4 2"');
     });
 
-    it("n'affiche pas les poignées de redimensionnement en multi-sélection", () => {
+    it("n'affiche pas de disques de redimensionnement en multi-sélection", () => {
       const markup = renderToStaticMarkup(
         <VectorCanvas
           doc={docWithTwoRects()}
           selectedIds={["rect-a", "rect-b"]}
-          onRectHandlePointerDown={() => {}}
         />,
       );
 
       expect(markup).not.toContain("data-rect-handle");
+      expect(markup).not.toContain("data-circle-handle");
     });
 
     describe("raccourcis clavier dans le canvas", () => {

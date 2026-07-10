@@ -45,6 +45,10 @@ import {
   type ZOrderCommand,
 } from "@/features/vector-ai/lib/editor/dispatch/reorder-shapes";
 import { clampTextPlacement } from "@/features/vector-ai/lib/editor/dispatch/create-text";
+import {
+  cursorForRectResizeAtWorld,
+  cursorForSelectedShapeAtWorld,
+} from "@/features/vector-ai/lib/editor/geometry/resize";
 import { screenToWorld } from "@/features/vector-ai/lib/editor/geometry/screen-to-world";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type { CirclePreview } from "@/features/vector-ai/lib/editor/preview/circle";
@@ -67,10 +71,9 @@ import {
   getDisplayDoc,
   getPreviews,
   handleBackgroundPointerDown,
-  handleCircleHandlePointerDown,
   handleCubicHandlePointerDown,
   handleLineEndPointerDown,
-  handleRectHandlePointerDown,
+  handleRectResizePointerDown,
   handleShapePointerDown,
   handleViewBoxHandlePointerDown,
   shapePointerEventsForTool,
@@ -84,9 +87,7 @@ import {
   VECTOR_AI_TEXT_DOUBLE_CLICK_MS,
 } from "@/features/vector-ai/lib/vector-ai-config";
 import type {
-  CircleResizeHandle,
   LineEnd,
-  RectResizeHandle,
   ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import {
@@ -115,6 +116,8 @@ function worldFromEvent(
   if (!svg) return null;
   return screenToWorld(svg, event.clientX, event.clientY);
 }
+
+export type ShapePointerRegion = "body" | "resize-contour";
 
 export type UseVectorInteractionParams = {
   state: EditorState;
@@ -156,11 +159,22 @@ export type UseVectorInteractionResult = {
   styleControl: StyleControlState;
   applyStyleControlPatch: (patch: StylePatch) => void;
   shapePointerEvents: "auto" | "none";
+  snapToleranceWorld: number;
   onSvgPointerDown: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerMove: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerUp: (event: ReactPointerEvent<SVGSVGElement>) => void;
   onSvgPointerCancel: (event: ReactPointerEvent<SVGSVGElement>) => void;
-  onShapePointerDown: (shapeId: string, event: ReactPointerEvent) => void;
+  onShapePointerDown: (
+    shapeId: string,
+    event: ReactPointerEvent,
+    region?: ShapePointerRegion,
+  ) => void;
+  onShapePointerMove: (
+    shapeId: string,
+    event: ReactPointerEvent,
+    region?: ShapePointerRegion,
+  ) => void;
+  onShapePointerLeave: (event: ReactPointerEvent) => void;
   onShapeDoubleClick: (shapeId: string, event: ReactMouseEvent) => void;
   onLineEndPointerDown: (
     shapeId: string,
@@ -170,16 +184,6 @@ export type UseVectorInteractionResult = {
   onCubicHandlePointerDown: (
     shapeId: string,
     handle: CubicHandle,
-    event: ReactPointerEvent,
-  ) => void;
-  onRectHandlePointerDown: (
-    shapeId: string,
-    handle: RectResizeHandle,
-    event: ReactPointerEvent,
-  ) => void;
-  onCircleHandlePointerDown: (
-    shapeId: string,
-    handle: CircleResizeHandle,
     event: ReactPointerEvent,
   ) => void;
   onViewBoxHandlePointerDown?: (
@@ -498,7 +502,30 @@ export function useVectorInteraction({
   );
 
   const onShapePointerDown = useCallback(
-    (shapeId: string, event: ReactPointerEvent) => {
+    (
+      shapeId: string,
+      event: ReactPointerEvent,
+      region: ShapePointerRegion = "body",
+    ) => {
+      const world = worldFromEvent(svgRef.current, event);
+      if (!world) return;
+
+      if (region === "resize-contour") {
+        const result = handleRectResizePointerDown(
+          interactionState,
+          shapeId,
+          world,
+          event.pointerId,
+        );
+        if (!result) return;
+
+        event.stopPropagation();
+        captureSvgPointer(svgRef.current, event.pointerId);
+        dispatchActions(result.actions);
+        setSession(result.session);
+        return;
+      }
+
       const shape = getShapeById(state.doc, shapeId);
       if (shape?.type === "text" && state.tool === "select") {
         const now = event.timeStamp;
@@ -519,9 +546,6 @@ export function useVectorInteraction({
         lastTextPointerDownRef.current = null;
       }
 
-      const world = worldFromEvent(svgRef.current, event);
-      if (!world) return;
-
       const result = handleShapePointerDown(
         interactionState,
         shapeId,
@@ -540,6 +564,62 @@ export function useVectorInteraction({
     },
     [interactionState, dispatchActions, state.doc, state.tool, svgRef],
   );
+
+  const onShapePointerMove = useCallback(
+    (
+      shapeId: string,
+      event: ReactPointerEvent,
+      region: ShapePointerRegion = "body",
+    ) => {
+      if (state.tool !== "select") return;
+
+      const shape = getShapeById(state.doc, shapeId);
+      if (!shape) return;
+
+      const world = worldFromEvent(svgRef.current, event);
+      if (!world) return;
+
+      const target = event.currentTarget as SVGElement;
+
+      if (region === "resize-contour") {
+        if (shape.type !== "rect") return;
+        target.style.cursor = cursorForRectResizeAtWorld(
+          {
+            x: shape.transform.x,
+            y: shape.transform.y,
+            w: shape.w,
+            h: shape.h,
+          },
+          world,
+          interactionState.snapToleranceWorld,
+        );
+        return;
+      }
+
+      if (shape.type !== "circle") return;
+
+      const isSoleSelected =
+        state.selection.ids.length === 1 && state.selection.ids[0] === shapeId;
+      if (!isSoleSelected) return;
+
+      target.style.cursor = cursorForSelectedShapeAtWorld(
+        shape,
+        world,
+        interactionState.snapToleranceWorld,
+      );
+    },
+    [
+      interactionState.snapToleranceWorld,
+      state.doc,
+      state.selection.ids,
+      state.tool,
+      svgRef,
+    ],
+  );
+
+  const onShapePointerLeave = useCallback((event: ReactPointerEvent) => {
+    (event.currentTarget as SVGElement).style.cursor = "";
+  }, []);
 
   const onLineEndPointerDown = useCallback(
     (shapeId: string, end: LineEnd, event: ReactPointerEvent) => {
@@ -569,50 +649,6 @@ export function useVectorInteraction({
       if (!world) return;
 
       const result = handleCubicHandlePointerDown(
-        interactionState,
-        shapeId,
-        handle,
-        world,
-        event.pointerId,
-      );
-      if (!result) return;
-
-      event.stopPropagation();
-      captureSvgPointer(svgRef.current, event.pointerId);
-      dispatchActions(result.actions);
-      setSession(result.session);
-    },
-    [interactionState, dispatchActions, svgRef],
-  );
-
-  const onRectHandlePointerDown = useCallback(
-    (shapeId: string, handle: RectResizeHandle, event: ReactPointerEvent) => {
-      const world = worldFromEvent(svgRef.current, event);
-      if (!world) return;
-
-      const result = handleRectHandlePointerDown(
-        interactionState,
-        shapeId,
-        handle,
-        world,
-        event.pointerId,
-      );
-      if (!result) return;
-
-      event.stopPropagation();
-      captureSvgPointer(svgRef.current, event.pointerId);
-      dispatchActions(result.actions);
-      setSession(result.session);
-    },
-    [interactionState, dispatchActions, svgRef],
-  );
-
-  const onCircleHandlePointerDown = useCallback(
-    (shapeId: string, handle: CircleResizeHandle, event: ReactPointerEvent) => {
-      const world = worldFromEvent(svgRef.current, event);
-      if (!world) return;
-
-      const result = handleCircleHandlePointerDown(
         interactionState,
         shapeId,
         handle,
@@ -820,16 +856,17 @@ export function useVectorInteraction({
       shapePointerEventsForTool(state.tool) === "none"
         ? "none"
         : "auto",
+    snapToleranceWorld: interactionState.snapToleranceWorld,
     onSvgPointerDown,
     onSvgPointerMove,
     onSvgPointerUp,
     onSvgPointerCancel,
     onShapePointerDown,
+    onShapePointerMove,
+    onShapePointerLeave,
     onShapeDoubleClick,
     onLineEndPointerDown,
     onCubicHandlePointerDown,
-    onRectHandlePointerDown,
-    onCircleHandlePointerDown,
     onViewBoxHandlePointerDown:
       (viewBoxHandlesVisible || session.kind === "resize-viewbox") && !aiPending
         ? onViewBoxHandlePointerDown

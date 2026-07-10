@@ -11,16 +11,12 @@ import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 import type { LineEnd } from "@/features/vector-ai/lib/editor/session/types";
 import type { CubicHandle } from "@/features/vector-ai/lib/document/types";
 import { ArtboardHandles } from "@/features/vector-ai/lib/view/overlays/artboard-handles";
-import { SelectionCircleHandles } from "@/features/vector-ai/lib/view/overlays/selection-circle-handles";
 import { SelectionCubicHandles } from "@/features/vector-ai/lib/view/overlays/selection-cubic-handles";
 import { SelectionLineHandles } from "@/features/vector-ai/lib/view/overlays/selection-line-handles";
 import { SelectionOutlines } from "@/features/vector-ai/lib/view/overlays/selection-outlines";
-import { SelectionRectHandles } from "@/features/vector-ai/lib/view/overlays/selection-rect-handles";
-import type {
-  CircleResizeHandle,
-  RectResizeHandle,
-  ViewBoxResizeHandle,
-} from "@/features/vector-ai/lib/editor/session/types";
+import { SelectionRectResizeHit } from "@/features/vector-ai/lib/view/overlays/selection-rect-resize-hit";
+import type { ViewBoxResizeHandle } from "@/features/vector-ai/lib/editor/session/types";
+import type { ShapePointerRegion } from "@/features/vector-ai/lib/editor/use-vector-interaction";
 import { TextEditForeignObject } from "@/features/vector-ai/components/text-edit-foreign-object";
 import type { TextEditCommit } from "@/features/vector-ai/lib/editor/dispatch/commit-text-content";
 import { viewBoxToAttr } from "@/features/vector-ai/lib/view/shape-presentation";
@@ -41,7 +37,17 @@ export type VectorCanvasProps = {
   className?: string;
   "aria-label"?: string;
   shapePointerEvents?: "auto" | "none";
-  onShapePointerDown?: (shapeId: string, event: PointerEvent) => void;
+  onShapePointerDown?: (
+    shapeId: string,
+    event: PointerEvent,
+    region?: ShapePointerRegion,
+  ) => void;
+  onShapePointerMove?: (
+    shapeId: string,
+    event: PointerEvent,
+    region?: ShapePointerRegion,
+  ) => void;
+  onShapePointerLeave?: (event: PointerEvent) => void;
   onShapeDoubleClick?: (shapeId: string, event: MouseEvent) => void;
   onLineEndPointerDown?: (
     shapeId: string,
@@ -51,16 +57,6 @@ export type VectorCanvasProps = {
   onCubicHandlePointerDown?: (
     shapeId: string,
     handle: CubicHandle,
-    event: PointerEvent,
-  ) => void;
-  onRectHandlePointerDown?: (
-    shapeId: string,
-    handle: RectResizeHandle,
-    event: PointerEvent,
-  ) => void;
-  onCircleHandlePointerDown?: (
-    shapeId: string,
-    handle: CircleResizeHandle,
     event: PointerEvent,
   ) => void;
   onPointerDown?: (event: PointerEvent<SVGSVGElement>) => void;
@@ -74,6 +70,7 @@ export type VectorCanvasProps = {
   editingTextId?: string | null;
   textEdit?: VectorCanvasTextEdit | null;
   viewBoxHandlesVisible?: boolean;
+  snapToleranceWorld?: number;
   onViewBoxHandlePointerDown?: (
     handle: ViewBoxResizeHandle,
     event: PointerEvent,
@@ -89,11 +86,11 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       "aria-label": ariaLabel = "Zone de dessin vectoriel",
       shapePointerEvents = "auto",
       onShapePointerDown,
+      onShapePointerMove,
+      onShapePointerLeave,
       onShapeDoubleClick,
       onLineEndPointerDown,
       onCubicHandlePointerDown,
-      onRectHandlePointerDown,
-      onCircleHandlePointerDown,
       onPointerDown,
       onPointerMove,
       onPointerUp,
@@ -105,6 +102,7 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
       editingTextId = null,
       textEdit = null,
       viewBoxHandlesVisible = false,
+      snapToleranceWorld = 0,
       onViewBoxHandlePointerDown,
     },
     ref,
@@ -150,6 +148,16 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               onPointerDown={
                 shapePointerEvents === "auto" && onShapePointerDown
                   ? (event) => onShapePointerDown(shape.id, event)
+                  : undefined
+              }
+              onPointerMove={
+                shapePointerEvents === "auto" && onShapePointerMove
+                  ? (event) => onShapePointerMove(shape.id, event)
+                  : undefined
+              }
+              onPointerLeave={
+                shapePointerEvents === "auto" && onShapePointerLeave
+                  ? onShapePointerLeave
                   : undefined
               }
               onDoubleClick={
@@ -228,14 +236,19 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
           <SelectionOutlines doc={doc} selectedIds={selectedIds} />
           <g
             pointerEvents={
-              onLineEndPointerDown ||
-              onCubicHandlePointerDown ||
-              onRectHandlePointerDown ||
-              onCircleHandlePointerDown
+              onLineEndPointerDown || onCubicHandlePointerDown || onShapePointerDown
                 ? "auto"
                 : "none"
             }
           >
+            <SelectionRectResizeHit
+              doc={doc}
+              selectedId={primarySelectedId}
+              tolerance={snapToleranceWorld}
+              onShapePointerDown={onShapePointerDown}
+              onShapePointerMove={onShapePointerMove}
+              onShapePointerLeave={onShapePointerLeave}
+            />
             <SelectionLineHandles
               doc={doc}
               selectedId={primarySelectedId}
@@ -245,16 +258,6 @@ export const VectorCanvas = forwardRef<SVGSVGElement, VectorCanvasProps>(
               doc={doc}
               selectedId={primarySelectedId}
               onCubicHandlePointerDown={onCubicHandlePointerDown}
-            />
-            <SelectionRectHandles
-              doc={doc}
-              selectedId={primarySelectedId}
-              onRectHandlePointerDown={onRectHandlePointerDown}
-            />
-            <SelectionCircleHandles
-              doc={doc}
-              selectedId={primarySelectedId}
-              onCircleHandlePointerDown={onCircleHandlePointerDown}
             />
           </g>
           {textEdit ? (

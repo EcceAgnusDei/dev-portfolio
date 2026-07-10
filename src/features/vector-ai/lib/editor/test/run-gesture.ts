@@ -13,10 +13,9 @@ import {
   getDisplayDoc,
   getPreviews,
   handleBackgroundPointerDown,
-  handleCircleHandlePointerDown,
   handleCubicHandlePointerDown,
   handleLineEndPointerDown,
-  handleRectHandlePointerDown,
+  handleRectResizePointerDown,
   handleShapePointerDown,
   handleViewBoxHandlePointerDown,
   shouldCommitSessionOnPointerUp,
@@ -197,10 +196,9 @@ export function runGesture(
         break;
       }
       case "rect-handle-down": {
-        const result = handleRectHandlePointerDown(
+        const result = handleRectResizePointerDown(
           interaction,
           step.shapeId,
-          step.handle,
           step.world,
           pointerId,
         );
@@ -211,10 +209,13 @@ export function runGesture(
         break;
       }
       case "circle-handle-down": {
-        const result = handleCircleHandlePointerDown(
-          interaction,
+        const interactionWithSelection = {
+          ...interaction,
+          selectionIds: [step.shapeId],
+        };
+        const result = handleShapePointerDown(
+          interactionWithSelection,
           step.shapeId,
-          step.handle,
           step.world,
           pointerId,
         );

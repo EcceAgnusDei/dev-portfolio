@@ -32,12 +32,15 @@ import {
   beginRectResizeSession,
   beginViewBoxResizeSession,
 } from "@/features/vector-ai/lib/editor/session/begin-mutate";
+import {
+  isOnCircleContour,
+  resolveCircleResizeHandle,
+  resolveRectResizeHandle,
+} from "@/features/vector-ai/lib/editor/geometry/resize";
 import type {
-  CircleResizeHandle,
   CubicHandle,
   LineEnd,
   PointerSession,
-  RectResizeHandle,
   ViewBoxResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
 import { IDLE_POINTER_SESSION } from "@/features/vector-ai/lib/editor/session/types";
@@ -162,6 +165,13 @@ export type ShapePointerDownOptions = {
   additive?: boolean;
 };
 
+function isSoleSelected(
+  selectionIds: readonly string[],
+  shapeId: string,
+): boolean {
+  return selectionIds.length === 1 && selectionIds[0] === shapeId;
+}
+
 export function handleShapePointerDown(
   state: EditorInteractionState,
   shapeId: string,
@@ -173,6 +183,19 @@ export function handleShapePointerDown(
 
   const shape = getShapeById(state.doc, shapeId);
   if (!shape || shape.locked) return null;
+
+  const wasSoleSelected = isSoleSelected(state.selectionIds, shapeId);
+  const tolerance = state.snapToleranceWorld;
+
+  if (wasSoleSelected && shape.type === "circle") {
+    if (isOnCircleContour(shape, world, tolerance)) {
+      const handle = resolveCircleResizeHandle(shape.transform, world);
+      return {
+        session: beginCircleResizeSession(shape, handle, world, pointerId),
+        actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
+      };
+    }
+  }
 
   const nextIds = resolveShapeClickSelection(
     state.selectionIds,
@@ -188,6 +211,34 @@ export function handleShapePointerDown(
         ? beginMoveSession(state.doc, movableIds, world, pointerId)
         : IDLE_POINTER_SESSION,
     actions: [{ type: "SELECTION_SET", ids: nextIds }],
+  };
+}
+
+export function handleRectResizePointerDown(
+  state: EditorInteractionState,
+  shapeId: string,
+  world: WorldPoint,
+  pointerId: number,
+): { session: PointerSession; actions: EditorAction[] } | null {
+  if (state.tool !== "select") return null;
+
+  const shape = getShapeById(state.doc, shapeId);
+  if (!shape || shape.locked || shape.type !== "rect") return null;
+
+  const handle = resolveRectResizeHandle(
+    {
+      x: shape.transform.x,
+      y: shape.transform.y,
+      w: shape.w,
+      h: shape.h,
+    },
+    world,
+    state.snapToleranceWorld,
+  );
+
+  return {
+    session: beginRectResizeSession(shape, handle, world, pointerId),
+    actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
   };
 }
 
@@ -226,42 +277,6 @@ export function handleCubicHandlePointerDown(
 
   return {
     session,
-    actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
-  };
-}
-
-export function handleRectHandlePointerDown(
-  state: EditorInteractionState,
-  shapeId: string,
-  handle: RectResizeHandle,
-  world: WorldPoint,
-  pointerId: number,
-): { session: PointerSession; actions: EditorAction[] } | null {
-  if (state.tool !== "select") return null;
-
-  const shape = getShapeById(state.doc, shapeId);
-  if (!shape || shape.locked || shape.type !== "rect") return null;
-
-  return {
-    session: beginRectResizeSession(shape, handle, world, pointerId),
-    actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
-  };
-}
-
-export function handleCircleHandlePointerDown(
-  state: EditorInteractionState,
-  shapeId: string,
-  handle: CircleResizeHandle,
-  world: WorldPoint,
-  pointerId: number,
-): { session: PointerSession; actions: EditorAction[] } | null {
-  if (state.tool !== "select") return null;
-
-  const shape = getShapeById(state.doc, shapeId);
-  if (!shape || shape.locked || shape.type !== "circle") return null;
-
-  return {
-    session: beginCircleResizeSession(shape, handle, world, pointerId),
     actions: [{ type: "SELECTION_SET", ids: [shapeId] }],
   };
 }

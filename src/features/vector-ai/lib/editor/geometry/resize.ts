@@ -1,18 +1,57 @@
-import type { CircleShape, RectShape } from "@/features/vector-ai/lib/document/types";
+import type {
+  CircleShape,
+  RectShape,
+  ViewBox,
+} from "@/features/vector-ai/lib/document/types";
 import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
 import type { WorldPoint } from "@/features/vector-ai/lib/editor/geometry/world-point";
 import type {
   CircleResizeHandle,
   RectResizeHandle,
 } from "@/features/vector-ai/lib/editor/session/types";
-import type { ViewBox } from "@/features/vector-ai/lib/document/types";
+import {
+  VECTOR_AI_RECT_CORNER_HANDLE_ZONE_TOLERANCE_FACTOR,
+  VECTOR_AI_RECT_EDGE_HANDLE_OUTWARD_TOLERANCE_FACTOR,
+} from "@/features/vector-ai/lib/vector-ai-config";
+
+export const RECT_RESIZE_CURSOR: Record<RectResizeHandle, string> = {
+  nw: "nwse-resize",
+  n: "ns-resize",
+  ne: "nesw-resize",
+  e: "ew-resize",
+  se: "nwse-resize",
+  s: "ns-resize",
+  sw: "nesw-resize",
+  w: "ew-resize",
+};
+
+export const CIRCLE_RESIZE_CURSOR: Record<CircleResizeHandle, string> = {
+  n: "ns-resize",
+  e: "ew-resize",
+  s: "ns-resize",
+  w: "ew-resize",
+};
 
 export function rectHandleWorldPoint(
   rect: Pick<RectShape, "transform" | "w" | "h">,
   handle: RectResizeHandle,
 ): WorldPoint {
-  const { x, y } = rect.transform;
-  const { w, h } = rect;
+  return rectHandleWorldPointFromBounds(
+    {
+      x: rect.transform.x,
+      y: rect.transform.y,
+      w: rect.w,
+      h: rect.h,
+    },
+    handle,
+  );
+}
+
+export function rectHandleWorldPointFromBounds(
+  bounds: RectBounds,
+  handle: RectResizeHandle,
+): WorldPoint {
+  const { x, y, w, h } = bounds;
   switch (handle) {
     case "nw":
       return { x, y };
@@ -155,4 +194,107 @@ export function clampCircleRadiusToViewBox(
 ): number {
   if (r <= 0) return 0;
   return Math.min(r, maxCircleRadiusInViewBox(cx, cy, viewBox));
+}
+
+export function distanceToCircleContour(
+  center: WorldPoint,
+  r: number,
+  pointer: WorldPoint,
+): number {
+  return Math.abs(
+    Math.hypot(pointer.x - center.x, pointer.y - center.y) - r,
+  );
+}
+
+export function isOnCircleContour(
+  circle: Pick<CircleShape, "transform" | "r">,
+  pointer: WorldPoint,
+  tolerance: number,
+): boolean {
+  return (
+    distanceToCircleContour(circle.transform, circle.r, pointer) <= tolerance
+  );
+}
+
+export function resolveCircleResizeHandle(
+  center: WorldPoint,
+  pointer: WorldPoint,
+): CircleResizeHandle {
+  const dx = pointer.x - center.x;
+  const dy = pointer.y - center.y;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0 ? "e" : "w";
+  }
+  return dy > 0 ? "s" : "n";
+}
+
+function rectCornerZone(tolerance: number, w: number, h: number): number {
+  return Math.min(
+    tolerance * VECTOR_AI_RECT_CORNER_HANDLE_ZONE_TOLERANCE_FACTOR,
+    w / 2,
+    h / 2,
+  );
+}
+
+export function rectResizeHitStrokeWidth(tolerance: number): number {
+  const outward = tolerance * VECTOR_AI_RECT_EDGE_HANDLE_OUTWARD_TOLERANCE_FACTOR;
+  return tolerance + outward;
+}
+
+export function resolveRectResizeHandle(
+  bounds: RectBounds,
+  pointer: WorldPoint,
+  tolerance: number,
+): RectResizeHandle {
+  const { x, y, w, h } = bounds;
+  const seX = x + w;
+  const seY = y + h;
+
+  const cornerZone = rectCornerZone(tolerance, w, h);
+
+  const distLeft = pointer.x - x;
+  const distRight = seX - pointer.x;
+  const distTop = pointer.y - y;
+  const distBottom = seY - pointer.y;
+
+  const minHoriz = Math.min(distLeft, distRight);
+  const minVert = Math.min(distTop, distBottom);
+
+  if (minHoriz <= minVert) {
+    if (minHoriz === distLeft) {
+      if (distTop <= cornerZone) return "nw";
+      if (distBottom <= cornerZone) return "sw";
+      return "w";
+    }
+    if (distTop <= cornerZone) return "ne";
+    if (distBottom <= cornerZone) return "se";
+    return "e";
+  }
+
+  if (minVert === distTop) {
+    if (distLeft <= cornerZone) return "nw";
+    if (distRight <= cornerZone) return "ne";
+    return "n";
+  }
+
+  if (distLeft <= cornerZone) return "sw";
+  if (distRight <= cornerZone) return "se";
+  return "s";
+}
+
+export function cursorForRectResizeAtWorld(
+  bounds: RectBounds,
+  pointer: WorldPoint,
+  tolerance: number,
+): string {
+  return RECT_RESIZE_CURSOR[resolveRectResizeHandle(bounds, pointer, tolerance)];
+}
+
+export function cursorForSelectedShapeAtWorld(
+  shape: CircleShape,
+  pointer: WorldPoint,
+  tolerance: number,
+): string {
+  if (!isOnCircleContour(shape, pointer, tolerance)) return "";
+  return CIRCLE_RESIZE_CURSOR[resolveCircleResizeHandle(shape.transform, pointer)];
 }

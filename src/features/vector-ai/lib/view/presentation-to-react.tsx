@@ -24,18 +24,25 @@ import {
 
 export type PresentationToReactOptions = {
   onPointerDown?: (event: PointerEvent) => void;
+  onPointerMove?: (event: PointerEvent) => void;
+  onPointerLeave?: (event: PointerEvent) => void;
   onDoubleClick?: (event: MouseEvent) => void;
 };
 
 function pointerTargetProps(
   onPointerDown?: (event: PointerEvent) => void,
+  onPointerMove?: (event: PointerEvent) => void,
+  onPointerLeave?: (event: PointerEvent) => void,
   onDoubleClick?: (event: MouseEvent) => void,
 ) {
-  if (!onPointerDown && !onDoubleClick) return {};
+  if (!onPointerDown && !onPointerMove && !onPointerLeave && !onDoubleClick) {
+    return {};
+  }
   return {
     ...(onPointerDown ? { onPointerDown } : {}),
+    ...(onPointerMove ? { onPointerMove } : {}),
+    ...(onPointerLeave ? { onPointerLeave } : {}),
     ...(onDoubleClick ? { onDoubleClick } : {}),
-    style: { cursor: "move" },
   };
 }
 
@@ -177,9 +184,13 @@ export function presentationToReact(
   presentation: ShapePresentation,
   options?: PresentationToReactOptions,
 ): ReactElement {
-  const { onPointerDown, onDoubleClick } = options ?? {};
+  const { onPointerDown, onPointerMove, onPointerLeave, onDoubleClick } =
+    options ?? {};
   const hit =
-    onPointerDown != null || onDoubleClick != null
+    onPointerDown != null ||
+    onPointerMove != null ||
+    onPointerLeave != null ||
+    onDoubleClick != null
       ? hitLayerFromPresentation(presentation)
       : null;
 
@@ -188,11 +199,21 @@ export function presentationToReact(
       presentation.tag === "text"
         ? textNodeFromPresentation(
             presentation,
-            pointerTargetProps(onPointerDown, onDoubleClick),
+            pointerTargetProps(
+              onPointerDown,
+              onPointerMove,
+              onPointerLeave,
+              onDoubleClick,
+            ),
           )
         : layerToReact(
             { tag: presentation.tag, attrs: presentation.attrs },
-            pointerTargetProps(onPointerDown, onDoubleClick),
+            pointerTargetProps(
+              onPointerDown,
+              onPointerMove,
+              onPointerLeave,
+              onDoubleClick,
+            ),
           );
 
     if (!presentation.groupTransform) return node;
@@ -203,7 +224,12 @@ export function presentationToReact(
   const hitNode = layerToReact(hit, {
     pointerEvents:
       hit.tag === "line" || hit.tag === "path" ? "stroke" : undefined,
-    ...pointerTargetProps(onPointerDown, onDoubleClick),
+    ...pointerTargetProps(
+      onPointerDown,
+      onPointerMove,
+      onPointerLeave,
+      onDoubleClick,
+    ),
   });
 
   const visibleNode =

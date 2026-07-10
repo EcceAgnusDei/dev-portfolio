@@ -52,15 +52,16 @@ export function VectorCanvasInteractive({
         onPointerUp={interaction.onSvgPointerUp}
         onPointerCancel={interaction.onSvgPointerCancel}
         onShapePointerDown={interaction.onShapePointerDown}
+        onShapePointerMove={interaction.onShapePointerMove}
+        onShapePointerLeave={interaction.onShapePointerLeave}
         onShapeDoubleClick={interaction.onShapeDoubleClick}
         onLineEndPointerDown={interaction.onLineEndPointerDown}
         onCubicHandlePointerDown={interaction.onCubicHandlePointerDown}
-        onRectHandlePointerDown={interaction.onRectHandlePointerDown}
-        onCircleHandlePointerDown={interaction.onCircleHandlePointerDown}
         onViewBoxHandlePointerDown={interaction.onViewBoxHandlePointerDown}
         viewBoxHandlesVisible={
           viewBoxHandlesVisible || interaction.session.kind === "resize-viewbox"
         }
+        snapToleranceWorld={interaction.snapToleranceWorld}
       />
     </div>
   );

@@ -417,7 +417,10 @@ describe("courbe cubique", () => {
         type: "SELECTION_SET",
         ids: ["new-shape-id"],
       });
-      expect(dispatch).toHaveBeenCalledWith({ type: "TOOL_SET", tool: "select" });
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "TOOL_SET",
+        tool: "select",
+      });
       unmount();
     });
   });
@@ -463,24 +466,6 @@ describe("courbe cubique", () => {
 
       expect(markup).toContain("pointer-events:none");
       expect(markup).not.toContain("cursor:move");
-    });
-
-    it("conserve cursor move en mode sélection pour comparaison", () => {
-      const doc = {
-        ...createEmptyDoc(),
-        shapes: [makeLineShape({ id: "line-1" })],
-      };
-
-      const markup = renderToStaticMarkup(
-        <VectorCanvas
-          doc={doc}
-          shapePointerEvents="auto"
-          onShapePointerDown={() => {}}
-          onPointerDown={() => {}}
-        />,
-      );
-
-      expect(markup).toContain("cursor:move");
     });
   });
 
