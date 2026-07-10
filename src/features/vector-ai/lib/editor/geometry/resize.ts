@@ -1,6 +1,5 @@
 import type {
   CircleShape,
-  RectShape,
   ViewBox,
 } from "@/features/vector-ai/lib/document/types";
 import type { RectPreview } from "@/features/vector-ai/lib/editor/preview/rect";
@@ -31,64 +30,6 @@ export const CIRCLE_RESIZE_CURSOR: Record<CircleResizeHandle, string> = {
   s: "ns-resize",
   w: "ew-resize",
 };
-
-export function rectHandleWorldPoint(
-  rect: Pick<RectShape, "transform" | "w" | "h">,
-  handle: RectResizeHandle,
-): WorldPoint {
-  return rectHandleWorldPointFromBounds(
-    {
-      x: rect.transform.x,
-      y: rect.transform.y,
-      w: rect.w,
-      h: rect.h,
-    },
-    handle,
-  );
-}
-
-export function rectHandleWorldPointFromBounds(
-  bounds: RectBounds,
-  handle: RectResizeHandle,
-): WorldPoint {
-  const { x, y, w, h } = bounds;
-  switch (handle) {
-    case "nw":
-      return { x, y };
-    case "n":
-      return { x: x + w / 2, y };
-    case "ne":
-      return { x: x + w, y };
-    case "e":
-      return { x: x + w, y: y + h / 2 };
-    case "se":
-      return { x: x + w, y: y + h };
-    case "s":
-      return { x: x + w / 2, y: y + h };
-    case "sw":
-      return { x, y: y + h };
-    case "w":
-      return { x, y: y + h / 2 };
-  }
-}
-
-export function circleHandleWorldPoint(
-  circle: Pick<CircleShape, "transform" | "r">,
-  handle: CircleResizeHandle,
-): WorldPoint {
-  const { x: cx, y: cy } = circle.transform;
-  const { r } = circle;
-  switch (handle) {
-    case "n":
-      return { x: cx, y: cy - r };
-    case "e":
-      return { x: cx + r, y: cy };
-    case "s":
-      return { x: cx, y: cy + r };
-    case "w":
-      return { x: cx - r, y: cy };
-  }
-}
 
 export type RectBounds = {
   x: number;

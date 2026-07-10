@@ -6,10 +6,6 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { createEmptyDoc } from "@/features/vector-ai/lib/document/schema";
 import {
-  circleHandleWorldPoint,
-  rectHandleWorldPoint,
-} from "@/features/vector-ai/lib/editor/geometry/resize";
-import {
   makeCircleShape,
   makeEditorWithRect,
   makeEditorWithTwoRects,
@@ -172,7 +168,7 @@ describe("workflow: câblage redimensionnement", () => {
       const hit = workflow.queryRectResizeHit();
       expect(hit).not.toBeNull();
 
-      const down = rectHandleWorldPoint(rect, "se");
+      const down = { x: rect.transform.x + rect.w, y: rect.transform.y + rect.h };
       workflow.drag(hit!, down, { x: 130, y: 90 });
 
       expect(workflow.interaction.session.kind).toBe("idle");
@@ -227,7 +223,7 @@ describe("workflow: câblage redimensionnement", () => {
       const hit = workflow.queryRectResizeHit();
       expect(hit).not.toBeNull();
 
-      const down = rectHandleWorldPoint(rect, "se");
+      const down = { x: rect.transform.x + rect.w, y: rect.transform.y + rect.h };
       workflow.drag(hit!, down, { x: 130, y: 90 });
 
       expect(workflow.interaction.session.kind).toBe("idle");
@@ -246,7 +242,7 @@ describe("workflow: câblage redimensionnement", () => {
       const hit = workflow.queryRectResizeHit();
       expect(hit).not.toBeNull();
 
-      const down = rectHandleWorldPoint(rect, "se");
+      const down = { x: rect.transform.x + rect.w, y: rect.transform.y + rect.h };
       workflow.drag(hit!, down, { x: 130, y: 90 });
 
       expect(workflow.interaction.session.kind).toBe("idle");
@@ -265,7 +261,7 @@ describe("workflow: câblage redimensionnement", () => {
       const body = workflow.queryContentCircle();
       expect(body).not.toBeNull();
 
-      const down = circleHandleWorldPoint(circle, "e");
+      const down = { x: circle.transform.x + circle.r, y: circle.transform.y };
       workflow.drag(body!, down, { x: 80, y: 50 });
 
       expect(workflow.interaction.session.kind).toBe("idle");
