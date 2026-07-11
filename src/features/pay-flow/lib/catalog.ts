@@ -15,10 +15,6 @@ export const productSchema = z.object({
 
 export type Product = z.infer<typeof productSchema>;
 
-export const PRODUCT_CATEGORIES: { id: ProductCategory; label: string }[] = [
-  { id: "bustes", label: "Bustes" },
-];
-
 export const CATALOG: Product[] = productSchema.array().parse([
   {
     id: "buste-socrate",
@@ -49,9 +45,16 @@ export const CATALOG: Product[] = productSchema.array().parse([
   },
 ]);
 
-export function getProductsByCategory(
-  category: ProductCategory | "all",
-): Product[] {
-  if (category === "all") return CATALOG;
-  return CATALOG.filter((product) => product.category === category);
+export function getProductById(id: string): Product | undefined {
+  return CATALOG.find((product) => product.id === id);
+}
+
+export function computeCartTotalCents(
+  lines: { productId: string; qty: number }[],
+): number {
+  return lines.reduce((total, line) => {
+    const product = getProductById(line.productId);
+    if (!product) return total;
+    return total + product.priceCents * line.qty;
+  }, 0);
 }

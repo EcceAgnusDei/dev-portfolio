@@ -9,15 +9,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatPrice } from "@/features/pay-flow/lib/format-price";
+import { formatPrice } from "@/features/pay-flow/lib/utils";
 import type { Product } from "@/features/pay-flow/lib/catalog";
 
 type ProductCardProps = {
   product: Product;
-  onAddToCart?: (productId: string) => void;
+  onAddToCart: (productId: string) => void;
+  priority?: boolean;
 };
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({
+  product,
+  onAddToCart,
+  priority = false,
+}: ProductCardProps) {
   return (
     <Card className="h-full">
       <Image
@@ -25,6 +30,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         alt={product.name}
         width={320}
         height={400}
+        priority={priority}
         className="aspect-4/5 w-full object-cover"
       />
       <CardHeader>
@@ -40,8 +46,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <Button
           type="button"
           className="w-full"
-          disabled={!onAddToCart}
-          onClick={() => onAddToCart?.(product.id)}
+          onClick={() => onAddToCart(product.id)}
         >
           Ajouter au panier
         </Button>
