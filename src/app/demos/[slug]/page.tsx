@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { getDemoBySlug } from "@/features/demos/demos";
+import { PayFlowDemoClient } from "@/features/pay-flow/components/pay-flow-demo-client";
 import { PixelAiDemoClient } from "@/features/pixel-ai/components/pixel-ai-demo-client";
 import { VectorAiDemoClient } from "@/features/vector-ai/components/vector-ai-demo-client";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 const DEMO_VIEWS: Record<string, ComponentType> = {
   "pixel-ai": PixelAiDemoClient,
   "vector-ai": VectorAiDemoClient,
+  "pay-flow": PayFlowDemoClient,
 };
 
 type PageProps = {

@@ -20,10 +20,9 @@ export const demos = demoSchema.array().parse([
     description: "Dessiner en vecteur avec l’IA.",
   },
   {
-    slug: "example-sdk",
-    title: "Exemple SDK",
-    description:
-      "Page modèle pour une démo interactive. Remplace le contenu par ton intégration SDK.",
+    slug: "pay-flow",
+    title: "Pay Flow",
+    description: "Miniboutique avec panier et paiement Stripe en mode test.",
   },
 ]);
 
