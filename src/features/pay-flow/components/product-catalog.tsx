@@ -10,23 +10,28 @@ type ProductCatalogProps = {
 
 export function ProductCatalog({ onAddToCart }: ProductCatalogProps) {
   return (
-    <ul
-      className={cn(
-        "grid gap-4",
-        CATALOG.length === 1
-          ? "grid-cols-1"
-          : "sm:grid-cols-2 lg:grid-cols-3",
-      )}
-    >
-      {CATALOG.map((product, index) => (
-        <li key={product.id}>
-          <ProductCard
-            product={product}
-            onAddToCart={onAddToCart}
-            priority={index === 0}
-          />
-        </li>
-      ))}
-    </ul>
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-heading text-base font-medium">Catalogue</h2>
+      </div>
+      <ul
+        className={cn(
+          "grid gap-4",
+          CATALOG.length === 1
+            ? "grid-cols-1"
+            : "sm:grid-cols-2 lg:grid-cols-3",
+        )}
+      >
+        {CATALOG.map((product, index) => (
+          <li key={product.id}>
+            <ProductCard
+              product={product}
+              onAddToCart={onAddToCart}
+              priority={index === 0}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
