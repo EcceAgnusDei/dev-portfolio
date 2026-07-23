@@ -58,3 +58,76 @@ export function computeCartTotalCents(
     return total + product.priceCents * line.qty;
   }, 0);
 }
+
+export const cartLineInputSchema = z.object({
+  productId: z.string().min(1),
+  qty: z.number().int().positive().max(99),
+});
+
+export const cartLinesInputSchema = z
+  .array(cartLineInputSchema)
+  .min(1, "Le panier est vide.");
+
+export type ResolvedCartLine = {
+  productId: string;
+  qty: number;
+  name: string;
+  unitAmountCents: number;
+  lineTotalCents: number;
+};
+
+export type ResolvedCart = {
+  lines: ResolvedCartLine[];
+  totalCents: number;
+};
+
+export class ResolveCartError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResolveCartError";
+  }
+}
+
+export function resolveCartLines(input: unknown): ResolvedCart {
+  const parsed = cartLinesInputSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    throw new ResolveCartError(first?.message ?? "Panier invalide.");
+  }
+
+  const qtyByProductId = new Map<string, number>();
+  for (const line of parsed.data) {
+    qtyByProductId.set(
+      line.productId,
+      (qtyByProductId.get(line.productId) ?? 0) + line.qty,
+    );
+  }
+
+  const lines: ResolvedCartLine[] = [];
+  let totalCents = 0;
+
+  for (const [productId, qty] of qtyByProductId) {
+    if (qty > 99) {
+      throw new ResolveCartError(
+        `La quantité pour « ${productId} » dépasse la limite (99).`,
+      );
+    }
+
+    const product = getProductById(productId);
+    if (!product) {
+      throw new ResolveCartError(`Produit inconnu : « ${productId} ».`);
+    }
+
+    const lineTotalCents = product.priceCents * qty;
+    totalCents += lineTotalCents;
+    lines.push({
+      productId: product.id,
+      qty,
+      name: product.name,
+      unitAmountCents: product.priceCents,
+      lineTotalCents,
+    });
+  }
+
+  return { lines, totalCents };
+}
