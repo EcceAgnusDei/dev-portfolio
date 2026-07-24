@@ -120,7 +120,7 @@ export function CartPanel({
             aria-busy={checkoutLoading}
             onClick={onCheckout}
           >
-            {checkoutLoading ? "Redirection…" : "Paiement factice"}
+            {checkoutLoading ? "Redirection…" : "Payer"}
           </Button>
         </CardFooter>
       </Card>

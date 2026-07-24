@@ -128,3 +128,14 @@
     @apply font-sans;
   }
 }
+
+@keyframes pay-flow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pay-flow-spin {
+  animation: pay-flow-spin 1s linear infinite;
+  transform-origin: center;
+}

@@ -4,7 +4,10 @@ import {
   markOrderExpired,
   markOrderPaid,
 } from "@/features/pay-flow/lib/order-store";
-import { getStripe, getStripeWebhookSecret } from "@/features/pay-flow/lib/stripe-client";
+import {
+  getStripe,
+  getStripeWebhookSecret,
+} from "@/features/pay-flow/lib/stripe-client";
 
 export type HandleStripeWebhookResult =
   | { ok: true; type: string }

@@ -20,14 +20,6 @@ export function readCheckoutUrl(
   return { status, sessionId };
 }
 
-export function buildMockCheckoutSuccessUrl(sessionId?: string): string {
-  const params = new URLSearchParams({
-    status: "success",
-    session_id: sessionId ?? `mock-${crypto.randomUUID()}`,
-  });
-  return `/demos/pay-flow?${params.toString()}`;
-}
-
 export function useCheckoutUrl() {
   const searchParams = useSearchParams();
   return useMemo(() => readCheckoutUrl(searchParams), [searchParams]);
