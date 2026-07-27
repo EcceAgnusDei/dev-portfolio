@@ -24,6 +24,12 @@ export const demos = demoSchema.array().parse([
     title: "Pay Flow",
     description: "Miniboutique avec panier et paiement Stripe en mode test.",
   },
+  {
+    slug: "spend-dashboard",
+    title: "Spend Dashboard",
+    description:
+      "Extrayez des factures et visualisez vos dépenses dans un dashboard.",
+  },
 ]);
 
 export function getDemoBySlug(slug: string): Demo | undefined {

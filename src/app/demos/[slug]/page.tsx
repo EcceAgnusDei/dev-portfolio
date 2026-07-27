@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { getDemoBySlug } from "@/features/demos/demos";
 import { PayFlowDemoClient } from "@/features/pay-flow/components/pay-flow-demo-client";
 import { PixelAiDemoClient } from "@/features/pixel-ai/components/pixel-ai-demo-client";
+import { SpendDashboardDemoClient } from "@/features/spend-dashboard/components/spend-dashboard-demo-client";
 import { VectorAiDemoClient } from "@/features/vector-ai/components/vector-ai-demo-client";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ const DEMO_VIEWS: Record<string, ComponentType> = {
   "pixel-ai": PixelAiDemoClient,
   "vector-ai": VectorAiDemoClient,
   "pay-flow": PayFlowDemoClient,
+  "spend-dashboard": SpendDashboardDemoClient,
 };
 
 type PageProps = {
