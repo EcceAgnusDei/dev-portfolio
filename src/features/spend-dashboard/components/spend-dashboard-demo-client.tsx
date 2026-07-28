@@ -5,18 +5,13 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  formatFileSize,
-  formatInvoiceDate,
-  formatInvoiceMoney,
-} from "@/features/spend-dashboard/lib/format-invoice";
+import { InvoiceReviewForm } from "@/features/spend-dashboard/components/invoice-review-form";
+import { formatFileSize } from "@/features/spend-dashboard/lib/format-invoice";
 import type { InvoiceExtraction } from "@/features/spend-dashboard/lib/invoice-extraction-schema";
 import { postExtractInvoice } from "@/features/spend-dashboard/lib/post-extract-invoice";
 import {
   SPEND_DASHBOARD_ACCEPT_ATTR,
   SPEND_DASHBOARD_ACCEPTED_MIME_TYPES,
-  SPEND_DASHBOARD_CATEGORY_LABELS,
-  SPEND_DASHBOARD_CONFIDENCE_LABELS,
   SPEND_DASHBOARD_MAX_FILE_BYTES,
 } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 import { cn } from "@/lib/utils";
@@ -33,6 +28,7 @@ export function SpendDashboardDemoClient() {
   const [phase, setPhase] = useState<ExtractPhase>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [invoice, setInvoice] = useState<InvoiceExtraction | null>(null);
+  const [extractionKey, setExtractionKey] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -101,6 +97,7 @@ export function SpendDashboardDemoClient() {
     }
 
     setInvoice(result.invoice);
+    setExtractionKey((key) => key + 1);
     setPhase("success");
   }
 
@@ -246,64 +243,11 @@ export function SpendDashboardDemoClient() {
         ) : null}
 
         {phase === "success" && invoice ? (
-          <div className="rounded-xl bg-muted/40 px-4 py-5">
-            <p className="mb-3 text-sm font-medium">Résultat</p>
-            <dl className="grid gap-2 text-sm sm:grid-cols-2">
-              {(
-                [
-                  ["Fournisseur", invoice.vendor],
-                  [
-                    "Date",
-                    invoice.invoiceDate
-                      ? formatInvoiceDate(invoice.invoiceDate)
-                      : "—",
-                  ],
-                  ["N° facture", invoice.invoiceNumber ?? "—"],
-                  ["Devise", invoice.currency],
-                  [
-                    "Montant HT",
-                    invoice.amountHtCents != null
-                      ? formatInvoiceMoney(
-                          invoice.amountHtCents,
-                          invoice.currency,
-                        )
-                      : "—",
-                  ],
-                  [
-                    "TVA",
-                    invoice.amountTvaCents != null
-                      ? formatInvoiceMoney(
-                          invoice.amountTvaCents,
-                          invoice.currency,
-                        )
-                      : "—",
-                  ],
-                  [
-                    "Montant TTC",
-                    invoice.amountTtcCents != null
-                      ? formatInvoiceMoney(
-                          invoice.amountTtcCents,
-                          invoice.currency,
-                        )
-                      : "—",
-                  ],
-                  [
-                    "Catégorie",
-                    SPEND_DASHBOARD_CATEGORY_LABELS[invoice.category],
-                  ],
-                  [
-                    "Confiance",
-                    SPEND_DASHBOARD_CONFIDENCE_LABELS[invoice.confidence],
-                  ],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label} className="flex flex-col gap-0.5">
-                  <dt className="text-xs text-muted-foreground">{label}</dt>
-                  <dd className="font-medium">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+          <InvoiceReviewForm
+            key={extractionKey}
+            invoice={invoice}
+            sourceFileName={file?.name}
+          />
         ) : null}
       </section>
     </div>

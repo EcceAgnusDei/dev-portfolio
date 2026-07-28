@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   SPEND_DASHBOARD_CONFIDENCE_LEVELS,
+  SPEND_DASHBOARD_DEFAULT_CURRENCY,
   SPEND_DASHBOARD_INVOICE_CATEGORIES,
 } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 
@@ -27,6 +28,14 @@ export const invoiceExtractionSchema = z.object({
 });
 
 export type InvoiceExtraction = z.infer<typeof invoiceExtractionSchema>;
+
+export const invoiceSaveSchema = invoiceExtractionSchema.extend({
+  invoiceDate: isoDateSchema,
+  amountTtcCents: moneyCentsSchema,
+  currency: z.literal(SPEND_DASHBOARD_DEFAULT_CURRENCY),
+});
+
+export type InvoiceSave = z.infer<typeof invoiceSaveSchema>;
 
 type ParseInvoiceExtractionResult =
   | { ok: true; invoice: InvoiceExtraction }
