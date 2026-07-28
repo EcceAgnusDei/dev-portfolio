@@ -32,6 +32,10 @@ function normalizeInvoiceNumber(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function normalizeVendor(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 function readStore(): InvoiceRecord[] {
   if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -106,6 +110,27 @@ export function findInvoiceByNumber(
       (entry) =>
         entry.invoiceNumber != null &&
         normalizeInvoiceNumber(entry.invoiceNumber) === normalized,
+    ) ?? null
+  );
+}
+
+export function findSimilarInvoice(
+  extraction: Pick<
+    InvoiceExtraction,
+    "vendor" | "invoiceDate" | "amountTtcCents"
+  >,
+): InvoiceRecord | null {
+  if (extraction.invoiceDate == null || extraction.amountTtcCents == null) {
+    return null;
+  }
+
+  const vendor = normalizeVendor(extraction.vendor);
+  return (
+    readStore().find(
+      (entry) =>
+        normalizeVendor(entry.vendor) === vendor &&
+        entry.invoiceDate === extraction.invoiceDate &&
+        entry.amountTtcCents === extraction.amountTtcCents,
     ) ?? null
   );
 }

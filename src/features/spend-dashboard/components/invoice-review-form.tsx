@@ -2,8 +2,25 @@
 
 import { useId, useState, type ReactNode } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import type { InvoiceExtraction } from "@/features/spend-dashboard/lib/invoice-extraction-schema";
+import type {
+  InvoiceExtraction,
+  InvoiceSave,
+} from "@/features/spend-dashboard/lib/invoice-extraction-schema";
+import {
+  formatInvoiceDate,
+  formatInvoiceMoney,
+} from "@/features/spend-dashboard/lib/format-invoice";
 import {
   invoiceToFormValues,
   isInvoiceFormValid,
@@ -19,7 +36,10 @@ import {
   SPEND_DASHBOARD_INVOICE_CATEGORIES,
   type SpendDashboardInvoiceCategory,
 } from "@/features/spend-dashboard/lib/spend-dashboard-config";
-import { saveInvoiceExtraction } from "@/features/spend-dashboard/lib/invoice-store";
+import {
+  findSimilarInvoice,
+  saveInvoiceExtraction,
+} from "@/features/spend-dashboard/lib/invoice-store";
 import { cn } from "@/lib/utils";
 
 const fieldClassName =
@@ -69,6 +89,8 @@ export function InvoiceReviewForm({
   const [errors, setErrors] = useState<InvoiceFormErrors>({});
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingSave, setPendingSave] = useState<InvoiceSave | null>(null);
 
   const canSave = isInvoiceFormValid(values);
 
@@ -92,6 +114,24 @@ export function InvoiceReviewForm({
     setErrors({});
     setSaveNotice(null);
     setSaveError(null);
+    setConfirmOpen(false);
+    setPendingSave(null);
+  }
+
+  function commitSave(toSave: InvoiceSave) {
+    const saved = saveInvoiceExtraction(toSave, { sourceFileName });
+    if (!saved.ok) {
+      setSaveNotice(null);
+      setSaveError(saved.error);
+      setErrors(
+        saved.reason === "duplicate" ? { invoiceNumber: saved.error } : {},
+      );
+      return;
+    }
+
+    setErrors({});
+    setSaveError(null);
+    setSaveNotice("Facture enregistrée.");
   }
 
   function handleSave() {
@@ -103,24 +143,29 @@ export function InvoiceReviewForm({
       return;
     }
 
-    const saved = saveInvoiceExtraction(result.invoice, { sourceFileName });
-    if (!saved.ok) {
+    const similar = findSimilarInvoice(result.invoice);
+    if (similar) {
+      setPendingSave(result.invoice);
+      setConfirmOpen(true);
       setSaveNotice(null);
-      setSaveError(saved.error);
-      setErrors(
-        saved.reason === "duplicate"
-          ? { invoiceNumber: saved.error }
-          : {},
-      );
+      setSaveError(null);
+      setErrors({});
       return;
     }
 
-    setErrors({});
-    setSaveError(null);
-    setSaveNotice("Facture enregistrée.");
+    commitSave(result.invoice);
+  }
+
+  function handleConfirmSimilarSave() {
+    if (!pendingSave) return;
+    const toSave = pendingSave;
+    setPendingSave(null);
+    setConfirmOpen(false);
+    commitSave(toSave);
   }
 
   return (
+    <>
     <form
       className={cn(
         "flex flex-col gap-4 rounded-xl bg-muted/40 px-4 py-5",
@@ -318,5 +363,34 @@ export function InvoiceReviewForm({
         ) : null}
       </div>
     </form>
+
+    <AlertDialog
+      open={confirmOpen}
+      onOpenChange={(open) => {
+        setConfirmOpen(open);
+        if (!open) setPendingSave(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Facture similaire déjà enregistrée</AlertDialogTitle>
+          <AlertDialogDescription>
+            Une facture avec le même fournisseur, la même date et le même montant
+            TTC existe déjà
+            {pendingSave
+              ? ` (${pendingSave.vendor}, ${formatInvoiceDate(pendingSave.invoiceDate)}, ${formatInvoiceMoney(pendingSave.amountTtcCents, SPEND_DASHBOARD_DEFAULT_CURRENCY)})`
+              : ""}
+            . Voulez-vous quand même l’enregistrer ?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmSimilarSave}>
+            Enregistrer quand même
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
