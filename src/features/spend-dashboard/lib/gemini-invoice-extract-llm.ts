@@ -2,7 +2,6 @@ import { FinishReason, GoogleGenerativeAI } from "@google/generative-ai";
 import type { Part } from "@google/generative-ai";
 
 import {
-  SPEND_DASHBOARD_DEFAULT_CURRENCY,
   SPEND_DASHBOARD_DEFAULT_LLM_MODEL,
   SPEND_DASHBOARD_INVOICE_CATEGORIES,
   SPEND_DASHBOARD_MAX_OUTPUT_TOKENS,
@@ -34,7 +33,7 @@ Règles :
 - amountHtCents / amountTvaCents : prends les totaux HT et TVA du document s'ils sont affichés clairement ; sinon null.
 - amountTtcCents, amountHtCents, amountTvaCents et invoiceDate sont à null s'ils sont absents ou illisibles.
 - invoiceNumber à null s'il est absent ou illisible.
-- currency : code ISO de la facture ; ${SPEND_DASHBOARD_DEFAULT_CURRENCY} si absent ou si le document n'est pas une facture.
+- si la devise détèctée n'est pas €, mets confidence à "low".
 - category : choisis la plus proche parmi la liste pour l'ensemble de la facture ; "other" si aucune ne convient.
 - confidence : "high" si les champs clés sont clairs, "medium" si partiels, "low" si le document est flou, ambigu ou hors sujet.
 - N'invente jamais de date, de montant, de n° de facture ni de fournisseur.

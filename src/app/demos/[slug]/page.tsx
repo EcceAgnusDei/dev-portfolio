@@ -32,9 +32,15 @@ export default async function DemoPage({ params }: PageProps) {
   if (!demo) notFound();
 
   const View = DEMO_VIEWS[slug];
+  const isWide = slug === "spend-dashboard";
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-16">
+    <div
+      className={cn(
+        "mx-auto flex w-full flex-1 flex-col gap-6 px-6 py-16",
+        isWide ? "max-w-5xl" : "max-w-3xl",
+      )}
+    >
       <div className="flex flex-col gap-2">
         <Link
           href="/"
