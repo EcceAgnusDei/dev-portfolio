@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInvoiceMoney } from "@/features/spend-dashboard/lib/format-invoice";
-import type { DashboardSummary } from "@/features/spend-dashboard/lib/dashboard-mock";
+import type { DashboardSummary } from "@/features/spend-dashboard/lib/build-dashboard-summary";
 import { SPEND_DASHBOARD_CATEGORY_LABELS } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 import { cn } from "@/lib/utils";
 
