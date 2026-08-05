@@ -20,8 +20,11 @@ export type DashboardSummary = {
   currency: string;
   totalTtcCents: number;
   evolutionPercent: number | null;
+  invoiceCount: number;
+  averageTtcCents: number | null;
   byCategory: DashboardCategoryTotal[];
   topVendors: DashboardVendorTotal[];
+  invoices: InvoiceRecord[];
 };
 
 export type DashboardPeriod = {
@@ -262,10 +265,13 @@ export function buildDashboardSummary(
   invoices: readonly InvoiceRecord[],
   period: DashboardPeriod,
 ): DashboardSummary {
-  const currentInvoices = filterInvoices(invoices, period);
+  const currentInvoices = filterInvoices(invoices, period).sort((a, b) =>
+    b.invoiceDate.localeCompare(a.invoiceDate),
+  );
   const previousInvoices = filterInvoices(invoices, getPreviousPeriod(period));
   const totalTtcCents = sumTtc(currentInvoices);
   const previousTotalTtcCents = sumTtc(previousInvoices);
+  const invoiceCount = currentInvoices.length;
 
   return {
     periodLabel: formatDashboardPeriodLabel(period),
@@ -275,7 +281,11 @@ export function buildDashboardSummary(
       totalTtcCents,
       previousTotalTtcCents,
     ),
+    invoiceCount,
+    averageTtcCents:
+      invoiceCount > 0 ? Math.round(totalTtcCents / invoiceCount) : null,
     byCategory: buildCategoryTotals(currentInvoices),
     topVendors: buildTopVendors(currentInvoices),
+    invoices: currentInvoices,
   };
 }

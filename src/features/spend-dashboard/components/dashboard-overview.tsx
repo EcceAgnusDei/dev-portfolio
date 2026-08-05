@@ -1,3 +1,8 @@
+"use client";
+
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useMemo, useState } from "react";
+
 import {
   Card,
   CardContent,
@@ -5,8 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatInvoiceMoney } from "@/features/spend-dashboard/lib/format-invoice";
+import {
+  formatInvoiceDate,
+  formatInvoiceMoney,
+} from "@/features/spend-dashboard/lib/format-invoice";
 import type { DashboardSummary } from "@/features/spend-dashboard/lib/build-dashboard-summary";
+import type { InvoiceRecord } from "@/features/spend-dashboard/lib/invoice-store";
 import { SPEND_DASHBOARD_CATEGORY_LABELS } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +23,9 @@ type DashboardOverviewProps = {
   summary: DashboardSummary;
   className?: string;
 };
+
+type InvoiceSortKey = "date" | "vendor" | "category" | "amount";
+type SortDirection = "asc" | "desc";
 
 function formatEvolution(percent: number | null): string {
   if (percent == null) return "—";
@@ -34,15 +46,104 @@ function formatSharePercent(percent: number): string {
   })} %`;
 }
 
+function compareInvoices(
+  a: InvoiceRecord,
+  b: InvoiceRecord,
+  sortKey: InvoiceSortKey,
+): number {
+  switch (sortKey) {
+    case "date":
+      return a.invoiceDate.localeCompare(b.invoiceDate);
+    case "vendor":
+      return a.vendor.localeCompare(b.vendor, "fr", { sensitivity: "base" });
+    case "category":
+      return SPEND_DASHBOARD_CATEGORY_LABELS[a.category].localeCompare(
+        SPEND_DASHBOARD_CATEGORY_LABELS[b.category],
+        "fr",
+        { sensitivity: "base" },
+      );
+    case "amount":
+      return a.amountTtcCents - b.amountTtcCents;
+  }
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  align = "left",
+  onSort,
+}: {
+  label: string;
+  sortKey: InvoiceSortKey;
+  activeKey: InvoiceSortKey;
+  direction: SortDirection;
+  align?: "left" | "right";
+  onSort: (key: InvoiceSortKey) => void;
+}) {
+  const isActive = activeKey === sortKey;
+  const Icon = !isActive ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;
+
+  return (
+    <th
+      className={cn(
+        "px-2 py-2 font-medium",
+        align === "right" && "text-right",
+      )}
+      aria-sort={
+        isActive
+          ? direction === "asc"
+            ? "ascending"
+            : "descending"
+          : "none"
+      }
+    >
+      <button
+        type="button"
+        className={cn(
+          "inline-flex items-center gap-1 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          align === "right" && "flex-row-reverse",
+        )}
+        onClick={() => onSort(sortKey)}
+      >
+        <span>{label}</span>
+        <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+      </button>
+    </th>
+  );
+}
+
 export function DashboardOverview({
   summary,
   className,
 }: DashboardOverviewProps) {
+  const [sortKey, setSortKey] = useState<InvoiceSortKey>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
   const totalCents = summary.totalTtcCents;
   const evolutionPositive =
     summary.evolutionPercent != null && summary.evolutionPercent > 0;
   const evolutionNegative =
     summary.evolutionPercent != null && summary.evolutionPercent < 0;
+
+  const sortedInvoices = useMemo(() => {
+    const invoices = [...summary.invoices];
+    invoices.sort((a, b) => {
+      const result = compareInvoices(a, b, sortKey);
+      return sortDirection === "asc" ? result : -result;
+    });
+    return invoices;
+  }, [sortDirection, sortKey, summary.invoices]);
+
+  function handleSort(nextKey: InvoiceSortKey) {
+    if (nextKey === sortKey) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(nextKey);
+    setSortDirection(nextKey === "date" || nextKey === "amount" ? "desc" : "asc");
+  }
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
@@ -149,6 +250,108 @@ export function DashboardOverview({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Factures</CardTitle>
+          <CardDescription>
+            Récapitulatif des factures de la période
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-muted/40 px-3 py-2">
+              <p className="text-xs text-muted-foreground">Nombre de factures</p>
+              <p className="text-sm font-medium tabular-nums">
+                {summary.invoiceCount.toLocaleString("fr-FR")}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/40 px-3 py-2">
+              <p className="text-xs text-muted-foreground">Montant moyen TTC</p>
+              <p className="text-sm font-medium tabular-nums">
+                {summary.averageTtcCents == null
+                  ? "—"
+                  : formatInvoiceMoney(
+                      summary.averageTtcCents,
+                      summary.currency,
+                    )}
+              </p>
+            </div>
+          </div>
+
+          {summary.invoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucune facture pour cette période.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <SortableHeader
+                      label="Date"
+                      sortKey="date"
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                    <SortableHeader
+                      label="Fournisseur"
+                      sortKey="vendor"
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                    <th className="px-2 py-2 font-medium text-muted-foreground">
+                      N°
+                    </th>
+                    <SortableHeader
+                      label="Catégorie"
+                      sortKey="category"
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                    <SortableHeader
+                      label="TTC"
+                      sortKey="amount"
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      align="right"
+                      onSort={handleSort}
+                    />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedInvoices.map((invoice) => (
+                    <tr
+                      key={invoice.id}
+                      className="border-b border-border/60 last:border-0"
+                    >
+                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">
+                        {formatInvoiceDate(invoice.invoiceDate)}
+                      </td>
+                      <td className="px-2 py-2">{invoice.vendor}</td>
+                      <td className="px-2 py-2 text-muted-foreground">
+                        {invoice.invoiceNumber ?? "—"}
+                      </td>
+                      <td className="px-2 py-2">
+                        {SPEND_DASHBOARD_CATEGORY_LABELS[invoice.category]}
+                      </td>
+                      <td className="px-2 py-2 text-right font-medium tabular-nums">
+                        {formatInvoiceMoney(
+                          invoice.amountTtcCents,
+                          summary.currency,
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
