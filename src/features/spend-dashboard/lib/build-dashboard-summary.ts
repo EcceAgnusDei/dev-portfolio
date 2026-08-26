@@ -20,6 +20,7 @@ export type DashboardSummary = {
   currency: string;
   totalTtcCents: number;
   evolutionPercent: number | null;
+  evolutionLabel: string | null;
   invoiceCount: number;
   averageTtcCents: number | null;
   byCategory: DashboardCategoryTotal[];
@@ -67,7 +68,9 @@ export function calendarYearPeriod(year: number): DashboardPeriod {
   };
 }
 
-const TOP_VENDORS_LIMIT = 5;
+const MONTH_BASELINE_LOOKBACK = 12;
+const QUARTER_BASELINE_LOOKBACK = 4;
+const YEAR_BASELINE_LOOKBACK = 1;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function parseUtcDate(isoDate: string): Date {
@@ -244,21 +247,120 @@ function buildTopVendors(
       });
     }
   }
-  return Array.from(totals.values())
-    .sort((a, b) => b.totalCents - a.totalCents)
-    .slice(0, TOP_VENDORS_LIMIT);
+
+  return Array.from(totals.values()).sort(
+    (a, b) => b.totalCents - a.totalCents,
+  );
 }
 
 function computeEvolutionPercent(
   currentTotal: number,
-  previousTotal: number,
+  baselineTotal: number,
 ): number | null {
-  if (previousTotal === 0) {
-    if (currentTotal === 0) return null;
-    return 100;
-  }
-  const raw = ((currentTotal - previousTotal) / previousTotal) * 100;
+  if (baselineTotal === 0) return null;
+  const raw = ((currentTotal - baselineTotal) / baselineTotal) * 100;
   return Math.round(raw * 10) / 10;
+}
+
+function earliestInvoiceDate(
+  invoices: readonly InvoiceRecord[],
+): string | null {
+  if (invoices.length === 0) return null;
+  let earliest = invoices[0]!.invoiceDate;
+  for (const invoice of invoices) {
+    if (invoice.invoiceDate < earliest) earliest = invoice.invoiceDate;
+  }
+  return earliest;
+}
+
+function baselineLookbackLimit(period: DashboardPeriod): number {
+  if (isCalendarMonthPeriod(period)) return MONTH_BASELINE_LOOKBACK;
+  if (isCalendarQuarterPeriod(period)) return QUARTER_BASELINE_LOOKBACK;
+  if (isCalendarYearPeriod(period)) return YEAR_BASELINE_LOOKBACK;
+  return 0;
+}
+
+function listBaselinePeriods(
+  period: DashboardPeriod,
+  earliestDate: string,
+): DashboardPeriod[] {
+  const limit = baselineLookbackLimit(period);
+  if (limit === 0) return [];
+
+  const periods: DashboardPeriod[] = [];
+  let cursor = getPreviousPeriod(period);
+
+  for (let index = 0; index < limit; index += 1) {
+    if (cursor.to < earliestDate) break;
+    periods.push(cursor);
+    cursor = getPreviousPeriod(cursor);
+  }
+
+  return periods;
+}
+
+function formatEvolutionComparisonLabel(
+  period: DashboardPeriod,
+  baselineCount: number,
+): string {
+  if (isCalendarMonthPeriod(period)) {
+    if (baselineCount === 1) return "vs mois précédent";
+    if (baselineCount === MONTH_BASELINE_LOOKBACK) {
+      return "vs moyenne des 12 derniers mois";
+    }
+    return `vs moyenne des ${baselineCount} derniers mois`;
+  }
+
+  if (isCalendarQuarterPeriod(period)) {
+    if (baselineCount === 1) return "vs trimestre précédent";
+    if (baselineCount === QUARTER_BASELINE_LOOKBACK) {
+      return "vs moyenne des 4 derniers trimestres";
+    }
+    return `vs moyenne des ${baselineCount} derniers trimestres`;
+  }
+
+  if (isCalendarYearPeriod(period)) {
+    if (baselineCount === 1) return "vs année précédente";
+    return `vs moyenne des ${baselineCount} années précédentes`;
+  }
+
+  return "vs période précédente";
+}
+
+function buildEvolutionComparison(
+  invoices: readonly InvoiceRecord[],
+  period: DashboardPeriod,
+  currentTotalCents: number,
+): { percent: number | null; label: string | null } {
+  const earliestDate = earliestInvoiceDate(invoices);
+  if (!earliestDate) {
+    return { percent: null, label: null };
+  }
+
+  const baselinePeriods = listBaselinePeriods(period, earliestDate);
+  if (baselinePeriods.length === 0) {
+    return { percent: null, label: null };
+  }
+
+  const baselineTotalCents = baselinePeriods.reduce(
+    (sum, baselinePeriod) =>
+      sum + sumTtc(filterInvoices(invoices, baselinePeriod)),
+    0,
+  );
+  const baselineAverageCents = baselineTotalCents / baselinePeriods.length;
+  const percent = computeEvolutionPercent(
+    currentTotalCents,
+    baselineAverageCents,
+  );
+
+  if (percent == null) {
+    return { percent: null, label: null };
+  }
+
+  return {
+    percent,
+    label: formatEvolutionComparisonLabel(period, baselinePeriods.length),
+  };
 }
 
 export function buildDashboardSummary(
@@ -268,19 +370,20 @@ export function buildDashboardSummary(
   const currentInvoices = filterInvoices(invoices, period).sort((a, b) =>
     b.invoiceDate.localeCompare(a.invoiceDate),
   );
-  const previousInvoices = filterInvoices(invoices, getPreviousPeriod(period));
   const totalTtcCents = sumTtc(currentInvoices);
-  const previousTotalTtcCents = sumTtc(previousInvoices);
   const invoiceCount = currentInvoices.length;
+  const evolution = buildEvolutionComparison(
+    invoices,
+    period,
+    totalTtcCents,
+  );
 
   return {
     periodLabel: formatDashboardPeriodLabel(period),
     currency: SPEND_DASHBOARD_DEFAULT_CURRENCY,
     totalTtcCents,
-    evolutionPercent: computeEvolutionPercent(
-      totalTtcCents,
-      previousTotalTtcCents,
-    ),
+    evolutionPercent: evolution.percent,
+    evolutionLabel: evolution.label,
     invoiceCount,
     averageTtcCents:
       invoiceCount > 0 ? Math.round(totalTtcCents / invoiceCount) : null,

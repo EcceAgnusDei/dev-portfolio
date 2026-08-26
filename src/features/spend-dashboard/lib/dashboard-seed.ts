@@ -346,12 +346,69 @@ function monthLines(year: number, month: number): SeedLine[] {
   if (year === 2026 && month === 3) {
     lines[0] = { ...rent, sourceFileName: "bail-mars.pdf" };
   }
+  return [...lines, ...smallVendorLines(year, month)];
+}
+
+const SMALL_VENDORS: ReadonlyArray<{
+  vendor: string;
+  category: SpendDashboardInvoiceCategory;
+  ttcCents: number;
+}> = [
+  { vendor: "Fnac Pro", category: "office", ttcCents: 2_450 },
+  { vendor: "Cultura", category: "office", ttcCents: 1_890 },
+  { vendor: "Decathlon", category: "other", ttcCents: 2_100 },
+  { vendor: "Starbucks", category: "meals", ttcCents: 1_240 },
+  { vendor: "Deliveroo", category: "meals", ttcCents: 2_780 },
+  { vendor: "Bolt", category: "transport", ttcCents: 1_650 },
+  { vendor: "Free Mobile", category: "other", ttcCents: 2_990 },
+  { vendor: "La Poste", category: "office", ttcCents: 1_120 },
+  { vendor: "Amazon Business", category: "office", ttcCents: 2_680 },
+  { vendor: "Notion Labs", category: "software", ttcCents: 1_800 },
+  { vendor: "Canva", category: "software", ttcCents: 1_440 },
+  { vendor: "Figma", category: "software", ttcCents: 2_160 },
+  { vendor: "GitHub", category: "software", ttcCents: 2_520 },
+  { vendor: "Slack Technologies", category: "software", ttcCents: 2_880 },
+  { vendor: "Zoom", category: "software", ttcCents: 1_920 },
+  { vendor: "Monoprix", category: "office", ttcCents: 1_560 },
+  { vendor: "Franprix", category: "meals", ttcCents: 980 },
+  { vendor: "Total Energies", category: "transport", ttcCents: 2_340 },
+  { vendor: "Parkings Indigo", category: "transport", ttcCents: 1_380 },
+  { vendor: "Clean Services", category: "other", ttcCents: 2_700 },
+  { vendor: "Flower Power", category: "other", ttcCents: 1_050 },
+  { vendor: "Print Express", category: "office", ttcCents: 1_710 },
+  { vendor: "Coffee Shop Pro", category: "meals", ttcCents: 2_050 },
+  { vendor: "Taxi G7", category: "transport", ttcCents: 2_430 },
+];
+
+function positiveModulo(value: number, modulo: number): number {
+  return ((value % modulo) + modulo) % modulo;
+}
+
+function smallVendorLines(year: number, month: number): SeedLine[] {
+  const perMonth = 5;
+  const offset = ((year - 2020) * 12 + (month - 1)) * perMonth;
+  const lines: SeedLine[] = [];
+
+  for (let i = 0; i < perMonth; i += 1) {
+    const entry =
+      SMALL_VENDORS[positiveModulo(offset + i, SMALL_VENDORS.length)]!;
+    const day = Math.min(28, 16 + i * 2);
+    lines.push({
+      day,
+      vendor: entry.vendor,
+      category: entry.category,
+      ttcCents: entry.ttcCents + ((year + month + i) % 5) * 40,
+      invoiceNumber: `SMALL-${year}${pad2(month)}-${pad2(i + 1)}`,
+      confidence: "medium",
+    });
+  }
+
   return lines;
 }
 
 function buildSeedInvoices(): InvoiceRecord[] {
   const invoices: InvoiceRecord[] = [];
-  for (const year of [2024, 2025, 2026] as const) {
+  for (const year of [2020, 2021, 2022, 2023, 2024, 2025, 2026] as const) {
     for (let month = 1; month <= 12; month += 1) {
       monthLines(year, month).forEach((line, index) => {
         invoices.push(buildInvoice(year, month, index + 1, line));

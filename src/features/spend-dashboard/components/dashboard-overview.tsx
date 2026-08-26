@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,7 +15,10 @@ import {
   formatInvoiceDate,
   formatInvoiceMoney,
 } from "@/features/spend-dashboard/lib/format-invoice";
-import type { DashboardSummary } from "@/features/spend-dashboard/lib/build-dashboard-summary";
+import type {
+  DashboardSummary,
+  DashboardVendorTotal,
+} from "@/features/spend-dashboard/lib/build-dashboard-summary";
 import type { InvoiceRecord } from "@/features/spend-dashboard/lib/invoice-store";
 import { SPEND_DASHBOARD_CATEGORY_LABELS } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 import { cn } from "@/lib/utils";
@@ -27,8 +31,9 @@ type DashboardOverviewProps = {
 type InvoiceSortKey = "date" | "vendor" | "category" | "amount";
 type SortDirection = "asc" | "desc";
 
-function formatEvolution(percent: number | null): string {
-  if (percent == null) return "—";
+const TOP_VENDORS_PREVIEW = 5;
+
+function formatEvolution(percent: number): string {
   const sign = percent > 0 ? "+" : "";
   return `${sign}${percent.toLocaleString("fr-FR", {
     maximumFractionDigits: 1,
@@ -114,18 +119,66 @@ function SortableHeader({
   );
 }
 
+function VendorShareRow({
+  entry,
+  totalCents,
+  currency,
+}: {
+  entry: DashboardVendorTotal;
+  totalCents: number;
+  currency: string;
+}) {
+  const sharePercent = shareOfTotal(entry.totalCents, totalCents);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span className="truncate">{entry.vendor}</span>
+        <span className="shrink-0 tabular-nums">
+          <span className="font-medium">
+            {formatInvoiceMoney(entry.totalCents, currency)}
+          </span>
+          <span className="text-muted-foreground">
+            {" "}
+            · {formatSharePercent(sharePercent)}
+          </span>
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-foreground/55"
+          style={{ width: `${sharePercent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function DashboardOverview({
   summary,
   className,
 }: DashboardOverviewProps) {
   const [sortKey, setSortKey] = useState<InvoiceSortKey>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [expandedVendorsPeriodLabel, setExpandedVendorsPeriodLabel] = useState<
+    string | null
+  >(null);
 
   const totalCents = summary.totalTtcCents;
   const evolutionPositive =
     summary.evolutionPercent != null && summary.evolutionPercent > 0;
   const evolutionNegative =
     summary.evolutionPercent != null && summary.evolutionPercent < 0;
+
+  const showAllVendors =
+    expandedVendorsPeriodLabel === summary.periodLabel;
+  const hiddenVendorCount = Math.max(
+    0,
+    summary.topVendors.length - TOP_VENDORS_PREVIEW,
+  );
+  const visibleVendors = showAllVendors
+    ? summary.topVendors
+    : summary.topVendors.slice(0, TOP_VENDORS_PREVIEW);
 
   const sortedInvoices = useMemo(() => {
     const invoices = [...summary.invoices];
@@ -158,18 +211,21 @@ export function DashboardOverview({
           <CardTitle className="text-xl">
             {formatInvoiceMoney(summary.totalTtcCents, summary.currency)}
           </CardTitle>
-          <p
-            className={cn(
-              "text-sm",
-              evolutionPositive && "text-emerald-700 dark:text-emerald-400",
-              evolutionNegative && "text-destructive",
-              !evolutionPositive &&
-                !evolutionNegative &&
-                "text-muted-foreground",
-            )}
-          >
-            {formatEvolution(summary.evolutionPercent)} vs période précédente
-          </p>
+          {summary.evolutionPercent != null && summary.evolutionLabel ? (
+            <p
+              className={cn(
+                "text-sm",
+                evolutionPositive && "text-emerald-700 dark:text-emerald-400",
+                evolutionNegative && "text-destructive",
+                !evolutionPositive &&
+                  !evolutionNegative &&
+                  "text-muted-foreground",
+              )}
+            >
+              {formatEvolution(summary.evolutionPercent)}{" "}
+              {summary.evolutionLabel}
+            </p>
+          ) : null}
         </CardHeader>
       </Card>
 
@@ -219,34 +275,30 @@ export function DashboardOverview({
             <CardDescription>Part du total des dépenses</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {summary.topVendors.map((entry) => {
-              const sharePercent = shareOfTotal(entry.totalCents, totalCents);
-              return (
-                <div key={entry.vendor} className="flex flex-col gap-1">
-                  <div className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="truncate">{entry.vendor}</span>
-                    <span className="shrink-0 tabular-nums">
-                      <span className="font-medium">
-                        {formatInvoiceMoney(
-                          entry.totalCents,
-                          summary.currency,
-                        )}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {" "}
-                        · {formatSharePercent(sharePercent)}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-foreground/55"
-                      style={{ width: `${sharePercent}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {visibleVendors.map((entry) => (
+              <VendorShareRow
+                key={entry.vendor}
+                entry={entry}
+                totalCents={totalCents}
+                currency={summary.currency}
+              />
+            ))}
+            {hiddenVendorCount > 0 ? (
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto self-start px-0"
+                onClick={() =>
+                  setExpandedVendorsPeriodLabel(
+                    showAllVendors ? null : summary.periodLabel,
+                  )
+                }
+              >
+                {showAllVendors
+                  ? "Réduire la liste"
+                  : `Voir les ${hiddenVendorCount} autres`}
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       </div>
