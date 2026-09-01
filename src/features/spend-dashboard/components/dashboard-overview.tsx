@@ -20,11 +20,13 @@ import type {
   DashboardVendorTotal,
 } from "@/features/spend-dashboard/lib/build-dashboard-summary";
 import type { InvoiceRecord } from "@/features/spend-dashboard/lib/invoice-store";
+import { InvoiceEditSheet } from "@/features/spend-dashboard/components/invoice-edit-sheet";
 import { SPEND_DASHBOARD_CATEGORY_LABELS } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 import { cn } from "@/lib/utils";
 
 type DashboardOverviewProps = {
   summary: DashboardSummary;
+  invoicesEditable?: boolean;
   className?: string;
 };
 
@@ -156,6 +158,7 @@ function VendorShareRow({
 
 export function DashboardOverview({
   summary,
+  invoicesEditable = false,
   className,
 }: DashboardOverviewProps) {
   const [sortKey, setSortKey] = useState<InvoiceSortKey>("date");
@@ -163,6 +166,13 @@ export function DashboardOverview({
   const [expandedVendorsPeriodLabel, setExpandedVendorsPeriodLabel] = useState<
     string | null
   >(null);
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceRecord | null>(
+    null,
+  );
+  const [isCreating, setIsCreating] = useState(false);
+
+  const sheetOpen =
+    invoicesEditable && (isCreating || editingInvoice != null);
 
   const totalCents = summary.totalTtcCents;
   const evolutionPositive =
@@ -200,9 +210,24 @@ export function DashboardOverview({
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">Vue d’ensemble</p>
-        <p className="text-sm text-muted-foreground">{summary.periodLabel}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium">Vue d’ensemble</p>
+          <p className="text-sm text-muted-foreground">{summary.periodLabel}</p>
+        </div>
+        {invoicesEditable ? (
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              setEditingInvoice(null);
+              setIsCreating(true);
+            }}
+          >
+            Ajouter une facture
+          </Button>
+        ) : null}
       </div>
 
       <Card size="sm">
@@ -378,7 +403,37 @@ export function DashboardOverview({
                   {sortedInvoices.map((invoice) => (
                     <tr
                       key={invoice.id}
-                      className="border-b border-border/60 last:border-0"
+                      className={cn(
+                        "border-b border-border/60 last:border-0",
+                        invoicesEditable &&
+                          "cursor-pointer hover:bg-muted/40",
+                      )}
+                      onClick={
+                        invoicesEditable
+                          ? () => {
+                              setIsCreating(false);
+                              setEditingInvoice(invoice);
+                            }
+                          : undefined
+                      }
+                      onKeyDown={
+                        invoicesEditable
+                          ? (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setIsCreating(false);
+                                setEditingInvoice(invoice);
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={invoicesEditable ? 0 : undefined}
+                      role={invoicesEditable ? "button" : undefined}
+                      aria-label={
+                        invoicesEditable
+                          ? `Modifier la facture ${invoice.vendor}`
+                          : undefined
+                      }
                     >
                       <td className="px-2 py-2 whitespace-nowrap tabular-nums">
                         {formatInvoiceDate(invoice.invoiceDate)}
@@ -404,6 +459,25 @@ export function DashboardOverview({
           )}
         </CardContent>
       </Card>
+
+      <InvoiceEditSheet
+        key={
+          sheetOpen
+            ? isCreating
+              ? "create"
+              : (editingInvoice?.id ?? "edit")
+            : "closed"
+        }
+        mode={isCreating ? "create" : "edit"}
+        invoice={editingInvoice}
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingInvoice(null);
+            setIsCreating(false);
+          }
+        }}
+      />
     </div>
   );
 }

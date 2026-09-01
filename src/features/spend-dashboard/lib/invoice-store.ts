@@ -119,15 +119,18 @@ export function findSimilarInvoice(
     InvoiceExtraction,
     "vendor" | "invoiceDate" | "amountTtcCents"
   >,
+  options?: { excludeId?: string },
 ): InvoiceRecord | null {
   if (extraction.invoiceDate == null || extraction.amountTtcCents == null) {
     return null;
   }
 
   const vendor = normalizeVendor(extraction.vendor);
+  const excludeId = options?.excludeId;
   return (
     readStore().find(
       (entry) =>
+        entry.id !== excludeId &&
         normalizeVendor(entry.vendor) === vendor &&
         entry.invoiceDate === extraction.invoiceDate &&
         entry.amountTtcCents === extraction.amountTtcCents,
@@ -178,6 +181,67 @@ export function saveInvoiceExtraction(
   return { ok: true, record: parsed.data };
 }
 
+export function updateInvoice(
+  id: string,
+  extraction: InvoiceExtraction,
+): SaveInvoiceResult {
+  const store = readStore();
+  const index = store.findIndex((entry) => entry.id === id);
+  if (index < 0) {
+    return {
+      ok: false,
+      reason: "invalid",
+      error: "Facture introuvable.",
+    };
+  }
+
+  if (extraction.invoiceNumber) {
+    const normalized = normalizeInvoiceNumber(extraction.invoiceNumber);
+    const duplicate = store.find(
+      (entry) =>
+        entry.id !== id &&
+        entry.invoiceNumber != null &&
+        normalizeInvoiceNumber(entry.invoiceNumber) === normalized,
+    );
+    if (duplicate) {
+      return {
+        ok: false,
+        reason: "duplicate",
+        error: `Une facture avec le n° « ${extraction.invoiceNumber} » est déjà enregistrée.`,
+      };
+    }
+  }
+
+  const existing = store[index]!;
+  const recordCandidate = {
+    ...extraction,
+    currency: SPEND_DASHBOARD_DEFAULT_CURRENCY,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    ...(existing.sourceFileName
+      ? { sourceFileName: existing.sourceFileName }
+      : {}),
+  };
+
+  const parsed = invoiceRecordSchema.safeParse(recordCandidate);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: "invalid",
+      error: "Données de facture invalides.",
+    };
+  }
+
+  const next = store.slice();
+  next[index] = parsed.data;
+  const writeError = writeStore(next);
+  if (writeError) {
+    return { ok: false, reason: "storage", error: writeError };
+  }
+
+  return { ok: true, record: parsed.data };
+}
+
 export function deleteInvoice(id: string): string | null {
   const store = readStore();
   if (!store.some((entry) => entry.id === id)) return null;
@@ -186,4 +250,12 @@ export function deleteInvoice(id: string): string | null {
 
 export function clearInvoices(): string | null {
   return writeStore([]);
+}
+
+export function replaceInvoices(invoices: InvoiceRecord[]): string | null {
+  const parsed = invoiceRecordListSchema.safeParse(invoices);
+  if (!parsed.success) {
+    return "Données de factures invalides.";
+  }
+  return writeStore(parsed.data);
 }

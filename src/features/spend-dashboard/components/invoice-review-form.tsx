@@ -39,6 +39,8 @@ import {
 import {
   findSimilarInvoice,
   saveInvoiceExtraction,
+  updateInvoice,
+  type InvoiceRecord,
 } from "@/features/spend-dashboard/lib/invoice-store";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +50,10 @@ const fieldClassName =
 type InvoiceReviewFormProps = {
   invoice: InvoiceExtraction;
   sourceFileName?: string;
+  mode?: "create" | "edit";
+  invoiceId?: string;
+  onSaved?: (record: InvoiceRecord) => void;
+  onCancel?: () => void;
   className?: string;
 };
 
@@ -80,6 +86,10 @@ function Field({
 export function InvoiceReviewForm({
   invoice,
   sourceFileName,
+  mode = "create",
+  invoiceId,
+  onSaved,
+  onCancel,
   className,
 }: InvoiceReviewFormProps) {
   const formId = useId();
@@ -93,6 +103,7 @@ export function InvoiceReviewForm({
   const [pendingSave, setPendingSave] = useState<InvoiceSave | null>(null);
 
   const canSave = isInvoiceFormValid(values);
+  const isEdit = mode === "edit";
 
   function updateField<K extends InvoiceFormField>(
     field: K,
@@ -116,10 +127,15 @@ export function InvoiceReviewForm({
     setSaveError(null);
     setConfirmOpen(false);
     setPendingSave(null);
+    onCancel?.();
   }
 
   function commitSave(toSave: InvoiceSave) {
-    const saved = saveInvoiceExtraction(toSave, { sourceFileName });
+    const saved =
+      isEdit && invoiceId
+        ? updateInvoice(invoiceId, toSave)
+        : saveInvoiceExtraction(toSave, { sourceFileName });
+
     if (!saved.ok) {
       setSaveNotice(null);
       setSaveError(saved.error);
@@ -131,7 +147,8 @@ export function InvoiceReviewForm({
 
     setErrors({});
     setSaveError(null);
-    setSaveNotice("Facture enregistrée.");
+    setSaveNotice(isEdit ? "Facture mise à jour." : "Facture enregistrée.");
+    onSaved?.(saved.record);
   }
 
   function handleSave() {
@@ -143,7 +160,9 @@ export function InvoiceReviewForm({
       return;
     }
 
-    const similar = findSimilarInvoice(result.invoice);
+    const similar = findSimilarInvoice(result.invoice, {
+      excludeId: isEdit ? invoiceId : undefined,
+    });
     if (similar) {
       setPendingSave(result.invoice);
       setConfirmOpen(true);
@@ -166,231 +185,244 @@ export function InvoiceReviewForm({
 
   return (
     <>
-    <form
-      className={cn(
-        "flex flex-col gap-4 rounded-xl bg-muted/40 px-4 py-5",
-        className,
-      )}
-      onSubmit={(event) => {
-        event.preventDefault();
-        handleSave();
-      }}
-    >
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">Relecture</p>
-        <p className="text-xs text-muted-foreground">
-          Corrigez les champs si besoin, puis enregistrez.
-        </p>
-      </div>
-
-      <p className="text-sm">
-        <span className="text-muted-foreground">Confiance IA : </span>
-        <span className="font-medium">
-          {SPEND_DASHBOARD_CONFIDENCE_LABELS[values.confidence]}
-        </span>
-      </p>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field
-          id={`${formId}-vendor`}
-          label="Fournisseur *"
-          error={errors.vendor}
-        >
-          <input
-            id={`${formId}-vendor`}
-            type="text"
-            value={values.vendor}
-            onChange={(event) => updateField("vendor", event.target.value)}
-            aria-invalid={Boolean(errors.vendor)}
-            aria-describedby={errors.vendor ? `${formId}-vendor-error` : undefined}
-            className={fieldClassName}
-            autoComplete="organization"
-            required
-          />
-        </Field>
-
-        <Field
-          id={`${formId}-date`}
-          label="Date *"
-          error={errors.invoiceDate}
-        >
-          <input
-            id={`${formId}-date`}
-            type="date"
-            value={values.invoiceDate}
-            onChange={(event) => updateField("invoiceDate", event.target.value)}
-            aria-invalid={Boolean(errors.invoiceDate)}
-            aria-describedby={
-              errors.invoiceDate ? `${formId}-date-error` : undefined
-            }
-            className={fieldClassName}
-            required
-          />
-        </Field>
-
-        <Field
-          id={`${formId}-number`}
-          label="N° facture"
-          error={errors.invoiceNumber}
-        >
-          <input
-            id={`${formId}-number`}
-            type="text"
-            value={values.invoiceNumber}
-            onChange={(event) =>
-              updateField("invoiceNumber", event.target.value)
-            }
-            aria-invalid={Boolean(errors.invoiceNumber)}
-            aria-describedby={
-              errors.invoiceNumber ? `${formId}-number-error` : undefined
-            }
-            className={fieldClassName}
-          />
-        </Field>
-
+      <form
+        className={cn(
+          "flex flex-col gap-4 rounded-xl bg-muted/40 px-4 py-5",
+          className,
+        )}
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSave();
+        }}
+      >
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Devise</span>
-          <p className="flex h-8 items-center text-sm font-medium">
-            {SPEND_DASHBOARD_DEFAULT_CURRENCY}
+          <p className="text-sm font-medium">
+            {isEdit ? "Modifier la facture" : "Relecture"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isEdit
+              ? "Corrigez les champs, puis enregistrez les modifications."
+              : "Corrigez les champs si besoin, puis enregistrez."}
           </p>
         </div>
 
-        <Field
-          id={`${formId}-ht`}
-          label="Montant HT (€)"
-          error={errors.amountHt}
-        >
-          <input
-            id={`${formId}-ht`}
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            value={values.amountHt}
-            onChange={(event) => updateField("amountHt", event.target.value)}
-            aria-invalid={Boolean(errors.amountHt)}
-            aria-describedby={errors.amountHt ? `${formId}-ht-error` : undefined}
-            className={fieldClassName}
-          />
-        </Field>
+        <p className="text-sm">
+          <span className="text-muted-foreground">Confiance IA : </span>
+          <span className="font-medium">
+            {SPEND_DASHBOARD_CONFIDENCE_LABELS[values.confidence]}
+          </span>
+        </p>
 
-        <Field
-          id={`${formId}-tva`}
-          label="TVA (€)"
-          error={errors.amountTva}
-        >
-          <input
-            id={`${formId}-tva`}
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            value={values.amountTva}
-            onChange={(event) => updateField("amountTva", event.target.value)}
-            aria-invalid={Boolean(errors.amountTva)}
-            aria-describedby={
-              errors.amountTva ? `${formId}-tva-error` : undefined
-            }
-            className={fieldClassName}
-          />
-        </Field>
-
-        <Field
-          id={`${formId}-ttc`}
-          label="Montant TTC (€) *"
-          error={errors.amountTtc}
-        >
-          <input
-            id={`${formId}-ttc`}
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            value={values.amountTtc}
-            onChange={(event) => updateField("amountTtc", event.target.value)}
-            aria-invalid={Boolean(errors.amountTtc)}
-            aria-describedby={
-              errors.amountTtc ? `${formId}-ttc-error` : undefined
-            }
-            className={fieldClassName}
-            required
-          />
-        </Field>
-
-        <Field
-          id={`${formId}-category`}
-          label="Catégorie *"
-          error={errors.category}
-        >
-          <select
-            id={`${formId}-category`}
-            value={values.category}
-            onChange={(event) =>
-              updateField(
-                "category",
-                event.target.value as SpendDashboardInvoiceCategory,
-              )
-            }
-            aria-invalid={Boolean(errors.category)}
-            aria-describedby={
-              errors.category ? `${formId}-category-error` : undefined
-            }
-            className={fieldClassName}
-            required
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field
+            id={`${formId}-vendor`}
+            label="Fournisseur *"
+            error={errors.vendor}
           >
-            {SPEND_DASHBOARD_INVOICE_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {SPEND_DASHBOARD_CATEGORY_LABELS[category]}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+            <input
+              id={`${formId}-vendor`}
+              type="text"
+              value={values.vendor}
+              onChange={(event) => updateField("vendor", event.target.value)}
+              aria-invalid={Boolean(errors.vendor)}
+              aria-describedby={
+                errors.vendor ? `${formId}-vendor-error` : undefined
+              }
+              className={fieldClassName}
+              autoComplete="organization"
+              required
+            />
+          </Field>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" disabled={!canSave}>
-          Enregistrer
-        </Button>
-        <Button type="button" variant="ghost" onClick={handleCancel}>
-          Annuler
-        </Button>
-        {saveNotice ? (
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {saveNotice}
-          </p>
-        ) : null}
-        {saveError ? (
-          <p className="text-xs text-destructive" role="alert">
-            {saveError}
-          </p>
-        ) : null}
-      </div>
-    </form>
+          <Field
+            id={`${formId}-date`}
+            label="Date *"
+            error={errors.invoiceDate}
+          >
+            <input
+              id={`${formId}-date`}
+              type="date"
+              value={values.invoiceDate}
+              onChange={(event) =>
+                updateField("invoiceDate", event.target.value)
+              }
+              aria-invalid={Boolean(errors.invoiceDate)}
+              aria-describedby={
+                errors.invoiceDate ? `${formId}-date-error` : undefined
+              }
+              className={fieldClassName}
+              required
+            />
+          </Field>
 
-    <AlertDialog
-      open={confirmOpen}
-      onOpenChange={(open) => {
-        setConfirmOpen(open);
-        if (!open) setPendingSave(null);
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Facture similaire déjà enregistrée</AlertDialogTitle>
-          <AlertDialogDescription>
-            Une facture avec le même fournisseur, la même date et le même montant
-            TTC existe déjà
-            {pendingSave
-              ? ` (${pendingSave.vendor}, ${formatInvoiceDate(pendingSave.invoiceDate)}, ${formatInvoiceMoney(pendingSave.amountTtcCents, SPEND_DASHBOARD_DEFAULT_CURRENCY)})`
-              : ""}
-            . Voulez-vous quand même l’enregistrer ?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmSimilarSave}>
-            Enregistrer quand même
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          <Field
+            id={`${formId}-number`}
+            label="N° facture"
+            error={errors.invoiceNumber}
+          >
+            <input
+              id={`${formId}-number`}
+              type="text"
+              value={values.invoiceNumber}
+              onChange={(event) =>
+                updateField("invoiceNumber", event.target.value)
+              }
+              aria-invalid={Boolean(errors.invoiceNumber)}
+              aria-describedby={
+                errors.invoiceNumber ? `${formId}-number-error` : undefined
+              }
+              className={fieldClassName}
+            />
+          </Field>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Devise</span>
+            <p className="flex h-8 items-center text-sm font-medium">
+              {SPEND_DASHBOARD_DEFAULT_CURRENCY}
+            </p>
+          </div>
+
+          <Field
+            id={`${formId}-ht`}
+            label="Montant HT (€)"
+            error={errors.amountHt}
+          >
+            <input
+              id={`${formId}-ht`}
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={values.amountHt}
+              onChange={(event) => updateField("amountHt", event.target.value)}
+              aria-invalid={Boolean(errors.amountHt)}
+              aria-describedby={
+                errors.amountHt ? `${formId}-ht-error` : undefined
+              }
+              className={fieldClassName}
+            />
+          </Field>
+
+          <Field
+            id={`${formId}-tva`}
+            label="TVA (€)"
+            error={errors.amountTva}
+          >
+            <input
+              id={`${formId}-tva`}
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={values.amountTva}
+              onChange={(event) => updateField("amountTva", event.target.value)}
+              aria-invalid={Boolean(errors.amountTva)}
+              aria-describedby={
+                errors.amountTva ? `${formId}-tva-error` : undefined
+              }
+              className={fieldClassName}
+            />
+          </Field>
+
+          <Field
+            id={`${formId}-ttc`}
+            label="Montant TTC (€) *"
+            error={errors.amountTtc}
+          >
+            <input
+              id={`${formId}-ttc`}
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={values.amountTtc}
+              onChange={(event) => updateField("amountTtc", event.target.value)}
+              aria-invalid={Boolean(errors.amountTtc)}
+              aria-describedby={
+                errors.amountTtc ? `${formId}-ttc-error` : undefined
+              }
+              className={fieldClassName}
+              required
+            />
+          </Field>
+
+          <Field
+            id={`${formId}-category`}
+            label="Catégorie *"
+            error={errors.category}
+          >
+            <select
+              id={`${formId}-category`}
+              value={values.category}
+              onChange={(event) =>
+                updateField(
+                  "category",
+                  event.target.value as SpendDashboardInvoiceCategory,
+                )
+              }
+              aria-invalid={Boolean(errors.category)}
+              aria-describedby={
+                errors.category ? `${formId}-category-error` : undefined
+              }
+              className={fieldClassName}
+              required
+            >
+              {SPEND_DASHBOARD_INVOICE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {SPEND_DASHBOARD_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" disabled={!canSave}>
+            {isEdit ? "Enregistrer les modifications" : "Enregistrer"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={handleCancel}>
+            Annuler
+          </Button>
+          {saveNotice ? (
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {saveNotice}
+            </p>
+          ) : null}
+          {saveError ? (
+            <p className="text-xs text-destructive" role="alert">
+              {saveError}
+            </p>
+          ) : null}
+        </div>
+      </form>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          setConfirmOpen(open);
+          if (!open) setPendingSave(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Facture similaire déjà enregistrée
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Une facture avec le même fournisseur, la même date et le même
+              montant TTC existe déjà
+              {pendingSave
+                ? ` (${pendingSave.vendor}, ${formatInvoiceDate(pendingSave.invoiceDate)}, ${formatInvoiceMoney(pendingSave.amountTtcCents, SPEND_DASHBOARD_DEFAULT_CURRENCY)})`
+                : ""}
+              . Voulez-vous quand même{" "}
+              {isEdit ? "enregistrer ces modifications" : "l’enregistrer"} ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSimilarSave}>
+              {isEdit ? "Modifier quand même" : "Enregistrer quand même"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

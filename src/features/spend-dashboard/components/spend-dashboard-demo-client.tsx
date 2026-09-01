@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DashboardOverview } from "@/features/spend-dashboard/components/dashboard-overview";
@@ -28,6 +28,7 @@ import {
 import {
   getInvoicesStoreServerSnapshot,
   getInvoicesStoreSnapshot,
+  replaceInvoices,
   subscribeInvoicesStore,
 } from "@/features/spend-dashboard/lib/invoice-store";
 
@@ -52,6 +53,11 @@ export function SpendDashboardDemoClient() {
     getInvoicesStoreSnapshot,
     getInvoicesStoreServerSnapshot,
   );
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    replaceInvoices(DASHBOARD_SEED_INVOICES);
+  }, []);
 
   const allMonthOptions = useMemo(() => {
     if (dataSource === "seed") return listDashboardSeedMonths();
@@ -382,7 +388,10 @@ export function SpendDashboardDemoClient() {
         </p>
       ) : null}
 
-      <DashboardOverview summary={summary} />
+      <DashboardOverview
+        summary={summary}
+        invoicesEditable={dataSource === "local"}
+      />
     </div>
   );
 }
