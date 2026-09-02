@@ -37,11 +37,11 @@ export default async function DemoPage({ params }: PageProps) {
   return (
     <div
       className={cn(
-        "mx-auto flex w-full flex-1 flex-col gap-6 px-6 py-16",
+        "mx-auto flex w-full flex-1 flex-col px-6 py-16",
         isWide ? "max-w-5xl" : "max-w-3xl",
       )}
     >
-      <div className="flex flex-col gap-2">
+      <header className="mb-15 flex flex-col gap-2">
         <Link
           href="/"
           className={cn(buttonVariants({ variant: "link" }), "w-fit")}
@@ -52,8 +52,12 @@ export default async function DemoPage({ params }: PageProps) {
           {demo.title}
         </h1>
         <p className="text-muted-foreground">{demo.description}</p>
-      </div>
-      {View ? <View /> : null}
+      </header>
+      {View ? (
+        <main>
+          <View />
+        </main>
+      ) : null}
     </div>
   );
 }

@@ -13,8 +13,8 @@ import { demos } from "@/features/demos/demos";
 
 export default function Home() {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-10 px-6 py-16">
-      <header className="flex flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-16">
+      <header className="mb-15 flex flex-col gap-3">
         <p className="text-sm font-medium text-muted-foreground">Portfolio dev</p>
         <h1 className="font-heading text-4xl font-semibold tracking-tight">
           Démos SDK

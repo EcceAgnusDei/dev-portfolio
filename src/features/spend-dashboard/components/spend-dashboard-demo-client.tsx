@@ -48,6 +48,7 @@ export function SpendDashboardDemoClient() {
   const [selectedYear, setSelectedYear] = useState(() =>
     currentMonthKey().slice(0, 4),
   );
+  const [isCreating, setIsCreating] = useState(false);
   const localInvoices = useSyncExternalStore(
     subscribeInvoicesStore,
     getInvoicesStoreSnapshot,
@@ -157,6 +158,7 @@ export function SpendDashboardDemoClient() {
 
   function handleDataSourceChange(next: DashboardDataSource) {
     setDataSource(next);
+    setIsCreating(false);
     if (next === "seed") {
       setSelectedMonth(DASHBOARD_SEED_DEFAULT_MONTH);
       setSelectedQuarter(monthKeyToQuarterKey(DASHBOARD_SEED_DEFAULT_MONTH));
@@ -211,8 +213,32 @@ export function SpendDashboardDemoClient() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3">
+    <section
+      className="flex flex-col gap-4"
+      aria-labelledby="dashboard-summary-heading"
+    >
+      <header className="flex items-start justify-between gap-3">
+        <h2
+          id="dashboard-summary-heading"
+          className="font-heading text-lg font-medium leading-snug"
+        >
+          Synthèse des dépenses
+        </h2>
+        {dataSource === "local" ? (
+          <Button
+            type="button"
+            className="shrink-0"
+            onClick={() => setIsCreating(true)}
+          >
+            Ajouter une facture
+          </Button>
+        ) : null}
+      </header>
+
+      <section
+        className="flex flex-wrap items-end gap-3"
+        aria-label="Filtres du dashboard"
+      >
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -373,7 +399,7 @@ export function SpendDashboardDemoClient() {
             </div>
           </div>
         ) : null}
-      </div>
+      </section>
 
       {dataSource === "local" && localInvoices.length === 0 ? (
         <p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -391,7 +417,9 @@ export function SpendDashboardDemoClient() {
       <DashboardOverview
         summary={summary}
         invoicesEditable={dataSource === "local"}
+        isCreating={isCreating}
+        onCreatingChange={setIsCreating}
       />
-    </div>
+    </section>
   );
 }

@@ -9,7 +9,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   formatInvoiceDate,
@@ -27,6 +26,8 @@ import { cn } from "@/lib/utils";
 type DashboardOverviewProps = {
   summary: DashboardSummary;
   invoicesEditable?: boolean;
+  isCreating?: boolean;
+  onCreatingChange?: (creating: boolean) => void;
   className?: string;
 };
 
@@ -34,6 +35,9 @@ type InvoiceSortKey = "date" | "vendor" | "category" | "amount";
 type SortDirection = "asc" | "desc";
 
 const TOP_VENDORS_PREVIEW = 5;
+
+const cardHeadingClassName =
+  "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm";
 
 function formatEvolution(percent: number): string {
   const sign = percent > 0 ? "+" : "";
@@ -90,20 +94,17 @@ function SortableHeader({
   onSort: (key: InvoiceSortKey) => void;
 }) {
   const isActive = activeKey === sortKey;
-  const Icon = !isActive ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;
+  const Icon = !isActive
+    ? ArrowUpDown
+    : direction === "asc"
+      ? ArrowUp
+      : ArrowDown;
 
   return (
     <th
-      className={cn(
-        "px-2 py-2 font-medium",
-        align === "right" && "text-right",
-      )}
+      className={cn("px-2 py-2 font-medium", align === "right" && "text-right")}
       aria-sort={
-        isActive
-          ? direction === "asc"
-            ? "ascending"
-            : "descending"
-          : "none"
+        isActive ? (direction === "asc" ? "ascending" : "descending") : "none"
       }
     >
       <button
@@ -159,6 +160,8 @@ function VendorShareRow({
 export function DashboardOverview({
   summary,
   invoicesEditable = false,
+  isCreating = false,
+  onCreatingChange,
   className,
 }: DashboardOverviewProps) {
   const [sortKey, setSortKey] = useState<InvoiceSortKey>("date");
@@ -169,10 +172,8 @@ export function DashboardOverview({
   const [editingInvoice, setEditingInvoice] = useState<InvoiceRecord | null>(
     null,
   );
-  const [isCreating, setIsCreating] = useState(false);
 
-  const sheetOpen =
-    invoicesEditable && (isCreating || editingInvoice != null);
+  const sheetOpen = invoicesEditable && (isCreating || editingInvoice != null);
 
   const totalCents = summary.totalTtcCents;
   const evolutionPositive =
@@ -180,8 +181,7 @@ export function DashboardOverview({
   const evolutionNegative =
     summary.evolutionPercent != null && summary.evolutionPercent < 0;
 
-  const showAllVendors =
-    expandedVendorsPeriodLabel === summary.periodLabel;
+  const showAllVendors = expandedVendorsPeriodLabel === summary.periodLabel;
   const hiddenVendorCount = Math.max(
     0,
     summary.topVendors.length - TOP_VENDORS_PREVIEW,
@@ -205,260 +205,276 @@ export function DashboardOverview({
       return;
     }
     setSortKey(nextKey);
-    setSortDirection(nextKey === "date" || nextKey === "amount" ? "desc" : "asc");
+    setSortDirection(
+      nextKey === "date" || nextKey === "amount" ? "desc" : "asc",
+    );
+  }
+
+  function closeSheet() {
+    setEditingInvoice(null);
+    onCreatingChange?.(false);
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">Vue d’ensemble</p>
-          <p className="text-sm text-muted-foreground">{summary.periodLabel}</p>
+    <>
+      <div className={cn("flex flex-col gap-6", className)}>
+        <section aria-labelledby="dashboard-total-heading">
+          <Card size="sm">
+            <CardHeader>
+              <h3 id="dashboard-total-heading" className={cardHeadingClassName}>
+                Total TTC
+              </h3>
+              <p className="text-xl font-medium tabular-nums">
+                {formatInvoiceMoney(summary.totalTtcCents, summary.currency)}
+              </p>
+              {summary.evolutionPercent != null && summary.evolutionLabel ? (
+                <p
+                  className={cn(
+                    "text-sm",
+                    evolutionPositive &&
+                      "text-emerald-700 dark:text-emerald-400",
+                    evolutionNegative && "text-destructive",
+                    !evolutionPositive &&
+                      !evolutionNegative &&
+                      "text-muted-foreground",
+                  )}
+                >
+                  {formatEvolution(summary.evolutionPercent)}{" "}
+                  {summary.evolutionLabel}
+                </p>
+              ) : null}
+            </CardHeader>
+          </Card>
+        </section>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section aria-labelledby="dashboard-categories-heading">
+            <Card>
+              <CardHeader>
+                <h3
+                  id="dashboard-categories-heading"
+                  className={cardHeadingClassName}
+                >
+                  Par catégorie
+                </h3>
+                <CardDescription>Part du total des dépenses</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {summary.byCategory.map((entry) => {
+                  const sharePercent = shareOfTotal(
+                    entry.totalCents,
+                    totalCents,
+                  );
+                  return (
+                    <div key={entry.category} className="flex flex-col gap-1">
+                      <div className="flex items-baseline justify-between gap-2 text-sm">
+                        <span>
+                          {SPEND_DASHBOARD_CATEGORY_LABELS[entry.category]}
+                        </span>
+                        <span className="shrink-0 tabular-nums">
+                          <span className="font-medium">
+                            {formatInvoiceMoney(
+                              entry.totalCents,
+                              summary.currency,
+                            )}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {formatSharePercent(sharePercent)}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-foreground/80"
+                          style={{ width: `${sharePercent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </section>
+
+          <section aria-labelledby="dashboard-vendors-heading">
+            <Card>
+              <CardHeader>
+                <h3
+                  id="dashboard-vendors-heading"
+                  className={cardHeadingClassName}
+                >
+                  Top fournisseurs
+                </h3>
+                <CardDescription>Part du total des dépenses</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {visibleVendors.map((entry) => (
+                  <VendorShareRow
+                    key={entry.vendor}
+                    entry={entry}
+                    totalCents={totalCents}
+                    currency={summary.currency}
+                  />
+                ))}
+                {hiddenVendorCount > 0 ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto self-start px-0"
+                    onClick={() =>
+                      setExpandedVendorsPeriodLabel(
+                        showAllVendors ? null : summary.periodLabel,
+                      )
+                    }
+                  >
+                    {showAllVendors
+                      ? "Réduire la liste"
+                      : `Voir les ${hiddenVendorCount} autres`}
+                  </Button>
+                ) : null}
+              </CardContent>
+            </Card>
+          </section>
         </div>
-        {invoicesEditable ? (
-          <Button
-            type="button"
-            size="sm"
-            className="shrink-0"
-            onClick={() => {
-              setEditingInvoice(null);
-              setIsCreating(true);
-            }}
-          >
-            Ajouter une facture
-          </Button>
-        ) : null}
-      </div>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardDescription>Total TTC</CardDescription>
-          <CardTitle className="text-xl">
-            {formatInvoiceMoney(summary.totalTtcCents, summary.currency)}
-          </CardTitle>
-          {summary.evolutionPercent != null && summary.evolutionLabel ? (
-            <p
-              className={cn(
-                "text-sm",
-                evolutionPositive && "text-emerald-700 dark:text-emerald-400",
-                evolutionNegative && "text-destructive",
-                !evolutionPositive &&
-                  !evolutionNegative &&
-                  "text-muted-foreground",
-              )}
-            >
-              {formatEvolution(summary.evolutionPercent)}{" "}
-              {summary.evolutionLabel}
-            </p>
-          ) : null}
-        </CardHeader>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Par catégorie</CardTitle>
-            <CardDescription>Part du total des dépenses</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {summary.byCategory.map((entry) => {
-              const sharePercent = shareOfTotal(entry.totalCents, totalCents);
-              return (
-                <div key={entry.category} className="flex flex-col gap-1">
-                  <div className="flex items-baseline justify-between gap-2 text-sm">
-                    <span>
-                      {SPEND_DASHBOARD_CATEGORY_LABELS[entry.category]}
-                    </span>
-                    <span className="shrink-0 tabular-nums">
-                      <span className="font-medium">
-                        {formatInvoiceMoney(
-                          entry.totalCents,
-                          summary.currency,
-                        )}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {" "}
-                        · {formatSharePercent(sharePercent)}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-foreground/80"
-                      style={{ width: `${sharePercent}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Top fournisseurs</CardTitle>
-            <CardDescription>Part du total des dépenses</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {visibleVendors.map((entry) => (
-              <VendorShareRow
-                key={entry.vendor}
-                entry={entry}
-                totalCents={totalCents}
-                currency={summary.currency}
-              />
-            ))}
-            {hiddenVendorCount > 0 ? (
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto self-start px-0"
-                onClick={() =>
-                  setExpandedVendorsPeriodLabel(
-                    showAllVendors ? null : summary.periodLabel,
-                  )
-                }
+        <section aria-labelledby="dashboard-invoices-heading">
+          <Card>
+            <CardHeader>
+              <h3
+                id="dashboard-invoices-heading"
+                className={cardHeadingClassName}
               >
-                {showAllVendors
-                  ? "Réduire la liste"
-                  : `Voir les ${hiddenVendorCount} autres`}
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Factures</CardTitle>
-          <CardDescription>
-            Récapitulatif des factures de la période
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg bg-muted/40 px-3 py-2">
-              <p className="text-xs text-muted-foreground">Nombre de factures</p>
-              <p className="text-sm font-medium tabular-nums">
-                {summary.invoiceCount.toLocaleString("fr-FR")}
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted/40 px-3 py-2">
-              <p className="text-xs text-muted-foreground">Montant moyen TTC</p>
-              <p className="text-sm font-medium tabular-nums">
-                {summary.averageTtcCents == null
-                  ? "—"
-                  : formatInvoiceMoney(
-                      summary.averageTtcCents,
-                      summary.currency,
-                    )}
-              </p>
-            </div>
-          </div>
-
-          {summary.invoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aucune facture pour cette période.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <SortableHeader
-                      label="Date"
-                      sortKey="date"
-                      activeKey={sortKey}
-                      direction={sortDirection}
-                      onSort={handleSort}
-                    />
-                    <SortableHeader
-                      label="Fournisseur"
-                      sortKey="vendor"
-                      activeKey={sortKey}
-                      direction={sortDirection}
-                      onSort={handleSort}
-                    />
-                    <th className="px-2 py-2 font-medium text-muted-foreground">
-                      N°
-                    </th>
-                    <SortableHeader
-                      label="Catégorie"
-                      sortKey="category"
-                      activeKey={sortKey}
-                      direction={sortDirection}
-                      onSort={handleSort}
-                    />
-                    <SortableHeader
-                      label="TTC"
-                      sortKey="amount"
-                      activeKey={sortKey}
-                      direction={sortDirection}
-                      align="right"
-                      onSort={handleSort}
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedInvoices.map((invoice) => (
-                    <tr
-                      key={invoice.id}
-                      className={cn(
-                        "border-b border-border/60 last:border-0",
-                        invoicesEditable &&
-                          "cursor-pointer hover:bg-muted/40",
-                      )}
-                      onClick={
-                        invoicesEditable
-                          ? () => {
-                              setIsCreating(false);
-                              setEditingInvoice(invoice);
-                            }
-                          : undefined
-                      }
-                      onKeyDown={
-                        invoicesEditable
-                          ? (event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                setIsCreating(false);
-                                setEditingInvoice(invoice);
-                              }
-                            }
-                          : undefined
-                      }
-                      tabIndex={invoicesEditable ? 0 : undefined}
-                      role={invoicesEditable ? "button" : undefined}
-                      aria-label={
-                        invoicesEditable
-                          ? `Modifier la facture ${invoice.vendor}`
-                          : undefined
-                      }
-                    >
-                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">
-                        {formatInvoiceDate(invoice.invoiceDate)}
-                      </td>
-                      <td className="px-2 py-2">{invoice.vendor}</td>
-                      <td className="px-2 py-2 text-muted-foreground">
-                        {invoice.invoiceNumber ?? "—"}
-                      </td>
-                      <td className="px-2 py-2">
-                        {SPEND_DASHBOARD_CATEGORY_LABELS[invoice.category]}
-                      </td>
-                      <td className="px-2 py-2 text-right font-medium tabular-nums">
-                        {formatInvoiceMoney(
-                          invoice.amountTtcCents,
+                Factures
+              </h3>
+              <CardDescription>
+                Récapitulatif des factures de la période
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    Nombre de factures
+                  </p>
+                  <p className="text-sm font-medium tabular-nums">
+                    {summary.invoiceCount.toLocaleString("fr-FR")}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    Montant moyen TTC
+                  </p>
+                  <p className="text-sm font-medium tabular-nums">
+                    {summary.averageTtcCents == null
+                      ? "—"
+                      : formatInvoiceMoney(
+                          summary.averageTtcCents,
                           summary.currency,
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </p>
+                </div>
+              </div>
+
+              {summary.invoices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucune facture pour cette période.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[36rem] border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left">
+                        <SortableHeader
+                          label="Date"
+                          sortKey="date"
+                          activeKey={sortKey}
+                          direction={sortDirection}
+                          onSort={handleSort}
+                        />
+                        <SortableHeader
+                          label="Fournisseur"
+                          sortKey="vendor"
+                          activeKey={sortKey}
+                          direction={sortDirection}
+                          onSort={handleSort}
+                        />
+                        <th className="px-2 py-2 font-medium text-muted-foreground">
+                          N°
+                        </th>
+                        <SortableHeader
+                          label="Catégorie"
+                          sortKey="category"
+                          activeKey={sortKey}
+                          direction={sortDirection}
+                          onSort={handleSort}
+                        />
+                        <SortableHeader
+                          label="TTC"
+                          sortKey="amount"
+                          activeKey={sortKey}
+                          direction={sortDirection}
+                          align="right"
+                          onSort={handleSort}
+                        />
+                        {invoicesEditable ? (
+                          <th
+                            scope="col"
+                            className="px-2 py-2 text-right font-medium text-muted-foreground"
+                          >
+                            Actions
+                          </th>
+                        ) : null}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedInvoices.map((invoice) => (
+                        <tr
+                          key={invoice.id}
+                          className="border-b border-border/60 last:border-0"
+                        >
+                          <td className="px-2 py-2 whitespace-nowrap tabular-nums">
+                            {formatInvoiceDate(invoice.invoiceDate)}
+                          </td>
+                          <td className="px-2 py-2">{invoice.vendor}</td>
+                          <td className="px-2 py-2 text-muted-foreground">
+                            {invoice.invoiceNumber ?? "—"}
+                          </td>
+                          <td className="px-2 py-2">
+                            {SPEND_DASHBOARD_CATEGORY_LABELS[invoice.category]}
+                          </td>
+                          <td className="px-2 py-2 text-right font-medium tabular-nums">
+                            {formatInvoiceMoney(
+                              invoice.amountTtcCents,
+                              summary.currency,
+                            )}
+                          </td>
+                          {invoicesEditable ? (
+                            <td className="px-2 py-2 text-right">
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto px-0"
+                                aria-label={`Modifier la facture ${invoice.vendor}`}
+                                onClick={() => {
+                                  onCreatingChange?.(false);
+                                  setEditingInvoice(invoice);
+                                }}
+                              >
+                                Modifier
+                              </Button>
+                            </td>
+                          ) : null}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      </div>
 
       <InvoiceEditSheet
         key={
@@ -472,12 +488,9 @@ export function DashboardOverview({
         invoice={editingInvoice}
         open={sheetOpen}
         onOpenChange={(open) => {
-          if (!open) {
-            setEditingInvoice(null);
-            setIsCreating(false);
-          }
+          if (!open) closeSheet();
         }}
       />
-    </div>
+    </>
   );
 }
