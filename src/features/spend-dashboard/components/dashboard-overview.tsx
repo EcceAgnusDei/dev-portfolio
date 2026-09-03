@@ -19,7 +19,7 @@ import type {
   DashboardVendorTotal,
 } from "@/features/spend-dashboard/lib/build-dashboard-summary";
 import type { InvoiceRecord } from "@/features/spend-dashboard/lib/invoice-store";
-import { InvoiceEditSheet } from "@/features/spend-dashboard/components/invoice-edit-sheet";
+import { InvoiceEditDialog } from "@/features/spend-dashboard/components/invoice-edit-dialog";
 import { SPEND_DASHBOARD_CATEGORY_LABELS } from "@/features/spend-dashboard/lib/spend-dashboard-config";
 import { cn } from "@/lib/utils";
 
@@ -173,7 +173,7 @@ export function DashboardOverview({
     null,
   );
 
-  const sheetOpen = invoicesEditable && (isCreating || editingInvoice != null);
+  const dialogOpen = invoicesEditable && (isCreating || editingInvoice != null);
 
   const totalCents = summary.totalTtcCents;
   const evolutionPositive =
@@ -210,7 +210,7 @@ export function DashboardOverview({
     );
   }
 
-  function closeSheet() {
+  function closeDialog() {
     setEditingInvoice(null);
     onCreatingChange?.(false);
   }
@@ -476,19 +476,13 @@ export function DashboardOverview({
         </section>
       </div>
 
-      <InvoiceEditSheet
-        key={
-          sheetOpen
-            ? isCreating
-              ? "create"
-              : (editingInvoice?.id ?? "edit")
-            : "closed"
-        }
+      <InvoiceEditDialog
+        key={editingInvoice?.id ?? "create"}
         mode={isCreating ? "create" : "edit"}
         invoice={editingInvoice}
-        open={sheetOpen}
+        open={dialogOpen}
         onOpenChange={(open) => {
-          if (!open) closeSheet();
+          if (!open) closeDialog();
         }}
       />
     </>

@@ -52,6 +52,7 @@ type InvoiceReviewFormProps = {
   sourceFileName?: string;
   mode?: "create" | "edit";
   invoiceId?: string;
+  portalContainer?: HTMLElement | null;
   onSaved?: (record: InvoiceRecord) => void;
   onCancel?: () => void;
   className?: string;
@@ -88,6 +89,7 @@ export function InvoiceReviewForm({
   sourceFileName,
   mode = "create",
   invoiceId,
+  portalContainer,
   onSaved,
   onCancel,
   className,
@@ -400,7 +402,7 @@ export function InvoiceReviewForm({
           if (!open) setPendingSave(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent container={portalContainer ?? undefined}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               Facture similaire déjà enregistrée
